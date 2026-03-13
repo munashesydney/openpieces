@@ -6,49 +6,57 @@ import { useEffect, useMemo, useRef, useState } from "react";
 type Model = {
   id: string;
   label: string;
-  providerMark?: "g" | "spark" | "swirl";
   badge?: string;
 };
 
-const MODELS: Model[] = [
-  { id: "claude-opus", label: "Claude Opus 4.1", providerMark: "spark" },
-  { id: "gemini-pro", label: "Gemini 3 Pro", providerMark: "g", badge: "BETA" },
-  { id: "gpt-5-instant", label: "GPT-5 Instant", providerMark: "swirl" },
-  { id: "gpt-5-thinking", label: "GPT-5 Thinking", providerMark: "swirl" },
-  { id: "gpt-4o", label: "GPT-4o", providerMark: "swirl" },
-];
+type Provider = {
+  id: string;
+  label: string;
+  models: Model[];
+};
 
-function ProviderMark({ mark }: { mark: Model["providerMark"] }) {
-  if (mark === "g") {
-    return (
-      <div className="flex h-4 w-4 items-center justify-center rounded-full bg-emerald-500/15 text-[10px] font-bold text-emerald-600 dark:text-emerald-400">
-        G
-      </div>
-    );
-  }
-  if (mark === "spark") {
-    return (
-      <div className="flex h-4 w-4 items-center justify-center rounded-full bg-orange-500/15 text-[10px] font-bold text-orange-600 dark:text-orange-400">
-        ✳
-      </div>
-    );
-  }
-  return (
-    <div className="flex h-4 w-4 items-center justify-center rounded-full bg-[var(--hover-bg)] text-[10px] font-bold text-[var(--muted)]">
-      ◎
-    </div>
-  );
-}
+const PROVIDERS: Provider[] = [
+  {
+    id: "openai",
+    label: "OpenAI",
+    models: [
+      { id: "gpt-4o", label: "GPT-4o" },
+      { id: "gpt-4-turbo", label: "GPT-4 Turbo" },
+      { id: "gpt-5-early", label: "GPT-5 Early Access", badge: "NEW" },
+    ],
+  },
+  {
+    id: "anthropic",
+    label: "Anthropic",
+    models: [
+      { id: "claude-3-5-sonnet", label: "Claude 3.5 Sonnet" },
+      { id: "claude-3-opus", label: "Claude 3 Opus" },
+      { id: "claude-3-haiku", label: "Claude 3 Haiku" },
+    ],
+  },
+  {
+    id: "google",
+    label: "Google",
+    models: [
+      { id: "gemini-1-5-pro", label: "Gemini 1.5 Pro", badge: "BETA" },
+      { id: "gemini-1-5-flash", label: "Gemini 1.5 Flash" },
+    ],
+  },
+];
 
 export function ModelPicker() {
   const [open, setOpen] = useState(false);
-  const [activeId, setActiveId] = useState<Model["id"]>(MODELS[1]!.id);
+  const [activeModelId, setActiveModelId] = useState<string>(PROVIDERS[0]!.models[0]!.id);
+  const [hoveredProviderId, setHoveredProviderId] = useState<string | null>(null);
   const rootRef = useRef<HTMLDivElement | null>(null);
 
-  const active = useMemo(
-    () => MODELS.find((m) => m.id === activeId) ?? MODELS[0]!,
-    [activeId],
-  );
+  const activeModel = useMemo(() => {
+    for (const p of PROVIDERS) {
+      const model = p.models.find((m) => m.id === activeModelId);
+      if (model) return model;
+    }
+    return PROVIDERS[0]!.models[0]!;
+  }, [activeModelId]);
 
   useEffect(() => {
     function onPointerDown(e: PointerEvent) {
@@ -59,13 +67,15 @@ export function ModelPicker() {
     function onKeyDown(e: KeyboardEvent) {
       if (e.key === "Escape") setOpen(false);
     }
-    document.addEventListener("pointerdown", onPointerDown);
-    document.addEventListener("keydown", onKeyDown);
+    if (open) {
+      document.addEventListener("pointerdown", onPointerDown);
+      document.addEventListener("keydown", onKeyDown);
+    }
     return () => {
       document.removeEventListener("pointerdown", onPointerDown);
       document.removeEventListener("keydown", onKeyDown);
     };
-  }, []);
+  }, [open]);
 
   return (
     <div ref={rootRef} className="relative">
@@ -75,72 +85,83 @@ export function ModelPicker() {
         className="flex items-center gap-2 rounded-full bg-[var(--hover-bg)] px-3 py-1.5 text-sm font-medium text-[var(--foreground)] transition-colors hover:bg-[var(--hover-bg-strong)]"
         aria-haspopup="menu"
         aria-expanded={open}
-        aria-label="Choose model"
       >
-        <ProviderMark mark={active.providerMark} />
-        <span className="whitespace-nowrap">{active.label}</span>
-        {active.badge && (
-          <span className="ml-1 rounded-full bg-[var(--hover-bg)] px-2 py-0.5 text-[10px] font-semibold text-[var(--muted)]">
-            {active.badge}
+        <span className="whitespace-nowrap">{activeModel.label}</span>
+        {activeModel.badge && (
+          <span className="ml-1 rounded-full bg-[var(--accent)] px-2 py-0.5 text-[10px] font-semibold text-white">
+            {activeModel.badge}
           </span>
         )}
         <ChevronRight
-          className={`ml-1 h-4 w-4 text-[var(--muted)] transition-transform ${
+          className={`ml-1 h-3.5 w-3.5 text-[var(--muted)] transition-transform ${
             open ? "rotate-90" : ""
           }`}
         />
       </button>
 
       {open && (
-        <div
-          role="menu"
-          className="absolute left-0 top-[calc(100%+10px)] z-50 w-[280px] overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--card-bg)] shadow-[0_18px_45px_rgba(0,0,0,0.18)]"
+        <div 
+          className="absolute left-0 top-[calc(100%+12px)] z-[100] flex"
+          onMouseLeave={() => setHoveredProviderId(null)}
         >
-          <div className="p-3">
-            <div className="rounded-xl border border-[var(--border)] bg-[var(--hover-bg)] px-3 py-2 text-sm text-[var(--muted)]">
-              Search models...
-            </div>
+          {/* Providers List */}
+          <div className="w-[180px] overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--sidebar-bg)] p-1.5 shadow-[0_18px_45px_rgba(0,0,0,0.2)]">
+            <p className="px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-[var(--muted)]">
+              Providers
+            </p>
+            {PROVIDERS.map((p) => (
+              <button
+                key={p.id}
+                onMouseEnter={() => setHoveredProviderId(p.id)}
+                className={`flex w-full items-center justify-between rounded-xl px-3 py-2 text-left text-sm transition-all ${
+                  hoveredProviderId === p.id 
+                    ? "bg-[var(--hover-bg)] text-[var(--foreground)]" 
+                    : "text-[var(--muted)] hover:text-[var(--foreground)]"
+                }`}
+              >
+                {p.label}
+                <ChevronRight className="h-3 w-3 opacity-50" />
+              </button>
+            ))}
           </div>
-          <div className="h-px bg-[var(--border)]" />
-          <div className="p-1">
-            {MODELS.map((m) => {
-              const selected = m.id === activeId;
-              return (
+
+          {/* Models Submenu (Cascading) */}
+          {hoveredProviderId && (
+            <div className="ml-2 w-[220px] overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--sidebar-bg)] p-1.5 shadow-[0_18px_45px_rgba(0,0,0,0.2)] animate-in fade-in slide-in-from-left-2 duration-200">
+               <p className="px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-[var(--muted)]">
+                Models
+              </p>
+              {PROVIDERS.find(p => p.id === hoveredProviderId)?.models.map((m) => (
                 <button
                   key={m.id}
-                  type="button"
-                  role="menuitem"
                   onClick={() => {
-                    setActiveId(m.id);
+                    setActiveModelId(m.id);
                     setOpen(false);
+                    setHoveredProviderId(null);
                   }}
-                  className="flex w-full items-center gap-3 rounded-xl px-3 py-2 text-left transition-colors hover:bg-[var(--hover-bg)]"
+                  className={`flex w-full items-center justify-between rounded-xl px-3 py-2 text-left text-sm transition-all ${
+                    activeModelId === m.id
+                      ? "bg-[var(--accent)] text-white"
+                      : "text-[var(--muted)] hover:bg-[var(--hover-bg)] hover:text-[var(--foreground)]"
+                  }`}
                 >
-                  <ProviderMark mark={m.providerMark} />
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-2">
-                      <p className="truncate text-sm font-medium text-[var(--foreground)]">
-                        {m.label}
-                      </p>
-                      {m.badge && (
-                        <span className="rounded-full bg-[var(--hover-bg)] px-2 py-0.5 text-[10px] font-semibold text-[var(--muted)]">
-                          {m.badge}
-                        </span>
-                      )}
-                    </div>
+                  <div className="flex items-center gap-2 overflow-hidden">
+                    <span className="truncate">{m.label}</span>
+                    {m.badge && (
+                      <span className={`rounded-full px-1.5 py-0.5 text-[9px] font-bold ${
+                        activeModelId === m.id ? "bg-white/20 text-white" : "bg-[var(--hover-bg)] text-[var(--muted)]"
+                      }`}>
+                        {m.badge}
+                      </span>
+                    )}
                   </div>
-                  {selected ? (
-                    <Check className="h-4 w-4 text-[var(--accent)]" />
-                  ) : (
-                    <span className="h-4 w-4" />
-                  )}
+                  {activeModelId === m.id && <Check className="h-3.5 w-3.5" />}
                 </button>
-              );
-            })}
-          </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
     </div>
   );
 }
-

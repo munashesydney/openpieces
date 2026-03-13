@@ -93,7 +93,7 @@ export function Header() {
               <Icon
                 className="h-4 w-4"
                 strokeWidth={active ? 2.5 : 1.5}
-                fill={active ? "currentColor" : "none"}
+                fill="none"
               />
               {item.label}
               {active && (

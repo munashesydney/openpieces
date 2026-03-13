@@ -51,7 +51,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
             <User
               className="h-4 w-4"
               strokeWidth={personalActive ? 2.5 : 1.5}
-              fill={personalActive ? "currentColor" : "none"}
+              fill="none"
             />
           </Link>
           <Link
@@ -65,7 +65,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
             <Settings
               className="h-4 w-4"
               strokeWidth={settingsActive ? 2.5 : 1.5}
-              fill={settingsActive ? "currentColor" : "none"}
+              fill="none"
             />
           </Link>
         </div>
@@ -114,7 +114,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
               <User
                 className="mt-0.5 h-4 w-4 shrink-0"
                 strokeWidth={personalActive ? 2.5 : 1.5}
-                fill={personalActive ? "currentColor" : "none"}
+                fill="none"
               />
               <div className="min-w-0 flex-1">
                 <p className="truncate text-sm font-medium">Personal</p>
@@ -132,7 +132,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
               <Settings
                 className="mt-0.5 h-4 w-4 shrink-0"
                 strokeWidth={settingsActive ? 2.5 : 1.5}
-                fill={settingsActive ? "currentColor" : "none"}
+                fill="none"
               />
               <div className="min-w-0 flex-1">
                 <p className="truncate text-sm font-medium">Settings</p>

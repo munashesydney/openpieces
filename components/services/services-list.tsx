@@ -1,5 +1,7 @@
 "use client";
 
+import { Card } from "../ui/card";
+
 const services = [
   {
     title: "AI Compute",
@@ -39,11 +41,12 @@ export function ServicesList() {
   return (
     <div className="flex w-full justify-center px-6 pb-14 pt-14">
       <div className="relative w-full max-w-[820px]">
-        <div className="grid grid-cols-1 gap-px bg-[var(--border)] overflow-hidden rounded-2xl border border-[var(--border)] shadow-sm">
+        <div className="grid grid-cols-1 gap-4">
           {services.map((service, index) => (
-            <div
+            <Card
               key={index}
-              className="group relative cursor-pointer bg-[var(--background)] p-6 transition-colors hover:bg-[var(--hover-bg)]"
+              hoverable
+              className="group cursor-pointer p-6"
             >
               <div className="flex flex-1 items-center justify-between">
                 <div>
@@ -58,7 +61,7 @@ export function ServicesList() {
                   <span className="text-[var(--accent)] text-sm font-medium">Configure →</span>
                 </div>
               </div>
-            </div>
+            </Card>
           ))}
         </div>
 
@@ -70,7 +73,7 @@ export function ServicesList() {
           <div className="flex items-center gap-2">
             <button
               type="button"
-              className="flex h-9 w-9 items-center justify-center rounded-lg border border-[var(--border)] bg-[var(--card-bg)] text-[var(--muted)] transition-colors hover:bg-[var(--hover-bg)] hover:text-[var(--foreground)] disabled:opacity-50"
+              className="flex h-9 w-9 items-center justify-center rounded-lg border border-[var(--border)] bg-[var(--sidebar-bg)] text-[var(--muted)] transition-colors hover:bg-[var(--hover-bg)] hover:text-[var(--foreground)] disabled:opacity-50"
               disabled
             >
               <span className="sr-only">Previous</span>
@@ -82,11 +85,10 @@ export function ServicesList() {
               {[1, 2, 3].map((page) => (
                 <button
                   key={page}
-                  className={`flex h-9 w-9 items-center justify-center rounded-lg text-sm font-medium transition-colors ${
-                    page === 1
-                      ? "bg-[var(--accent)] text-white"
-                      : "border border-[var(--border)] bg-[var(--card-bg)] text-[var(--muted)] hover:bg-[var(--hover-bg)] hover:text-[var(--foreground)]"
-                  }`}
+                  className={`flex h-9 w-9 items-center justify-center rounded-lg text-sm font-medium transition-colors ${page === 1
+                    ? "bg-[var(--accent)] text-white"
+                    : "border border-[var(--border)] bg-[var(--sidebar-bg)] text-[var(--muted)] hover:bg-[var(--hover-bg)] hover:text-[var(--foreground)]"
+                    }`}
                 >
                   {page}
                 </button>
@@ -94,7 +96,7 @@ export function ServicesList() {
             </div>
             <button
               type="button"
-              className="flex h-9 w-9 items-center justify-center rounded-lg border border-[var(--border)] bg-[var(--card-bg)] text-[var(--muted)] transition-colors hover:bg-[var(--hover-bg)] hover:text-[var(--foreground)]"
+              className="flex h-9 w-9 items-center justify-center rounded-lg border border-[var(--border)] bg-[var(--sidebar-bg)] text-[var(--muted)] transition-colors hover:bg-[var(--hover-bg)] hover:text-[var(--foreground)]"
             >
               <span className="sr-only">Next</span>
               <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -103,9 +105,6 @@ export function ServicesList() {
             </button>
           </div>
         </div>
-
-        {/* Fancy background gradient restored as requested */}
-        <div className="pointer-events-none absolute -inset-x-16 -top-14 h-[520px] bg-[radial-gradient(ellipse_at_top,rgba(124,58,237,0.15)_0%,transparent_60%)] opacity-50 dark:bg-[radial-gradient(ellipse_at_top,rgba(168,85,247,0.18)_0%,transparent_60%)]" />
       </div>
     </div>
   );
