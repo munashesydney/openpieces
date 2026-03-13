@@ -2,33 +2,41 @@
 
 import { Check, ChevronsUpDown, Plus } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 
+// Matching the Workspace schema returned by API
 type Workspace = {
   id: string;
   name: string;
-  planLabel: string;
 };
-
-const WORKSPACES: Workspace[] = [
-  { id: "auralis", name: "Auralis Studio", planLabel: "Personal" },
-  { id: "team", name: "Team Auralis", planLabel: "Pro" },
-  { id: "client", name: "Client Sandbox", planLabel: "Free" },
-];
 
 export function WorkspaceSwitcher({
   placement = "down",
   variant = "full",
+  activeWorkspaceId,
 }: {
   placement?: "down" | "up";
   variant?: "full" | "icon";
+  activeWorkspaceId?: string;
 }) {
+  const router = useRouter();
   const [open, setOpen] = useState(false);
-  const [activeId, setActiveId] = useState<Workspace["id"]>(WORKSPACES[0]!.id);
+  const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
   const rootRef = useRef<HTMLDivElement | null>(null);
 
+  useEffect(() => {
+    fetch("/api/workspaces")
+      .then((res) => {
+        if (!res.ok) throw new Error("Failed to fetch workspaces");
+        return res.json();
+      })
+      .then((data) => setWorkspaces(data))
+      .catch((err) => console.error(err));
+  }, []);
+
   const active = useMemo(
-    () => WORKSPACES.find((w) => w.id === activeId) ?? WORKSPACES[0]!,
-    [activeId],
+    () => workspaces.find((w) => w.id === activeWorkspaceId) ?? workspaces[0],
+    [activeWorkspaceId, workspaces],
   );
 
   useEffect(() => {
@@ -50,7 +58,7 @@ export function WorkspaceSwitcher({
     };
   }, []);
 
-  const initial = active.name.trim().slice(0, 1).toUpperCase();
+  const initial = active ? active.name.trim().slice(0, 1).toUpperCase() : "-";
 
   const menuPositionClass =
     placement === "up"
@@ -62,6 +70,16 @@ export function WorkspaceSwitcher({
     placement === "up"
       ? "bottom-0 left-[calc(100%+8px)] w-64"
       : "top-0 left-[calc(100%+8px)] w-64";
+
+  if (!active && workspaces.length === 0) {
+    return (
+      <div className={isIconVariant ? "relative flex justify-center" : "relative mx-4"}>
+        <div className="flex w-full items-center gap-3 rounded-lg border border-[var(--border)] bg-[var(--hover-bg)] px-3 py-2 animate-pulse">
+           <div className="h-4 w-24 bg-[var(--border)] rounded" />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div
@@ -88,7 +106,7 @@ export function WorkspaceSwitcher({
           </div>
         )}
 
-        {!isIconVariant && (
+        {!isIconVariant && active && (
           <>
             <p className="min-w-0 flex-1 truncate text-sm font-medium text-[var(--foreground)]">
               {active.name}
@@ -107,8 +125,8 @@ export function WorkspaceSwitcher({
           } z-50 overflow-hidden rounded-lg border border-[var(--border)] bg-[var(--sidebar-bg)] shadow-[0_12px_30px_rgba(0,0,0,0.22)]`}
         >
           <ul className="p-1">
-            {WORKSPACES.map((w) => {
-              const selected = w.id === activeId;
+            {workspaces.map((w) => {
+              const selected = w.id === active?.id;
               const wInitial = w.name.trim().slice(0, 1).toUpperCase();
               return (
                 <li key={w.id}>
@@ -116,8 +134,8 @@ export function WorkspaceSwitcher({
                     type="button"
                     role="menuitem"
                     onClick={() => {
-                      setActiveId(w.id);
                       setOpen(false);
+                      router.push(`/workspace/${w.id}/personal`);
                     }}
                     className="flex w-full items-center gap-3 rounded-md px-2 py-2 text-left transition-colors hover:bg-[var(--hover-bg)]"
                   >

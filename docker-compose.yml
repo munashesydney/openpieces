@@ -1,0 +1,71 @@
+# =============================================================================
+# Development — hot reload, verbose logs, source code mounted as a volume
+#
+# With bundled Postgres (default):
+#   COMPOSE_PROFILES=with-db docker compose up --build
+#   (or set COMPOSE_PROFILES=with-db in your .env)
+#
+# With your own hosted Postgres (Supabase, Neon, Railway, etc.):
+#   docker compose up --build
+#   (set DATABASE_URL in .env to point at your instance)
+# =============================================================================
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: development
+    volumes:
+      # Mount source so edits hot-reload inside the container
+      - .:/app
+      # Keep the container's node_modules isolated from the host
+      - /app/node_modules
+      # Keep Next.js build cache isolated
+      - /app/.next
+    # Run DB migrations then start dev server.
+    # Turbopack's file watcher doesn't support polling in Docker yet,
+    # so we fall back to Webpack mode where WATCHPACK_POLLING works.
+    command: sh -c "node_modules/.bin/tsx lib/db/migrate.ts && node_modules/.bin/next dev --webpack"
+    ports:
+      - "3000:3000"
+    environment:
+      - WATCHPACK_POLLING=true
+    env_file:
+      - .env
+    # Pretty, coloured logs streamed directly to your terminal
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  db:
+    # Only started when COMPOSE_PROFILES includes "with-db".
+    # If you have your own hosted Postgres, remove "with-db" from
+    # COMPOSE_PROFILES in .env and point DATABASE_URL at your instance.
+    profiles:
+      - with-db
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-openpieces}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-openpieces}
+      POSTGRES_DB: ${POSTGRES_DB:-openpieces}
+    ports:
+      # Expose so you can connect with pgAdmin / psql from the host
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-openpieces} -d ${POSTGRES_DB:-openpieces}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    logging:
+      driver: json-file
+      options:
+        max-size: "5m"
+        max-file: "2"
+
+volumes:
+  postgres_data:

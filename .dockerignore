@@ -1,0 +1,40 @@
+# Dependencies
+node_modules
+npm-debug.log*
+
+# Next.js build output
+.next
+out
+
+# Environment files (never bake secrets into image)
+.env
+.env.local
+.env.*.local
+
+# Git
+.git
+.gitignore
+
+# Editor / OS
+.DS_Store
+*.swp
+*.swo
+Thumbs.db
+
+# Docker
+Dockerfile*
+docker-compose*
+.dockerignore
+
+# Testing
+coverage
+.nyc_output
+
+# TypeScript
+*.tsbuildinfo
+next-env.d.ts
+
+# Misc
+README.md
+.eslintrc*
+eslint.config*

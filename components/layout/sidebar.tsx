@@ -72,7 +72,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
 
         {/* Workspace switcher */}
         <div className="w-full border-t border-[var(--border)] py-3">
-          <WorkspaceSwitcher placement="up" variant="icon" />
+          <WorkspaceSwitcher placement="up" variant="icon" activeWorkspaceId={workspaceId} />
         </div>
       </aside>
     );
@@ -144,7 +144,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
 
       {/* Bottom workspace switcher (drop-up) */}
       <div className="border-t border-[var(--border)] py-3">
-        <WorkspaceSwitcher placement="up" />
+        <WorkspaceSwitcher placement="up" activeWorkspaceId={workspaceId} />
       </div>
     </aside>
   );

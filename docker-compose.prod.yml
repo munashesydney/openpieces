@@ -1,0 +1,73 @@
+# =============================================================================
+# Production — standalone Next.js build, no source mounts, restart policies
+#
+# With bundled Postgres (default):
+#   COMPOSE_PROFILES=with-db docker compose -f docker-compose.prod.yml up -d
+#   (or set COMPOSE_PROFILES=with-db in your .env)
+#
+# With your own hosted Postgres (Supabase, Neon, Railway, etc.):
+#   docker compose -f docker-compose.prod.yml up -d
+#   (set DATABASE_URL in .env to point at your instance)
+# =============================================================================
+
+services:
+  migrate:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: migrator
+    env_file:
+      - .env
+    # Runs once and exits — app waits for it to complete successfully
+    restart: "no"
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: runner
+    ports:
+      - "3000:3000"
+    env_file:
+      - .env
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    restart: unless-stopped
+    # Minimal log retention in prod — use your log aggregator of choice
+    logging:
+      driver: json-file
+      options:
+        max-size: "20m"
+        max-file: "5"
+
+  db:
+    # Only started when COMPOSE_PROFILES includes "with-db".
+    # If you have your own hosted Postgres, skip this and set DATABASE_URL
+    # in .env to point at your instance instead.
+    profiles:
+      - with-db
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    # Do NOT expose 5432 to the host in production
+    expose:
+      - "5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+volumes:
+  postgres_data:
