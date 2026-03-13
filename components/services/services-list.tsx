@@ -1,69 +1,158 @@
 "use client";
 
+import { useState } from "react";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { Card } from "../ui/card";
+import { Button } from "@/components/basic/buttons/button";
+import { ChevronLeft, ChevronRight, Plus, Zap, Cpu, Terminal, MoreHorizontal } from "lucide-react";
+import { Sheet } from "../ui/sheet";
+import { Input } from "@/components/basic/input/input";
+import { Textarea } from "@/components/basic/input/textarea";
+import { Dropdown } from "@/components/basic/input/dropdown";
 
-const services = [
+interface Service {
+  id: string;
+  title: string;
+  description: string;
+  type: "trigger" | "action";
+}
+
+const services: Service[] = [
   {
-    title: "AI Compute",
-    description: "High-performance GPU clusters for training and inference.",
+    id: "1",
+    title: "Stripe Webhook",
+    description: "Listen for successful payments to trigger accounting workflows.",
+    type: "trigger",
   },
   {
-    title: "Global CDN",
-    description: "Lightning fast content delivery at the edge of the network.",
+    id: "2",
+    title: "Zoho Contact Creator",
+    description: "Automatically create new contacts in Zoho CRM from integrated leads.",
+    type: "action",
   },
   {
-    title: "Managed DB",
-    description: "Scalable, distributed databases with zero maintenance.",
+    id: "3",
+    title: "Telegram Message",
+    description: "Trigger on new incoming messages to specific bot channels.",
+    type: "trigger",
   },
   {
-    title: "Real-time Sync",
-    description: "Instant data synchronization across all user devices.",
+    id: "4",
+    title: "Notion Page Creator",
+    description: "Generate new database entries or pages in Notion workspaces.",
+    type: "action",
   },
   {
-    title: "Security & Auth",
-    description: "Enterprise-grade identity management and threat protection.",
+    id: "5",
+    title: "GitHub Webhook",
+    description: "Trigger on repository events like pushes, PRs, or new issues.",
+    type: "trigger",
   },
   {
-    title: "Semantic Search",
-    description: "AI-powered search engine for complex natural language queries.",
-  },
-  {
-    title: "Edge Functions",
-    description: "Serverless code execution as close to users as possible.",
-  },
-  {
-    title: "Conversational AI",
-    description: "Build intelligent chat interfaces with advanced LLMs.",
+    id: "6",
+    title: "Slack Notification",
+    description: "Post automated updates or rich messages to designated channels.",
+    type: "action",
   },
 ];
 
 export function ServicesList() {
+  const [isSheetOpen, setIsSheetOpen] = useState(false);
+  const [newServiceType, setNewServiceType] = useState("trigger");
+  const [selectedWorkflow, setSelectedWorkflow] = useState("");
+  const pathname = usePathname();
+  const segments = pathname.split("/").filter(Boolean);
+  const workspaceId = segments[1];
+
+  const triggers = services.filter((s) => s.type === "trigger");
+  const actions = services.filter((s) => s.type === "action");
+
   return (
-    <div className="flex w-full justify-center px-6 pb-14 pt-14">
-      <div className="relative w-full max-w-[820px]">
-        <div className="grid grid-cols-1 gap-4">
-          {services.map((service, index) => (
-            <Card
-              key={index}
-              hoverable
-              className="group cursor-pointer p-6"
-            >
-              <div className="flex flex-1 items-center justify-between">
-                <div>
-                  <h3 className="text-lg font-medium text-[var(--foreground)]">
-                    {service.title}
-                  </h3>
-                  <p className="mt-1 text-sm text-[var(--muted)]">
-                    {service.description}
-                  </p>
-                </div>
-                <div className="opacity-0 transition-opacity group-hover:opacity-100">
-                  <span className="text-[var(--accent)] text-sm font-medium">Configure →</span>
-                </div>
-              </div>
-            </Card>
-          ))}
+    <div className="flex w-full justify-center px-6 pb-20 pt-10">
+      <div className="w-full max-w-[820px] space-y-10">
+        {/* Header Section */}
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-semibold text-[var(--foreground)]">Services</h1>
+            <p className="text-sm text-[var(--muted)]">Manage and deploy AI-generated services within your workspace.</p>
+          </div>
+          <Button onClick={() => setIsSheetOpen(true)}>
+            <Plus className="h-4 w-4" />
+            New Service
+          </Button>
         </div>
+
+        {/* New Service Sheet */}
+        <Sheet
+          isOpen={isSheetOpen}
+          onClose={() => setIsSheetOpen(false)}
+          title="Create New Service"
+          description="Define a new trigger or action for your workspace."
+          footer={
+            <div className="flex justify-end gap-3">
+              <Button variant="ghost" onClick={() => setIsSheetOpen(false)}>Cancel</Button>
+              <Button onClick={() => setIsSheetOpen(false)}>Create Service</Button>
+            </div>
+          }
+        >
+          <div className="space-y-6">
+            <Input
+              label="Service Title"
+              placeholder="e.g. Stripe Webhook"
+            />
+            <Dropdown
+              label="Service Type"
+              value={newServiceType}
+              onChange={setNewServiceType}
+              options={[
+                { label: "Trigger (Event Source)", value: "trigger" },
+                { label: "Action (Endpoint)", value: "action" },
+              ]}
+            />
+            <Dropdown
+              label={newServiceType === "trigger" ? "Associated Workflow (Required)" : "Associated Workflow (Optional)"}
+              value={selectedWorkflow}
+              onChange={setSelectedWorkflow}
+              options={[
+                { label: "Select a workflow...", value: "" },
+                { label: "Post-Purchase Automation", value: "1" },
+                { label: "Lead Nurturing Sequence", value: "2" },
+                { label: "Technical Support Router", value: "3" },
+              ]}
+            />
+            <Textarea
+              label="Description"
+              placeholder="What should this service do?"
+            />
+          </div>
+        </Sheet>
+
+        {/* Triggers Section */}
+        <section className="space-y-4">
+          <div className="flex items-center gap-2 px-1">
+            <Zap className="h-4 w-4 text-amber-500" />
+            <h2 className="text-sm font-bold uppercase tracking-wider text-[var(--muted)]">Triggers</h2>
+          </div>
+          <div className="grid grid-cols-1 gap-4">
+            {triggers.map((service) => (
+              <ServiceCard key={service.id} service={service} workspaceId={workspaceId} />
+            ))}
+          </div>
+        </section>
+
+        {/* Actions Section */}
+        <section className="space-y-4 pt-4">
+          <div className="flex items-center gap-2 px-1">
+            <Terminal className="h-4 w-4 text-[var(--accent)]" />
+            <h2 className="text-sm font-bold uppercase tracking-wider text-[var(--muted)]">Actions</h2>
+          </div>
+          <div className="grid grid-cols-1 gap-4">
+            {actions.map((service) => (
+              <ServiceCard key={service.id} service={service} workspaceId={workspaceId} />
+            ))}
+          </div>
+        </section>
 
         {/* Pagination UI */}
         <div className="mt-8 flex items-center justify-between px-2">
@@ -71,41 +160,73 @@ export function ServicesList() {
             Showing <span className="font-medium text-[var(--foreground)]">1</span> to <span className="font-medium text-[var(--foreground)]">8</span> of <span className="font-medium text-[var(--foreground)]">24</span> services
           </div>
           <div className="flex items-center gap-2">
-            <button
-              type="button"
-              className="flex h-9 w-9 items-center justify-center rounded-lg border border-[var(--border)] bg-[var(--sidebar-bg)] text-[var(--muted)] transition-colors hover:bg-[var(--hover-bg)] hover:text-[var(--foreground)] disabled:opacity-50"
+            <Button
+              variant="outline"
+              size="icon"
               disabled
+              aria-label="Previous"
             >
-              <span className="sr-only">Previous</span>
-              <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-              </svg>
-            </button>
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
             <div className="flex gap-1">
               {[1, 2, 3].map((page) => (
-                <button
+                <Button
                   key={page}
-                  className={`flex h-9 w-9 items-center justify-center rounded-lg text-sm font-medium transition-colors ${page === 1
-                    ? "bg-[var(--accent)] text-white"
-                    : "border border-[var(--border)] bg-[var(--sidebar-bg)] text-[var(--muted)] hover:bg-[var(--hover-bg)] hover:text-[var(--foreground)]"
-                    }`}
+                  variant={page === 1 ? "primary" : "outline"}
+                  size="icon"
+                  className="text-sm"
                 >
                   {page}
-                </button>
+                </Button>
               ))}
             </div>
-            <button
-              type="button"
-              className="flex h-9 w-9 items-center justify-center rounded-lg border border-[var(--border)] bg-[var(--sidebar-bg)] text-[var(--muted)] transition-colors hover:bg-[var(--hover-bg)] hover:text-[var(--foreground)]"
+            <Button
+              variant="outline"
+              size="icon"
+              aria-label="Next"
             >
-              <span className="sr-only">Next</span>
-              <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-              </svg>
-            </button>
+              <ChevronRight className="h-4 w-4" />
+            </Button>
           </div>
         </div>
       </div>
     </div>
+  );
+}
+
+function ServiceCard({ service, workspaceId }: { service: Service; workspaceId: string }) {
+  const slug = service.title.toLowerCase().replace(/\s+/g, "-");
+  const Icon = service.type === "trigger" ? Zap : Terminal;
+  const iconColor = service.type === "trigger" ? "text-amber-500" : "text-[var(--accent)]";
+
+  return (
+    <Link href={`/workspace/${workspaceId}/personal/services/${slug}`}>
+      <Card hoverable className="group cursor-pointer p-5">
+        <div className="flex items-start justify-between gap-4">
+          <div className="flex flex-1 items-start gap-4">
+            <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[var(--hover-bg)] ${iconColor}`}>
+              <Icon className="h-5 w-5" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h3 className="text-base font-medium text-[var(--foreground)]">{service.title}</h3>
+                <span className="text-[10px] font-medium uppercase tracking-wider text-[var(--muted)]">
+                  {service.type}
+                </span>
+              </div>
+              <p className="mt-1 text-sm text-[var(--muted)]">{service.description}</p>
+              <div className="mt-3 flex items-center gap-3">
+                <span className="text-[10px] font-bold uppercase text-emerald-500">Operational</span>
+                <div className="h-1 w-1 rounded-full bg-[var(--border)]" />
+                <span className="text-[10px] font-medium uppercase text-[var(--muted)]">Last sync 2m ago</span>
+              </div>
+            </div>
+          </div>
+          <Button variant="ghost" size="icon" className="-mt-1">
+            <MoreHorizontal className="h-5 w-5" />
+          </Button>
+        </div>
+      </Card>
+    </Link>
   );
 }

@@ -1,6 +1,7 @@
 "use client";
 
 import { Bell, Mail, Smartphone } from "lucide-react";
+import { Button } from "@/components/basic/buttons/button";
 
 export default function NotificationsPage() {
   return (
@@ -30,16 +31,16 @@ export default function NotificationsPage() {
           <p className="mt-1 text-sm text-[var(--muted)]">Configure how you receive alerts on your devices.</p>
           
           <div className="mt-8">
-            <button className="rounded-lg border border-[var(--border)] px-4 py-2 text-sm font-medium hover:bg-[var(--hover-bg)]">
+            <Button variant="outline">
               Manage Device Tokens
-            </button>
+            </Button>
           </div>
         </section>
 
         <div className="flex items-center justify-end gap-3 pt-4">
-          <button className="rounded-lg bg-[var(--accent)] px-6 py-2 text-sm font-medium text-white shadow-[0_10px_25px_var(--accent-glow)] transition-opacity hover:opacity-90">
+          <Button>
             Save Settings
-          </button>
+          </Button>
         </div>
       </div>
     </div>

@@ -1,6 +1,8 @@
 "use client";
 
 import { Globe, Zap, Database, Hammer } from "lucide-react";
+import { Button } from "@/components/basic/buttons/button";
+import { Input } from "@/components/basic/input/input";
 
 export default function AdvancedPage() {
   return (
@@ -11,23 +13,22 @@ export default function AdvancedPage() {
           <p className="mt-1 text-sm text-[var(--muted)]">Manage your API keys and developer settings.</p>
           
           <div className="mt-8 space-y-4">
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Primary API Key</label>
-              <div className="flex rounded-lg border border-[var(--border)] bg-[var(--background)] p-1">
-                <input
-                  type="password"
-                  readOnly
-                  value="sk_test_51Mz..."
-                  className="flex-1 px-3 py-1.5 text-sm bg-transparent focus:outline-none"
-                />
-                <button className="px-3 py-1.5 text-xs font-medium text-[var(--accent)] hover:underline">
+            <div className="relative">
+              <Input
+                label="Primary API Key"
+                type="password"
+                readOnly
+                defaultValue="sk_test_51Mz..."
+              />
+              <div className="absolute bottom-[5px] right-2">
+                <Button variant="ghost" size="sm" className="h-8 px-3 text-[var(--accent)]">
                   Reveal
-                </button>
+                </Button>
               </div>
             </div>
-            <button className="text-sm font-medium text-[var(--accent)] hover:underline">
+            <Button variant="ghost" className="text-[var(--accent)] p-0 h-auto hover:bg-transparent hover:underline">
               Generate New Key
-            </button>
+            </Button>
           </div>
         </section>
 
@@ -36,19 +37,19 @@ export default function AdvancedPage() {
           <p className="mt-1 text-sm text-[var(--muted)]">Export your data or clear regional caches.</p>
           
           <div className="mt-8 flex gap-3 flex-wrap">
-            <button className="rounded-lg border border-[var(--border)] px-4 py-2 text-sm font-medium hover:bg-[var(--hover-bg)] transition-colors">
+            <Button variant="outline">
               Export All Data
-            </button>
-            <button className="rounded-lg border border-[var(--border)] px-4 py-2 text-sm font-medium hover:bg-[var(--hover-bg)] transition-colors text-amber-500 border-amber-500/20">
+            </Button>
+            <Button variant="danger">
               Purge Cache
-            </button>
+            </Button>
           </div>
         </section>
 
         <div className="flex items-center justify-end gap-3 pt-4">
-          <button className="rounded-lg bg-[var(--accent)] px-6 py-2 text-sm font-medium text-white shadow-[0_10px_25px_var(--accent-glow)] transition-opacity hover:opacity-90">
+          <Button>
             Apply Changes
-          </button>
+          </Button>
         </div>
       </div>
     </div>

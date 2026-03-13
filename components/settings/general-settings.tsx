@@ -7,6 +7,9 @@ import {
   CardDescription,
   CardContent
 } from "../ui/card";
+import { Button } from "@/components/basic/buttons/button";
+import { Input } from "@/components/basic/input/input";
+import { Textarea } from "@/components/basic/input/textarea";
 
 export function GeneralSettings() {
   return (
@@ -19,19 +22,15 @@ export function GeneralSettings() {
           </CardHeader>
           <CardContent>
             <div className="space-y-6">
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-[var(--foreground)]">Workspace Name</label>
-                <input
-                  type="text"
-                  className="w-full rounded-lg border border-[var(--border)] bg-[var(--background)] px-4 py-2.5 text-sm text-[var(--foreground)] focus:border-[var(--accent)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)] transition-all"
-                  placeholder="e.g. Acme Corporation"
-                  defaultValue="My Project"
-                />
-              </div>
+              <Input
+                label="Workspace Name"
+                placeholder="e.g. Acme Corporation"
+                defaultValue="My Project"
+              />
 
               <div className="space-y-2">
                 <label className="text-sm font-medium text-[var(--foreground)]">Workspace URL</label>
-                <div className="flex rounded-lg border border-[var(--border)] bg-[var(--background)] overflow-hidden">
+                <div className="flex rounded-lg border border-[var(--border)] bg-[var(--background)] overflow-hidden focus-within:ring-1 focus-within:ring-[var(--accent)] focus-within:border-[var(--accent)] transition-all">
                   <span className="flex items-center bg-[var(--hover-bg)] px-4 text-sm text-[var(--muted)] border-r border-[var(--border)]">
                     app.openpieces.com/
                   </span>
@@ -44,6 +43,12 @@ export function GeneralSettings() {
                 </div>
                 <p className="text-xs text-[var(--muted)]">This is your persistent workspace identifier.</p>
               </div>
+
+              <Textarea
+                label="Description"
+                placeholder="Tell us about this workspace..."
+                defaultValue="This is my primary workspace for AI automation."
+              />
             </div>
           </CardContent>
         </Card>
@@ -54,19 +59,19 @@ export function GeneralSettings() {
             <CardDescription>Irreversible and destructive actions for this workspace.</CardDescription>
           </CardHeader>
           <CardContent>
-            <button className="rounded-lg border border-red-500/20 bg-red-500/5 px-4 py-2 text-sm font-medium text-red-500 transition-colors hover:bg-red-500 hover:text-white">
+            <Button variant="danger">
               Delete Workspace
-            </button>
+            </Button>
           </CardContent>
         </Card>
 
         <div className="flex items-center justify-end gap-3 pt-4">
-          <button className="px-5 py-2 text-sm font-medium text-[var(--muted)] hover:text-[var(--foreground)] transition-colors">
+          <Button variant="ghost">
             Cancel
-          </button>
-          <button className="rounded-lg bg-[var(--accent)] px-6 py-2 text-sm font-medium text-white shadow-[0_10px_25px_var(--accent-glow)] transition-opacity hover:opacity-90">
+          </Button>
+          <Button>
             Save Changes
-          </button>
+          </Button>
         </div>
       </div>
     </div>

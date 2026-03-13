@@ -5,6 +5,7 @@ import { Globe, Paperclip, Plus, Send, Waves } from "lucide-react";
 import { ModelPicker } from "./model-picker";
 import { ModeToggle, type ComposerMode } from "./mode-toggle";
 import { Card } from "../ui/card";
+import { Button } from "@/components/basic/buttons/button";
 
 export function OverviewComposer() {
   const [mode, setMode] = useState<ComposerMode>("agent");
@@ -27,13 +28,14 @@ export function OverviewComposer() {
         <Card className="rounded-[28px] shadow-[0_18px_60px_rgba(0,0,0,0.12)] dark:shadow-[0_18_60px_rgba(0,0,0,0.35)] transition-all duration-300">
           <div className="px-4 py-4">
             <div className="grid grid-cols-[40px_1fr] items-center gap-x-3">
-              <button
-                type="button"
-                className="flex h-8 w-8 items-center justify-center rounded-full bg-[var(--hover-bg)] text-[var(--muted)] transition-colors hover:bg-[var(--hover-bg-strong)] hover:text-[var(--foreground)]"
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 text-[var(--muted)]"
                 aria-label="Add"
               >
                 <Plus className="h-4 w-4" />
-              </button>
+              </Button>
 
               <div className="min-w-0">
                 <ModeToggle mode={mode} onChange={setMode} />
@@ -59,49 +61,48 @@ export function OverviewComposer() {
 
           <div className="flex items-center justify-between gap-3 px-4 pb-4">
             <div className="flex items-center gap-2">
-              <button
-                type="button"
-                className="flex h-9 w-9 items-center justify-center rounded-full bg-[var(--hover-bg)] text-[var(--muted)] transition-colors hover:bg-[var(--hover-bg-strong)] hover:text-[var(--foreground)]"
+              <Button
+                variant="secondary"
+                size="icon"
                 aria-label="Attach"
               >
                 <Paperclip className="h-4 w-4" />
-              </button>
+              </Button>
 
               <ModelPicker />
 
-              <button
-                type="button"
-                className="flex h-9 w-9 items-center justify-center rounded-full bg-[var(--hover-bg)] text-[var(--muted)] transition-colors hover:bg-[var(--hover-bg-strong)] hover:text-[var(--foreground)]"
+              <Button
+                variant="secondary"
+                size="icon"
                 aria-label="Browse"
               >
                 <Globe className="h-4 w-4" />
-              </button>
+              </Button>
 
-              <button
-                type="button"
-                className="flex h-9 w-9 items-center justify-center rounded-full bg-[var(--hover-bg)] text-[var(--muted)] transition-colors hover:bg-[var(--hover-bg-strong)] hover:text-[var(--foreground)]"
+              <Button
+                variant="secondary"
+                size="icon"
                 aria-label="More"
               >
                 <span className="block text-lg leading-none pt-1">…</span>
-              </button>
+              </Button>
             </div>
 
             <div className="flex items-center gap-2">
-              <button
-                type="button"
-                className="flex h-9 w-9 items-center justify-center rounded-full bg-[var(--hover-bg)] text-[var(--muted)] transition-colors hover:bg-[var(--hover-bg-strong)] hover:text-[var(--foreground)]"
+              <Button
+                variant="secondary"
+                size="icon"
                 aria-label="Voice"
               >
                 <Waves className="h-4 w-4" />
-              </button>
+              </Button>
 
-              <button
-                type="button"
-                className="flex h-9 w-9 items-center justify-center rounded-full bg-[var(--accent)] text-white shadow-[0_10px_25px_var(--accent-glow)] transition-all hover:opacity-90 active:scale-90"
+              <Button
+                size="icon"
                 aria-label="Send"
               >
                 <Send className="h-4 w-4" />
-              </button>
+              </Button>
             </div>
           </div>
         </Card>

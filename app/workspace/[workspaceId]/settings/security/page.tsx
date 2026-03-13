@@ -1,6 +1,7 @@
 "use client";
 
 import { Shield, Key, Eye, EyeOff } from "lucide-react";
+import { Button } from "@/components/basic/buttons/button";
 
 export default function SecurityPage() {
   return (
@@ -16,9 +17,9 @@ export default function SecurityPage() {
                 <h3 className="text-sm font-medium">Two-Factor Authentication</h3>
                 <p className="text-xs text-[var(--muted)]">Add an extra layer of security to your account.</p>
               </div>
-              <button className="rounded-lg border border-[var(--border)] px-4 py-2 text-xs font-medium hover:bg-[var(--hover-bg)]">
+              <Button variant="outline" size="sm">
                 Enable
-              </button>
+              </Button>
             </div>
 
             <div className="flex items-center justify-between py-4">
@@ -26,9 +27,9 @@ export default function SecurityPage() {
                 <h3 className="text-sm font-medium">Session Management</h3>
                 <p className="text-xs text-[var(--muted)]">View and manage your active sessions across devices.</p>
               </div>
-              <button className="rounded-lg border border-[var(--border)] px-4 py-2 text-xs font-medium hover:bg-[var(--hover-bg)]">
+              <Button variant="outline" size="sm">
                 View Sessions
-              </button>
+              </Button>
             </div>
           </div>
         </section>
@@ -45,9 +46,9 @@ export default function SecurityPage() {
         </section>
 
         <div className="flex items-center justify-end gap-3 pt-4">
-          <button className="rounded-lg bg-[var(--accent)] px-6 py-2 text-sm font-medium text-white shadow-[0_10px_25px_var(--accent-glow)] transition-opacity hover:opacity-90">
+          <Button>
             Update Security
-          </button>
+          </Button>
         </div>
       </div>
     </div>

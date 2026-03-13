@@ -3,12 +3,14 @@
 import {
   LayoutDashboard,
   Workflow,
+  Calendar,
   Settings,
   Shield,
   Bell,
   Globe,
   Monitor,
   Menu,
+  Puzzle,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -29,10 +31,22 @@ export function Header() {
       activePattern: workspaceId ? `/workspace/${workspaceId}/personal` : "/",
     },
     {
+      label: "Workflows",
+      href: workspaceId ? `/workspace/${workspaceId}/personal/workflows` : "/workflows",
+      icon: Workflow,
+      activePattern: workspaceId ? `/workspace/${workspaceId}/personal/workflows` : "/workflows",
+    },
+    {
       label: "Services",
       href: workspaceId ? `/workspace/${workspaceId}/personal/services` : "/services",
-      icon: Workflow,
+      icon: Puzzle,
       activePattern: workspaceId ? `/workspace/${workspaceId}/personal/services` : "/services",
+    },
+    {
+      label: "Tasks",
+      href: workspaceId ? `/workspace/${workspaceId}/personal/tasks` : "/tasks",
+      icon: Calendar,
+      activePattern: workspaceId ? `/workspace/${workspaceId}/personal/tasks` : "/tasks",
     },
   ];
 
