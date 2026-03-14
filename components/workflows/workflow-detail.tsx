@@ -1,54 +1,49 @@
 "use client";
 
-import { ChevronLeft, Zap, Terminal, Sparkles, ArrowRight, Play, MoreHorizontal } from "lucide-react";
-import Link from "next/link";
-import { useParams, useRouter } from "next/navigation";
+import { useTransition } from "react";
+import {
+  ChevronLeft,
+  Zap,
+  Terminal,
+  Repeat,
+  Calendar,
+  Play,
+  Trash2,
+} from "lucide-react";
+import { useRouter } from "next/navigation";
 import { Card } from "../ui/card";
 import { Button } from "@/components/basic/buttons/button";
+import { ActionMenu } from "@/components/basic/input/action-menu";
+import { type Workflow, type Service, type Task } from "@/lib/db/schema";
+import { deleteWorkflowAction } from "@/app/workspace/[workspaceId]/personal/workflows/actions";
+import Link from "next/link";
 
-interface WorkflowStep {
-  id: string;
-  title: string;
-  description: string;
-  serviceId?: string;
-  serviceName?: string;
-  type: "trigger" | "action" | "logic";
+interface WorkflowDetailProps {
+  workflow: Workflow;
+  workspaceId: string;
+  services: Service[];
+  tasks: Task[];
 }
 
-const MOCK_WORKFLOW_DETAIL = {
-  id: "1",
-  title: "Post-Purchase Automation",
-  description: "AI-generated plan to handle customer onboarding and feedback after a Stripe payment.",
-  steps: [
-    {
-      id: "s1",
-      title: "Stripe Webhook Receiver",
-      description: "Listens for checkout.session.completed events.",
-      serviceName: "Stripe Webhook",
-      type: "trigger",
-    },
-    {
-      id: "s2",
-      title: "Customer Data Enrichment",
-      description: "Fetch additional customer details from Zoho.",
-      serviceName: "Zoho Contact Creator",
-      type: "action",
-    },
-    {
-      id: "s3",
-      title: "Team Notification",
-      description: "Post a message to #sales channel in Slack.",
-      serviceName: "Slack Notification",
-      type: "action",
-    },
-  ] as WorkflowStep[],
-};
-
-export function WorkflowDetail() {
-  const params = useParams();
+export function WorkflowDetail({
+  workflow,
+  workspaceId,
+  services,
+  tasks,
+}: WorkflowDetailProps) {
   const router = useRouter();
-  const workspaceId = params.workspaceId as string;
-  const workflow = MOCK_WORKFLOW_DETAIL; // In real app, fetch by id
+  const [isPending, startTransition] = useTransition();
+
+  const handleDelete = () => {
+    startTransition(async () => {
+      await deleteWorkflowAction(workspaceId, workflow.id);
+      router.push(`/workspace/${workspaceId}/personal/workflows`);
+    });
+  };
+
+  // Triggers = trigger-type services + all tasks
+  const triggerServices = services.filter((s) => s.type === "trigger");
+  const actionServices = services.filter((s) => s.type === "action");
 
   return (
     <div className="flex w-full justify-center px-6 pb-20 pt-10 font-Inter">
@@ -62,21 +57,42 @@ export function WorkflowDetail() {
             <ChevronLeft className="h-4 w-4 transition-transform group-hover:-translate-x-1" />
             Back to Workflows
           </button>
-          
-          <div className="flex items-start justify-between">
-            <div className="space-y-1">
-              <h1 className="text-2xl font-semibold text-[var(--foreground)]">
-                {workflow.title}
-              </h1>
-              <p className="text-sm text-[var(--muted)]">
-                {workflow.description}
-              </p>
+
+          <div className="flex items-start justify-between gap-4">
+            <div className="space-y-1 flex-1">
+              <div className="flex items-center gap-3">
+                <h1 className="text-2xl font-semibold text-[var(--foreground)]">{workflow.title}</h1>
+                <span
+                  className={`rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider ${
+                    workflow.status === "active"
+                      ? "bg-emerald-500/10 text-emerald-500"
+                      : workflow.status === "archived"
+                      ? "bg-red-500/10 text-red-500"
+                      : "bg-[var(--border)] text-[var(--muted)]"
+                  }`}
+                >
+                  {workflow.status}
+                </span>
+              </div>
+              {workflow.description && (
+                <p className="text-sm text-[var(--muted)]">{workflow.description}</p>
+              )}
             </div>
-            <div className="flex items-center gap-3">
-              <Button variant="ghost" size="icon">
-                <MoreHorizontal className="h-5 w-5" />
-              </Button>
-              <Button className="gap-2">
+            <div className="flex items-center gap-2 shrink-0">
+              <ActionMenu
+                onSelect={(val) => {
+                  if (val === "delete") handleDelete();
+                }}
+                options={[
+                  {
+                    label: "Delete Workflow",
+                    value: "delete",
+                    icon: <Trash2 className="h-4 w-4" />,
+                    destructive: true,
+                  },
+                ]}
+              />
+              <Button className="gap-2" disabled={isPending}>
                 <Play className="h-4 w-4 fill-current" />
                 Run Workflow
               </Button>
@@ -84,54 +100,164 @@ export function WorkflowDetail() {
           </div>
         </div>
 
-        {/* AI Plan Section */}
-        <div className="space-y-6">
+        {/* Triggers: trigger services + tasks */}
+        <div className="space-y-4">
           <div className="flex items-center gap-2 px-1">
-            <Sparkles className="h-4 w-4 text-[var(--accent)]" />
-            <h2 className="text-sm font-bold uppercase tracking-wider text-[var(--muted)]">The AI Plan</h2>
+            <Zap className="h-4 w-4 text-amber-500" />
+            <h2 className="text-sm font-bold uppercase tracking-wider text-[var(--muted)]">Triggers</h2>
           </div>
 
-          <div className="relative space-y-4 before:absolute before:bottom-0 before:left-4 before:top-4 before:w-px before:bg-[var(--border)]">
-            {workflow.steps.map((step, index) => (
-              <div key={step.id} className="relative pl-10">
-                <div className={`absolute left-0 flex h-8 w-8 items-center justify-center rounded-full border-4 border-[var(--background)] ring-1 ring-[var(--border)] ${
-                  step.type === "trigger" ? "bg-amber-500 text-white" : "bg-[var(--accent)] text-white"
-                }`}>
-                  {step.type === "trigger" ? <Zap className="h-3.5 w-3.5 fill-current" /> : <Terminal className="h-3.5 w-3.5" />}
-                </div>
-                
-                <Card className="p-5">
-                  <div className="flex items-start justify-between gap-4">
-                    <div className="flex-1 space-y-2">
-                      <div className="flex items-center justify-between">
-                         <h3 className="text-base font-semibold text-[var(--foreground)]">{step.title}</h3>
-                         <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)]">Step {index + 1}</span>
-                      </div>
-                      <p className="text-sm text-[var(--muted)] leading-relaxed">
-                        {step.description}
-                      </p>
-                      
-                      {step.serviceName && (
-                        <div className="mt-4 flex items-center gap-2 rounded-lg bg-[var(--hover-bg)] p-3">
-                          <div className={`flex h-8 w-8 items-center justify-center rounded-lg ${
-                             step.type === "trigger" ? "text-amber-500 bg-amber-500/10" : "text-[var(--accent)] bg-[var(--accent-glow)]/10"
-                          }`}>
-                            {step.type === "trigger" ? <Zap className="h-4 w-4" /> : <Terminal className="h-4 w-4" />}
-                          </div>
-                          <div className="flex flex-1 items-center justify-between text-xs">
-                            <span className="font-medium text-[var(--foreground)]">{step.serviceName}</span>
-                            <span className="text-[var(--muted)] italic">Associated Service</span>
-                          </div>
-                        </div>
-                      )}
-                    </div>
+          {triggerServices.length === 0 && tasks.length === 0 ? (
+            <EmptySlot label="No triggers or tasks linked to this workflow." />
+          ) : (
+            <div className="space-y-6">
+              {/* Service Triggers */}
+              <div className="space-y-3">
+                <p className="px-1 text-xs font-semibold uppercase tracking-wider text-[var(--muted)] opacity-50">
+                  Service Triggers
+                </p>
+                {triggerServices.length === 0 ? (
+                  <EmptySlot label="No service triggers." />
+                ) : (
+                  <div className="flex flex-col gap-4">
+                    {triggerServices.map((s) => (
+                      <ServiceRow key={s.id} service={s} workspaceId={workspaceId} />
+                    ))}
                   </div>
-                </Card>
+                )}
               </div>
-            ))}
-          </div>
+
+              {/* Task Triggers */}
+              <div className="space-y-3">
+                <p className="px-1 text-xs font-semibold uppercase tracking-wider text-[var(--muted)] opacity-50">
+                  Task Triggers
+                </p>
+                {tasks.length === 0 ? (
+                  <EmptySlot label="No task triggers." />
+                ) : (
+                  <div className="flex flex-col gap-4">
+                    {tasks.map((t) => (
+                      <TaskRow key={t.id} task={t} />
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
         </div>
+
+        {/* Actions: action services only */}
+        <div className="space-y-4">
+          <div className="flex items-center gap-2 px-1">
+            <Terminal className="h-4 w-4 text-[var(--accent)]" />
+            <h2 className="text-sm font-bold uppercase tracking-wider text-[var(--muted)]">Actions</h2>
+          </div>
+
+          {actionServices.length === 0 ? (
+            <EmptySlot label="No actions linked to this workflow." />
+          ) : (
+            <div className="flex flex-col gap-4">
+              {actionServices.map((s) => (
+                <ServiceRow key={s.id} service={s} workspaceId={workspaceId} />
+              ))}
+            </div>
+          )}
+        </div>
+
       </div>
     </div>
+  );
+}
+
+function EmptySlot({ label }: { label: string }) {
+  return (
+    <div className="rounded-xl border border-dashed border-[var(--border)] p-6 text-center text-sm text-[var(--muted)]">
+      {label}
+    </div>
+  );
+}
+
+function ServiceRow({
+  service,
+  workspaceId,
+}: {
+  service: Service;
+  workspaceId: string;
+}) {
+  const Icon = service.type === "trigger" ? Zap : Terminal;
+  const iconColor =
+    service.type === "trigger" ? "text-amber-500" : "text-[var(--accent)]";
+  const iconBg =
+    service.type === "trigger"
+      ? "bg-amber-500/10"
+      : "bg-[var(--accent-glow)]/10";
+
+  return (
+    <Link href={`/workspace/${workspaceId}/personal/services/${service.id}`}>
+      <Card hoverable className="cursor-pointer p-4">
+        <div className="flex items-center gap-4">
+          <div
+            className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${iconBg} ${iconColor}`}
+          >
+            <Icon className="h-4 w-4" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-medium text-[var(--foreground)] truncate">
+              {service.title}
+            </p>
+            {service.description && (
+              <p className="text-xs text-[var(--muted)] truncate mt-0.5">
+                {service.description}
+              </p>
+            )}
+          </div>
+          <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)]">
+            {service.type}
+          </span>
+        </div>
+      </Card>
+    </Link>
+  );
+}
+
+function TaskRow({ task }: { task: Task }) {
+  const Icon = task.type === "recurring" ? Repeat : Calendar;
+
+  return (
+    <Card className="p-4">
+      <div className="flex items-center gap-4">
+        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[var(--hover-bg)] text-[var(--muted)]">
+          <Icon className="h-4 w-4" />
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-medium text-[var(--foreground)] truncate">
+            {task.title}
+          </p>
+          {task.description && (
+            <p className="text-xs text-[var(--muted)] truncate mt-0.5">
+              {task.description}
+            </p>
+          )}
+        </div>
+        <div className="flex items-center gap-2 shrink-0">
+          {task.frequency && (
+            <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--accent)]">
+              {task.frequency}
+            </span>
+          )}
+          <span
+            className={`text-[10px] font-bold uppercase tracking-wider ${
+              task.status === "active"
+                ? "text-emerald-500"
+                : task.status === "paused"
+                ? "text-amber-500"
+                : "text-[var(--muted)]"
+            }`}
+          >
+            {task.status}
+          </span>
+        </div>
+      </div>
+    </Card>
   );
 }

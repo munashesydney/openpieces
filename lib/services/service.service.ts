@@ -1,7 +1,60 @@
 import { eq, and, count } from "drizzle-orm";
 import { db } from "../db";
-import { services, type NewService, type Service } from "../db/schema";
+import { services, workflows, type NewService, type Service } from "../db/schema";
 import { isValidUuid } from "../utils/uuid";
+import { ValidationError } from "../errors/validation-error";
+
+const VALID_SERVICE_TYPES = ["trigger", "action"] as const;
+
+export async function createService(data: NewService): Promise<Service> {
+  // ── Validate title ────────────────────────────────────────────────────────
+  if (!data.title || data.title.trim() === "") {
+    throw new ValidationError("Title is required.");
+  }
+
+  // ── Validate type ─────────────────────────────────────────────────────────
+  if (!VALID_SERVICE_TYPES.includes(data.type as typeof VALID_SERVICE_TYPES[number])) {
+    throw new ValidationError(
+      `Invalid service type "${data.type}". Must be one of: ${VALID_SERVICE_TYPES.join(", ")}.`
+    );
+  }
+
+  // ── Validate workflowId ───────────────────────────────────────────────────
+  // Required for triggers; optional for actions
+  if (data.type === "trigger" && !data.workflowId) {
+    throw new ValidationError("A workflow is required when creating a trigger service.");
+  }
+
+  if (data.workflowId) {
+    if (!isValidUuid(data.workflowId)) {
+      throw new ValidationError(
+        `The provided workflow ID "${data.workflowId}" is not a valid ID.`
+      );
+    }
+
+    // Verify the workflow actually exists in this workspace
+    const workflow = await db
+      .select({ id: workflows.id })
+      .from(workflows)
+      .where(
+        and(
+          eq(workflows.id, data.workflowId),
+          eq(workflows.workspaceId, data.workspaceId)
+        )
+      )
+      .limit(1);
+
+    if (workflow.length === 0) {
+      throw new ValidationError(
+        "The selected workflow does not exist in this workspace."
+      );
+    }
+  }
+
+  const result = await db.insert(services).values(data).returning();
+  return result[0];
+}
+
 
 export async function getServices(workspaceId: string, page: number = 1, pageSize: number = 10): Promise<{ data: Service[], total: number }> {
   if (!isValidUuid(workspaceId)) return { data: [], total: 0 };
@@ -25,6 +78,14 @@ export async function getServices(workspaceId: string, page: number = 1, pageSiz
   };
 }
 
+export async function getServicesByWorkflowId(workflowId: string, workspaceId: string): Promise<Service[]> {
+  if (!isValidUuid(workflowId) || !isValidUuid(workspaceId)) return [];
+  return db
+    .select()
+    .from(services)
+    .where(and(eq(services.workflowId, workflowId), eq(services.workspaceId, workspaceId)));
+}
+
 export async function getServiceById(serviceId: string, workspaceId: string): Promise<Service | null> {
   if (!isValidUuid(serviceId) || !isValidUuid(workspaceId)) return null;
 
@@ -36,10 +97,7 @@ export async function getServiceById(serviceId: string, workspaceId: string): Pr
   return result[0] ?? null;
 }
 
-export async function createService(data: NewService): Promise<Service> {
-  const result = await db.insert(services).values(data).returning();
-  return result[0];
-}
+
 
 export async function updateService(serviceId: string, workspaceId: string, data: Partial<NewService>): Promise<Service> {
   const result = await db

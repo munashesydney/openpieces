@@ -1,23 +1,25 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { Calendar, Clock, MoreHorizontal, Plus, Repeat, Timer, Play, Pause, Trash2, CheckCircle2 } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "../ui/card";
+import { Calendar, Clock, Plus, Repeat, Timer, Play, Pause, Trash2, CheckCircle2 } from "lucide-react";
+import { Card } from "../ui/card";
 import { Button } from "@/components/basic/buttons/button";
 import { Sheet } from "../ui/sheet";
 import { Input } from "@/components/basic/input/input";
-import { Dropdown } from "@/components/basic/input/dropdown";
 import { ActionMenu } from "@/components/basic/input/action-menu";
+import { Dropdown } from "@/components/basic/input/dropdown";
 import { Textarea } from "@/components/basic/input/textarea";
 import { createTaskAction, pauseTaskAction, resumeTaskAction, completeTaskAction, deleteTaskAction } from "@/app/workspace/[workspaceId]/personal/tasks/actions";
-import { type Task } from "@/lib/db/schema";
+import { type Task, type Workflow } from "@/lib/db/schema";
 
-export function TasksList({ 
-  initialTasks, 
-  workspaceId 
-}: { 
+export function TasksList({
+  initialTasks,
+  workspaceId,
+  workflows,
+}: {
   initialTasks: Task[];
   workspaceId: string;
+  workflows: Workflow[];
 }) {
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
@@ -25,6 +27,7 @@ export function TasksList({
   const [selectedWorkflow, setSelectedWorkflow] = useState("");
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
+  const [formError, setFormError] = useState<string | null>(null);
 
   const recurringTasks = initialTasks.filter((t) => t.type === "recurring");
   const upcomingTasks = initialTasks.filter((t) => t.type === "one-time" && t.status !== "completed");
@@ -33,26 +36,27 @@ export function TasksList({
   const handleCreateTask = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!title || !selectedWorkflow) return;
-    
+
+    setFormError(null);
     const formData = new FormData(e.currentTarget);
     formData.append("type", frequency === "one-time" ? "one-time" : "recurring");
     if (frequency !== "one-time") {
       formData.append("frequency", frequency);
     }
-    // Hardcode status to active
     formData.append("status", "active");
 
     startTransition(async () => {
-      try {
-        await createTaskAction(workspaceId, formData);
-        setIsSheetOpen(false);
-        setTitle("");
-        setDescription("");
-        setFrequency("one-time");
-        setSelectedWorkflow("");
-      } catch (err) {
-        console.error("Failed to create task", err);
+      const result = await createTaskAction(workspaceId, formData);
+      if ("error" in result) {
+        setFormError(result.error);
+        return;
       }
+      setIsSheetOpen(false);
+      setTitle("");
+      setDescription("");
+      setFrequency("one-time");
+      setSelectedWorkflow("");
+      setFormError(null);
     });
   };
 
@@ -95,7 +99,10 @@ export function TasksList({
         {/* New Task Sheet */}
         <Sheet
           isOpen={isSheetOpen}
-          onClose={() => setIsSheetOpen(false)}
+          onClose={() => {
+            setIsSheetOpen(false);
+            setFormError(null);
+          }}
           title="Create New Task"
           description="Schedule a new action or recurring workflow."
           footer={<></>} // Handled inside form
@@ -111,14 +118,12 @@ export function TasksList({
                 required
               />
               <Dropdown
-                label="Associated Workflow (Required)"
+                label="Workflow (Required)"
                 value={selectedWorkflow}
                 onChange={setSelectedWorkflow}
                 options={[
                   { label: "Select a workflow...", value: "" },
-                  { label: "Post-Purchase Automation", value: "workflow_123" },
-                  { label: "Lead Nurturing Sequence", value: "workflow_456" },
-                  { label: "Technical Support Router", value: "workflow_789" },
+                  ...workflows.map((w) => ({ label: w.title, value: w.id })),
                 ]}
               />
               <input type="hidden" name="workflowId" value={selectedWorkflow} />
@@ -141,7 +146,12 @@ export function TasksList({
                 ]}
               />
             </div>
-            <div className="mt-8 flex justify-end gap-3 border-t border-[var(--border)] pt-4">
+            {formError && (
+              <div className="rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-500">
+                {formError}
+              </div>
+            )}
+            <div className="mt-6 flex justify-end gap-3 border-t border-[var(--border)] pt-4">
               <Button type="button" variant="ghost" onClick={() => setIsSheetOpen(false)} disabled={isPending}>Cancel</Button>
               <Button type="submit" disabled={isPending || !title || !selectedWorkflow}>
                 {isPending ? "Creating..." : "Create Task"}

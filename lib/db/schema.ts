@@ -25,19 +25,33 @@ export const workspaces = pgTable("workspaces", {
 export type Workspace = typeof workspaces.$inferSelect;
 export type NewWorkspace = typeof workspaces.$inferInsert;
 
+export const workflows = pgTable("workflows", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  workspaceId: uuid("workspace_id")
+    .notNull()
+    .references(() => workspaces.id, { onDelete: "cascade" }),
+  title: text("title").notNull(),
+  description: text("description").notNull().default(""),
+  status: text("status", { enum: ["active", "draft", "archived"] }).notNull().default("draft"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export type Workflow = typeof workflows.$inferSelect;
+export type NewWorkflow = typeof workflows.$inferInsert;
+
 export const tasks = pgTable("tasks", {
   id: uuid("id").defaultRandom().primaryKey(),
   workspaceId: uuid("workspace_id")
     .notNull()
     .references(() => workspaces.id, { onDelete: "cascade" }),
-  // Using text for workflowId since workflows table doesn't exist yet, but it's required as per instructions.
-  workflowId: text("workflow_id").notNull(),
+  workflowId: uuid("workflow_id").references(() => workflows.id, { onDelete: "set null" }),
   title: text("title").notNull(),
   description: text("description").notNull().default(""),
   type: text("type", { enum: ["one-time", "recurring"] }).notNull().default("one-time"),
   status: text("status", { enum: ["active", "paused", "completed"] }).notNull().default("active"),
-  scheduledFor: text("scheduled_for"), // Optional formatted date string or timestamp string
-  frequency: text("frequency"), // e.g. "daily", "weekly", or a cron string
+  scheduledFor: text("scheduled_for"),
+  frequency: text("frequency"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
@@ -50,7 +64,7 @@ export const services = pgTable("services", {
   workspaceId: uuid("workspace_id")
     .notNull()
     .references(() => workspaces.id, { onDelete: "cascade" }),
-  workflowId: text("workflow_id"),
+  workflowId: uuid("workflow_id").references(() => workflows.id, { onDelete: "set null" }),
   title: text("title").notNull(),
   description: text("description").notNull().default(""),
   type: text("type", { enum: ["trigger", "action"] }).notNull(),

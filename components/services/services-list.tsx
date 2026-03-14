@@ -4,27 +4,29 @@ import { useState, useTransition } from "react";
 import Link from "next/link";
 import { Card } from "../ui/card";
 import { Button } from "@/components/basic/buttons/button";
-import { ChevronLeft, ChevronRight, Plus, Zap, Cpu, Terminal, MoreHorizontal, Trash2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, Plus, Zap, Terminal, Trash2 } from "lucide-react";
 import { Sheet } from "../ui/sheet";
 import { Input } from "@/components/basic/input/input";
 import { Textarea } from "@/components/basic/input/textarea";
 import { Dropdown } from "@/components/basic/input/dropdown";
 import { ActionMenu } from "@/components/basic/input/action-menu";
 import { createServiceAction, deleteServiceAction } from "@/app/workspace/[workspaceId]/personal/services/actions";
-import { type Service } from "@/lib/db/schema";
+import { type Service, type Workflow } from "@/lib/db/schema";
 
-export function ServicesList({ 
-  initialServices, 
+export function ServicesList({
+  initialServices,
   workspaceId,
   total,
   currentPage,
-  pageSize
-}: { 
+  pageSize,
+  workflows,
+}: {
   initialServices: Service[];
   workspaceId: string;
   total: number;
   currentPage: number;
   pageSize: number;
+  workflows: Workflow[];
 }) {
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
@@ -33,6 +35,7 @@ export function ServicesList({
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
+  const [formError, setFormError] = useState<string | null>(null);
 
   const filteredServices = initialServices.filter((s) => s.title.toLowerCase().includes(searchTerm.toLowerCase()));
   const triggers = filteredServices.filter((s) => s.type === "trigger");
@@ -41,24 +44,24 @@ export function ServicesList({
   const handleCreateService = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!title) return;
-    
-    // Workflow is required for triggers
     if (newServiceType === "trigger" && !selectedWorkflow) return;
 
+    setFormError(null);
     const formData = new FormData(e.currentTarget);
     formData.append("type", newServiceType);
 
     startTransition(async () => {
-      try {
-        await createServiceAction(workspaceId, formData);
-        setIsSheetOpen(false);
-        setTitle("");
-        setDescription("");
-        setNewServiceType("trigger");
-        setSelectedWorkflow("");
-      } catch (err) {
-        console.error("Failed to create service", err);
+      const result = await createServiceAction(workspaceId, formData);
+      if ("error" in result) {
+        setFormError(result.error);
+        return;
       }
+      setIsSheetOpen(false);
+      setTitle("");
+      setDescription("");
+      setNewServiceType("trigger");
+      setSelectedWorkflow("");
+      setFormError(null);
     });
   };
 
@@ -80,7 +83,10 @@ export function ServicesList({
         {/* New Service Sheet */}
         <Sheet
           isOpen={isSheetOpen}
-          onClose={() => setIsSheetOpen(false)}
+          onClose={() => {
+            setIsSheetOpen(false);
+            setFormError(null);
+          }}
           title="Create New Service"
           description="Define a new trigger or action for your workspace."
           footer={<></>} // Handled inside form
@@ -105,18 +111,16 @@ export function ServicesList({
                 ]}
               />
               <Dropdown
-                label={newServiceType === "trigger" ? "Associated Workflow (Required)" : "Associated Workflow (Optional)"}
+                label={newServiceType === "trigger" ? "Workflow (Required)" : "Workflow (Optional)"}
                 value={selectedWorkflow}
                 onChange={setSelectedWorkflow}
                 options={[
                   { label: "Select a workflow...", value: "" },
-                  { label: "Post-Purchase Automation", value: "workflow_123" },
-                  { label: "Lead Nurturing Sequence", value: "workflow_456" },
-                  { label: "Technical Support Router", value: "workflow_789" },
+                  ...workflows.map((w) => ({ label: w.title, value: w.id })),
                 ]}
               />
               <input type="hidden" name="workflowId" value={selectedWorkflow} />
-              <Textarea
+               <Textarea
                 name="description"
                 label="Description"
                 placeholder="What should this service do?"
@@ -125,7 +129,12 @@ export function ServicesList({
               />
             </div>
             
-            <div className="mt-8 flex justify-end gap-3 border-t border-[var(--border)] pt-4">
+            {formError && (
+              <div className="rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-500">
+                {formError}
+              </div>
+            )}
+            <div className="mt-6 flex justify-end gap-3 border-t border-[var(--border)] pt-4">
               <Button type="button" variant="ghost" onClick={() => setIsSheetOpen(false)} disabled={isPending}>Cancel</Button>
               <Button type="submit" disabled={isPending || !title || (newServiceType === "trigger" && !selectedWorkflow)}>
                 {isPending ? "Creating..." : "Create Service"}
