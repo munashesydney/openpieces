@@ -2,18 +2,24 @@
 
 import { useEffect, useRef } from "react";
 import { ChatMessageCard } from "./chat-message-card";
+import type { AiToolCall, AiToolResult } from "@/lib/ai-chat/types";
 
 export type ChatMessage = {
   id: string;
   content: string;
   role: "user" | "assistant";
+  status: "pending" | "streaming" | "complete" | "error";
+  toolCalls: AiToolCall[];
+  toolResults: AiToolResult[];
 };
 
 type OverviewChatAreaProps = {
   messages: ChatMessage[];
+  status?: string | null;
+  error?: string | null;
 };
 
-export function OverviewChatArea({ messages }: OverviewChatAreaProps) {
+export function OverviewChatArea({ messages, status, error }: OverviewChatAreaProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -41,9 +47,18 @@ export function OverviewChatArea({ messages }: OverviewChatAreaProps) {
               key={msg.id}
               className="animate-[messageIn_0.3s_ease-out_both]"
             >
-              <ChatMessageCard content={msg.content} role={msg.role} />
+              <ChatMessageCard
+                content={msg.content}
+                role={msg.role}
+                status={msg.status}
+                toolCalls={msg.toolCalls}
+                toolResults={msg.toolResults}
+              />
             </div>
           ))}
+          {status === "failed" && error ? (
+            <p className="text-sm text-red-500">{error}</p>
+          ) : null}
         </div>
       )}
     </div>

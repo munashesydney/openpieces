@@ -43,6 +43,13 @@
       "when": 1773447226388,
       "tag": "0005_tidy_the_professor",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1773529862955,
+      "tag": "0006_safe_gateway",
+      "breakpoints": true
     }
   ]
 }

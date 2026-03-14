@@ -9,16 +9,22 @@ import { Button } from "@/components/basic/buttons/button";
 
 type OverviewComposerProps = {
   onSend?: (value: string) => void;
+  disabled?: boolean;
+  isSending?: boolean;
 };
 
-export function OverviewComposer({ onSend }: OverviewComposerProps) {
+export function OverviewComposer({
+  onSend,
+  disabled = false,
+  isSending = false,
+}: OverviewComposerProps) {
   const [mode, setMode] = useState<ComposerMode>("agent");
   const [value, setValue] = useState("");
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const handleSend = () => {
     const trimmed = value.trim();
-    if (!trimmed || !onSend) return;
+    if (!trimmed || !onSend || disabled || isSending) return;
     onSend(trimmed);
     setValue("");
   };
@@ -66,6 +72,7 @@ export function OverviewComposer({ onSend }: OverviewComposerProps) {
                   value={value}
                   onChange={(e) => setValue(e.target.value)}
                   onKeyDown={handleKeyDown}
+                  disabled={disabled || isSending}
                   placeholder={
                     mode === "agent"
                       ? "What shall we automate today?"
@@ -120,6 +127,8 @@ export function OverviewComposer({ onSend }: OverviewComposerProps) {
                 size="icon"
                 aria-label="Send"
                 onClick={handleSend}
+                isLoading={isSending}
+                disabled={disabled}
               >
                 <Send className="h-4 w-4" />
               </Button>

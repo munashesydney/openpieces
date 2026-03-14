@@ -40,6 +40,26 @@ services:
         max-size: "10m"
         max-file: "3"
 
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: development
+    volumes:
+      - .:/app
+      - /app/node_modules
+      - /app/.next
+    command: sh -c "node_modules/.bin/tsx lib/db/migrate.ts && node_modules/.bin/tsx scripts/ai-worker.ts"
+    environment:
+      - WATCHPACK_POLLING=true
+    env_file:
+      - .env
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
   db:
     # Only started when COMPOSE_PROFILES includes "with-db".
     # If you have your own hosted Postgres, remove "with-db" from

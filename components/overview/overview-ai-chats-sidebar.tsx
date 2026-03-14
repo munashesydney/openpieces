@@ -2,10 +2,12 @@
 
 import { PanelLeftClose, Plus } from "lucide-react";
 import { Button } from "@/components/basic/buttons/button";
+import type { AiChatStatus } from "@/lib/ai-chat/types";
 
 export type SidebarChat = {
   id: string;
   title: string;
+  status: AiChatStatus;
 };
 
 type OverviewAiChatsSidebarProps = {
@@ -63,7 +65,12 @@ export function OverviewAiChatsSidebar({
                     : "text-[var(--muted)]"
                 }`}
               >
-                <span className="line-clamp-2">{chat.title}</span>
+                <div className="flex items-start justify-between gap-2">
+                  <span className="line-clamp-2">{chat.title}</span>
+                  {chat.status === "pending" || chat.status === "processing" ? (
+                    <span className="mt-1 h-2 w-2 shrink-0 rounded-full bg-[var(--accent)]" />
+                  ) : null}
+                </div>
               </button>
             </li>
           ))}

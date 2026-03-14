@@ -1,4 +1,5 @@
-import { pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
+import { index, jsonb, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
 
 export const users = pgTable("users", {
   id: uuid("id").defaultRandom().primaryKey(),
@@ -89,3 +90,62 @@ export const serviceEndpoints = pgTable("service_endpoints", {
 
 export type ServiceEndpoint = typeof serviceEndpoints.$inferSelect;
 export type NewServiceEndpoint = typeof serviceEndpoints.$inferInsert;
+
+export const aiChats = pgTable(
+  "ai_chats",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    workspaceId: uuid("workspace_id")
+      .notNull()
+      .references(() => workspaces.id, { onDelete: "cascade" }),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    title: text("title").notNull().default("New chat"),
+    status: text("status", {
+      enum: ["idle", "pending", "processing", "completed", "failed"],
+    })
+      .notNull()
+      .default("idle"),
+    error: text("error"),
+    model: text("model"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (table) => [
+    index("ai_chats_workspace_id_idx").on(table.workspaceId),
+    index("ai_chats_user_id_idx").on(table.userId),
+    index("ai_chats_updated_at_idx").on(table.updatedAt),
+  ]
+);
+
+export type AiChat = typeof aiChats.$inferSelect;
+export type NewAiChat = typeof aiChats.$inferInsert;
+
+export const aiMessages = pgTable(
+  "ai_messages",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    chatId: uuid("chat_id")
+      .notNull()
+      .references(() => aiChats.id, { onDelete: "cascade" }),
+    role: text("role", { enum: ["user", "assistant"] }).notNull(),
+    status: text("status", {
+      enum: ["pending", "streaming", "complete", "error"],
+    })
+      .notNull()
+      .default("complete"),
+    content: text("content").notNull().default(""),
+    toolCalls: jsonb("tool_calls").notNull().default(sql`'[]'::jsonb`),
+    toolResults: jsonb("tool_results").notNull().default(sql`'[]'::jsonb`),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (table) => [
+    index("ai_messages_chat_id_idx").on(table.chatId),
+    index("ai_messages_chat_id_created_at_idx").on(table.chatId, table.createdAt),
+  ]
+);
+
+export type AiMessage = typeof aiMessages.$inferSelect;
+export type NewAiMessage = typeof aiMessages.$inferInsert;

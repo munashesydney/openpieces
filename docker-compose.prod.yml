@@ -41,6 +41,23 @@ services:
         max-size: "20m"
         max-file: "5"
 
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: worker
+    env_file:
+      - .env
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    restart: unless-stopped
+    logging:
+      driver: json-file
+      options:
+        max-size: "20m"
+        max-file: "5"
+
   db:
     # Only started when COMPOSE_PROFILES includes "with-db".
     # If you have your own hosted Postgres, skip this and set DATABASE_URL
