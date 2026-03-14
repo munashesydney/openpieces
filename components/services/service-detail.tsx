@@ -1,33 +1,63 @@
 "use client";
 
-import { ChevronLeft, Activity, Code, Clock, ShieldCheck, Zap } from "lucide-react";
+import { useState, useTransition } from "react";
+import { ChevronLeft, Activity, Code, Clock, ShieldCheck, Zap, Plus, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "../ui/card";
 import { Button } from "@/components/basic/buttons/button";
-
-interface Endpoint {
-  method: "GET" | "POST" | "PUT" | "DELETE" | "PATCH";
-  path: string;
-  description: string;
-}
+import { Sheet } from "../ui/sheet";
+import { Input } from "@/components/basic/input/input";
+import { Textarea } from "@/components/basic/input/textarea";
+import { Dropdown } from "@/components/basic/input/dropdown";
+import { ActionMenu } from "@/components/basic/input/action-menu";
+import { type Service, type ServiceEndpoint } from "@/lib/db/schema";
+import { createEndpointAction, deleteEndpointAction } from "@/app/workspace/[workspaceId]/personal/services/[serviceId]/actions";
 
 interface ServiceDetailProps {
-  id: string;
+  service: Service;
+  endpoints: ServiceEndpoint[];
   workspaceId: string;
 }
 
-const MOCK_ENDPOINTS: Endpoint[] = [
-  { method: "GET", path: "/v1/status", description: "Get the current availability of the cluster." },
-  { method: "POST", path: "/v1/compute", description: "Submit a new training job to the GPU cluster." },
-  { method: "GET", path: "/v1/jobs/:id", description: "Retrieve detailed metrics for a specific job." },
-  { method: "DELETE", path: "/v1/jobs/:id", description: "Terminate a running compute session." },
-];
-
-export function ServiceDetail({ id, workspaceId }: ServiceDetailProps) {
+export function ServiceDetail({ service, endpoints, workspaceId }: ServiceDetailProps) {
   const router = useRouter();
-  // Mock data normalized from the ID
-  const title = id ? id.replace(/-/g, " ").replace(/\b\w/g, (l) => l.toUpperCase()) : "Service";
+  const [isPending, startTransition] = useTransition();
+  const [isSheetOpen, setIsSheetOpen] = useState(false);
+  
+  const [method, setMethod] = useState("GET");
+  const [path, setPath] = useState("");
+  const [description, setDescription] = useState("");
+
+  const handleCreateEndpoint = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (!path) return;
+
+    const formData = new FormData(e.currentTarget);
+    formData.append("method", method);
+
+    startTransition(async () => {
+      try {
+        await createEndpointAction(workspaceId, service.id, formData);
+        setIsSheetOpen(false);
+        setMethod("GET");
+        setPath("");
+        setDescription("");
+      } catch (err) {
+        console.error("Failed to create endpoint", err);
+      }
+    });
+  };
+
+  const handleDeleteEndpoint = (endpointId: string) => {
+    startTransition(async () => {
+      try {
+        await deleteEndpointAction(workspaceId, service.id, endpointId);
+      } catch (err) {
+        console.error("Failed to delete endpoint", err);
+      }
+    });
+  };
 
   return (
     <div className="flex w-full justify-center px-6 pb-20 pt-10 font-Inter">
@@ -45,10 +75,10 @@ export function ServiceDetail({ id, workspaceId }: ServiceDetailProps) {
           <div className="flex items-start justify-between">
             <div className="space-y-1">
               <h1 className="text-2xl font-semibold text-[var(--foreground)]">
-                {title}
+                {service.title}
               </h1>
               <p className="text-sm text-[var(--muted)]">
-                Service Details & API Reference
+                {service.description || "Service Details & API Reference"}
               </p>
             </div>
           </div>
@@ -98,34 +128,107 @@ export function ServiceDetail({ id, workspaceId }: ServiceDetailProps) {
 
         {/* Endpoints Section */}
         <Card>
-          <CardHeader>
-            <div className="flex items-center gap-2">
-              <Code className="h-5 w-5 text-[var(--muted)]" />
-              <CardTitle>API Endpoints</CardTitle>
+          <CardHeader className="flex flex-row items-center justify-between">
+            <div className="space-y-1.5">
+              <div className="flex items-center gap-2">
+                <Code className="h-5 w-5 text-[var(--muted)]" />
+                <CardTitle>API Endpoints</CardTitle>
+              </div>
+              <CardDescription>Available routes and methods for this service.</CardDescription>
             </div>
-            <CardDescription>Available routes and methods for this service.</CardDescription>
+            <Button size="sm" onClick={() => setIsSheetOpen(true)}>
+              <Plus className="h-4 w-4 mr-2" />
+              Add Endpoint
+            </Button>
           </CardHeader>
           <CardContent>
             <div className="divide-y divide-[var(--border)]">
-              {MOCK_ENDPOINTS.map((endpoint, i) => (
-                <div key={i} className="group flex flex-col gap-2 py-6 first:pt-0 last:pb-0">
-                  <div className="flex items-center gap-3">
-                    <span className={`rounded-md border px-2 py-0.5 text-[9px] font-bold tracking-wider ${
-                      endpoint.method === 'GET' ? 'border-emerald-500/20 text-emerald-500' :
-                      endpoint.method === 'POST' ? 'border-blue-500/20 text-blue-500' :
-                      endpoint.method === 'DELETE' ? 'border-red-500/20 text-red-500' : 
-                      'border-amber-500/20 text-amber-500'
-                    }`}>
-                      {endpoint.method}
-                    </span>
-                    <code className="text-sm font-mono text-[var(--foreground)] opacity-80">{endpoint.path}</code>
+              {endpoints.map((endpoint, i) => (
+                <div key={endpoint.id} className={`group flex items-start justify-between gap-4 py-6 first:pt-0 last:pb-0 ${isPending ? "opacity-50" : ""}`}>
+                  <div className="flex flex-col gap-2">
+                    <div className="flex items-center gap-3">
+                      <span className={`rounded-md border px-2 py-0.5 text-[9px] font-bold tracking-wider ${
+                        endpoint.method === 'GET' ? 'border-emerald-500/20 text-emerald-500' :
+                        endpoint.method === 'POST' ? 'border-blue-500/20 text-blue-500' :
+                        endpoint.method === 'DELETE' ? 'border-red-500/20 text-red-500' : 
+                        'border-amber-500/20 text-amber-500'
+                      }`}>
+                        {endpoint.method}
+                      </span>
+                      <code className="text-sm font-mono text-[var(--foreground)] opacity-80">{endpoint.path}</code>
+                    </div>
+                    {endpoint.description && <p className="text-sm text-[var(--muted)]">{endpoint.description}</p>}
                   </div>
-                  <p className="text-sm text-[var(--muted)]">{endpoint.description}</p>
+                  <div className="shrink-0">
+                     <ActionMenu
+                        onSelect={(val) => {
+                          if (val === "delete") {
+                            handleDeleteEndpoint(endpoint.id);
+                          }
+                        }}
+                        options={[
+                          { label: "Delete", value: "delete", icon: <Trash2 className="h-4 w-4" />, destructive: true },
+                        ]}
+                      />
+                  </div>
                 </div>
               ))}
+              {endpoints.length === 0 && (
+                <div className="rounded-xl border border-dashed border-[var(--border)] p-8 text-center text-sm text-[var(--muted)]">
+                  No endpoints defined yet.
+                </div>
+              )}
             </div>
           </CardContent>
         </Card>
+
+        {/* New Endpoint Sheet */}
+        <Sheet
+          isOpen={isSheetOpen}
+          onClose={() => setIsSheetOpen(false)}
+          title="Create New Endpoint"
+          description="Define a new API route mapping for this service."
+          footer={<></>} // Handled inside form
+        >
+          <form className="space-y-6" onSubmit={handleCreateEndpoint}>
+            <div className="space-y-6">
+              <Dropdown
+                label="HTTP Method"
+                value={method}
+                onChange={setMethod}
+                options={[
+                  { label: "GET", value: "GET" },
+                  { label: "POST", value: "POST" },
+                  { label: "PUT", value: "PUT" },
+                  { label: "PATCH", value: "PATCH" },
+                  { label: "DELETE", value: "DELETE" },
+                ]}
+              />
+              <Input
+                name="path"
+                label="Endpoint Path"
+                placeholder="e.g. /v1/users/:id"
+                value={path}
+                onChange={(e) => setPath(e.target.value)}
+                required
+              />
+              <Textarea
+                name="description"
+                label="Description"
+                placeholder="Describe what this endpoint does."
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+              />
+            </div>
+            
+            <div className="mt-8 flex justify-end gap-3 border-t border-[var(--border)] pt-4">
+              <Button type="button" variant="ghost" onClick={() => setIsSheetOpen(false)} disabled={isPending}>Cancel</Button>
+              <Button type="submit" disabled={isPending || !path}>
+                {isPending ? "Creating..." : "Create Endpoint"}
+              </Button>
+            </div>
+          </form>
+        </Sheet>
 
         {/* Security / Compliance Card */}
         <Card>

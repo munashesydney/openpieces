@@ -1,66 +1,81 @@
 "use client";
 
-import { useState } from "react";
-import { Calendar, Clock, MoreHorizontal, Plus, Repeat, Timer } from "lucide-react";
+import { useState, useTransition } from "react";
+import { Calendar, Clock, MoreHorizontal, Plus, Repeat, Timer, Play, Pause, Trash2, CheckCircle2 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "../ui/card";
 import { Button } from "@/components/basic/buttons/button";
 import { Sheet } from "../ui/sheet";
 import { Input } from "@/components/basic/input/input";
 import { Dropdown } from "@/components/basic/input/dropdown";
+import { ActionMenu } from "@/components/basic/input/action-menu";
 import { Textarea } from "@/components/basic/input/textarea";
+import { createTaskAction, pauseTaskAction, resumeTaskAction, completeTaskAction, deleteTaskAction } from "@/app/workspace/[workspaceId]/personal/tasks/actions";
+import { type Task } from "@/lib/db/schema";
 
-interface Task {
-  id: string;
-  title: string;
-  description: string;
-  type: "one-time" | "recurring";
-  status: "active" | "paused" | "completed";
-  scheduledFor?: string;
-  frequency?: string;
-}
-
-const MOCK_TASKS: Task[] = [
-  {
-    id: "1",
-    title: "Quarterly Audit",
-    description: "Generate and send the compliance report to the security team.",
-    type: "recurring",
-    status: "active",
-    frequency: "Every 3 months",
-  },
-  {
-    id: "2",
-    title: "Database Migration",
-    description: "Migrate legacy user data to the new distributed cluster.",
-    type: "one-time",
-    status: "active",
-    scheduledFor: "Oct 24, 2026 • 10:00 PM",
-  },
-  {
-    id: "3",
-    title: "Daily Backup",
-    description: "Full snapshot of all production databases and assets.",
-    type: "recurring",
-    status: "active",
-    frequency: "Daily at 2:00 AM",
-  },
-  {
-    id: "4",
-    title: "System Maintenance",
-    description: "Scheduled downtime for infrastructure upgrades.",
-    type: "one-time",
-    status: "completed",
-    scheduledFor: "Aug 12, 2025",
-  },
-];
-
-export function TasksList() {
+export function TasksList({ 
+  initialTasks, 
+  workspaceId 
+}: { 
+  initialTasks: Task[];
+  workspaceId: string;
+}) {
   const [isSheetOpen, setIsSheetOpen] = useState(false);
+  const [isPending, startTransition] = useTransition();
   const [frequency, setFrequency] = useState("one-time");
   const [selectedWorkflow, setSelectedWorkflow] = useState("");
-  const recurringTasks = MOCK_TASKS.filter((t) => t.type === "recurring");
-  const upcomingTasks = MOCK_TASKS.filter((t) => t.type === "one-time" && t.status !== "completed");
-  const completedTasks = MOCK_TASKS.filter((t) => t.status === "completed");
+  const [title, setTitle] = useState("");
+  const [description, setDescription] = useState("");
+
+  const recurringTasks = initialTasks.filter((t) => t.type === "recurring");
+  const upcomingTasks = initialTasks.filter((t) => t.type === "one-time" && t.status !== "completed");
+  const completedTasks = initialTasks.filter((t) => t.status === "completed");
+
+  const handleCreateTask = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (!title || !selectedWorkflow) return;
+    
+    const formData = new FormData(e.currentTarget);
+    formData.append("type", frequency === "one-time" ? "one-time" : "recurring");
+    if (frequency !== "one-time") {
+      formData.append("frequency", frequency);
+    }
+    // Hardcode status to active
+    formData.append("status", "active");
+
+    startTransition(async () => {
+      try {
+        await createTaskAction(workspaceId, formData);
+        setIsSheetOpen(false);
+        setTitle("");
+        setDescription("");
+        setFrequency("one-time");
+        setSelectedWorkflow("");
+      } catch (err) {
+        console.error("Failed to create task", err);
+      }
+    });
+  };
+
+  const StatusAction = ({ task }: { task: Task }) => {
+    return (
+      <ActionMenu
+        onSelect={(val) => {
+          startTransition(async () => {
+            if (val === "pause") await pauseTaskAction(workspaceId, task.id);
+            if (val === "resume") await resumeTaskAction(workspaceId, task.id);
+            if (val === "complete") await completeTaskAction(workspaceId, task.id);
+            if (val === "delete") await deleteTaskAction(workspaceId, task.id);
+          });
+        }}
+        options={[
+          ...(task.status === "active" ? [{ label: "Pause", value: "pause", icon: <Pause className="h-4 w-4" /> }] : []),
+          ...(task.status === "paused" ? [{ label: "Resume", value: "resume", icon: <Play className="h-4 w-4" /> }] : []),
+          ...(task.status !== "completed" ? [{ label: "Mark Completed", value: "complete", icon: <CheckCircle2 className="h-4 w-4" /> }] : []),
+          { label: "Delete", value: "delete", icon: <Trash2 className="h-4 w-4" />, destructive: true },
+        ]}
+      />
+    );
+  };
 
   return (
     <div className="flex w-full justify-center px-6 pb-20 pt-10">
@@ -83,45 +98,56 @@ export function TasksList() {
           onClose={() => setIsSheetOpen(false)}
           title="Create New Task"
           description="Schedule a new action or recurring workflow."
-          footer={
-            <div className="flex justify-end gap-3">
-              <Button variant="ghost" onClick={() => setIsSheetOpen(false)}>Cancel</Button>
-              <Button onClick={() => setIsSheetOpen(false)}>Create Task</Button>
-            </div>
-          }
+          footer={<></>} // Handled inside form
         >
-          <div className="space-y-6">
-            <Input
-              label="Task Title"
-              placeholder="e.g. Weekly Sync"
-            />
-            <Dropdown
-              label="Associated Workflow (Required)"
-              value={selectedWorkflow}
-              onChange={setSelectedWorkflow}
-              options={[
-                { label: "Select a workflow...", value: "" },
-                { label: "Post-Purchase Automation", value: "1" },
-                { label: "Lead Nurturing Sequence", value: "2" },
-                { label: "Technical Support Router", value: "3" },
-              ]}
-            />
-            <Textarea
-              label="Description"
-              placeholder="What should this task do?"
-            />
-            <Dropdown
-              label="Frequency"
-              value={frequency}
-              onChange={setFrequency}
-              options={[
-                { label: "One-time", value: "one-time" },
-                { label: "Daily", value: "daily" },
-                { label: "Weekly", value: "weekly" },
-                { label: "Monthly", value: "monthly" },
-              ]}
-            />
-          </div>
+          <form className="space-y-6" onSubmit={handleCreateTask}>
+            <div className="space-y-6">
+              <Input
+                name="title"
+                label="Task Title"
+                placeholder="e.g. Weekly Sync"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                required
+              />
+              <Dropdown
+                label="Associated Workflow (Required)"
+                value={selectedWorkflow}
+                onChange={setSelectedWorkflow}
+                options={[
+                  { label: "Select a workflow...", value: "" },
+                  { label: "Post-Purchase Automation", value: "workflow_123" },
+                  { label: "Lead Nurturing Sequence", value: "workflow_456" },
+                  { label: "Technical Support Router", value: "workflow_789" },
+                ]}
+              />
+              <input type="hidden" name="workflowId" value={selectedWorkflow} />
+              <Textarea
+                name="description"
+                label="Description"
+                placeholder="What should this task do?"
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+              />
+              <Dropdown
+                label="Frequency"
+                value={frequency}
+                onChange={setFrequency}
+                options={[
+                  { label: "One-time", value: "one-time" },
+                  { label: "Daily", value: "daily" },
+                  { label: "Weekly", value: "weekly" },
+                  { label: "Monthly", value: "monthly" },
+                ]}
+              />
+            </div>
+            <div className="mt-8 flex justify-end gap-3 border-t border-[var(--border)] pt-4">
+              <Button type="button" variant="ghost" onClick={() => setIsSheetOpen(false)} disabled={isPending}>Cancel</Button>
+              <Button type="submit" disabled={isPending || !title || !selectedWorkflow}>
+                {isPending ? "Creating..." : "Create Task"}
+              </Button>
+            </div>
+          </form>
         </Sheet>
 
         {/* Recurring Tasks */}
@@ -144,19 +170,26 @@ export function TasksList() {
                       <div className="mt-3 flex items-center gap-3">
                         <div className="flex items-center gap-1.5 text-[10px] font-bold uppercase text-[var(--accent)]">
                           <Timer className="h-3 w-3" />
-                          {task.frequency}
+                          {task.frequency || "Recurring"}
                         </div>
                         <div className="h-1 w-1 rounded-full bg-[var(--border)]" />
-                        <span className="text-[10px] font-bold uppercase text-emerald-500">Active</span>
+                        <span className={`text-[10px] font-bold uppercase ${task.status === "active" ? "text-emerald-500" : "text-amber-500"}`}>
+                          {task.status}
+                        </span>
                       </div>
                     </div>
                   </div>
-                  <Button variant="ghost" size="icon">
-                    <MoreHorizontal className="h-5 w-5" />
-                  </Button>
+                  <div className="shrink-0">
+                    <StatusAction task={task} />
+                  </div>
                 </div>
               </Card>
             ))}
+            {recurringTasks.length === 0 && (
+              <div className="rounded-xl border border-dashed border-[var(--border)] p-8 text-center text-sm text-[var(--muted)]">
+                No recurring tasks found.
+              </div>
+            )}
           </div>
         </section>
 
@@ -179,17 +212,30 @@ export function TasksList() {
                       <p className="mt-1 text-sm text-[var(--muted)]">{task.description}</p>
                       <div className="mt-3 flex items-center gap-3 text-[10px] font-bold uppercase text-[var(--muted)]">
                          <span>One-time</span>
+                         {task.scheduledFor && (
+                           <>
+                             <div className="h-1 w-1 rounded-full bg-[var(--border)]" />
+                             <span>{task.scheduledFor}</span>
+                           </>
+                         )}
                          <div className="h-1 w-1 rounded-full bg-[var(--border)]" />
-                         <span>{task.scheduledFor}</span>
+                         <span className={task.status === "active" ? "text-emerald-500 text-[10px] font-bold uppercase" : "text-amber-500 text-[10px] font-bold uppercase"}>
+                           {task.status}
+                         </span>
                       </div>
                     </div>
                   </div>
-                  <Button variant="ghost" size="icon">
-                    <MoreHorizontal className="h-5 w-5" />
-                  </Button>
+                  <div className="shrink-0">
+                    <StatusAction task={task} />
+                  </div>
                 </div>
               </Card>
             ))}
+            {upcomingTasks.length === 0 && (
+              <div className="rounded-xl border border-dashed border-[var(--border)] p-8 text-center text-sm text-[var(--muted)]">
+                No upcoming tasks found.
+              </div>
+            )}
           </div>
         </section>
 
@@ -204,7 +250,12 @@ export function TasksList() {
                     <div className="h-2 w-2 rounded-full bg-emerald-500" />
                     <span className="text-sm font-medium text-[var(--foreground)]">{task.title}</span>
                   </div>
-                  <span className="text-[10px] font-bold uppercase text-[var(--muted)]">{task.scheduledFor}</span>
+                  <div className="flex items-center gap-3">
+                    {task.scheduledFor && <span className="text-[10px] font-bold uppercase text-[var(--muted)]">{task.scheduledFor}</span>}
+                    <div className="shrink-0">
+                      <StatusAction task={task} />
+                    </div>
+                  </div>
                 </div>
               ))}
             </div>

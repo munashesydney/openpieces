@@ -62,7 +62,7 @@ export function Dropdown({
             isOpen ? "border-[var(--accent)] ring-1 ring-[var(--accent)]" : ""
           }`}
         >
-          <span className={selectedOption ? "text-[var(--foreground)]" : "text-[var(--muted)]"}>
+          <span className={`whitespace-nowrap truncate ${selectedOption ? "text-[var(--foreground)]" : "text-[var(--muted)]"}`}>
             {selectedOption ? selectedOption.label : placeholder}
           </span>
           <ChevronDown
@@ -73,7 +73,7 @@ export function Dropdown({
         </button>
 
         {isOpen && (
-          <div className="absolute z-50 mt-2 w-full overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--background)] shadow-xl animate-in fade-in zoom-in-95 duration-150">
+          <div className="absolute z-50 mt-2 min-w-full w-max max-w-[250px] overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--background)] shadow-xl animate-in fade-in zoom-in-95 duration-150 right-0">
             <div className="max-h-60 overflow-y-auto p-1.5">
               {options.map((option) => (
                 <button
@@ -84,8 +84,8 @@ export function Dropdown({
                     option.value === value ? "bg-[var(--hover-bg)] text-[var(--accent)]" : "text-[var(--foreground)]"
                   }`}
                 >
-                  <span>{option.label}</span>
-                  {option.value === value && <Check className="h-4 w-4" />}
+                  <span className="whitespace-nowrap">{option.label}</span>
+                  {option.value === value && <Check className="h-4 w-4 shrink-0 ml-4" />}
                 </button>
               ))}
             </div>

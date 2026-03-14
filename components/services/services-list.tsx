@@ -1,72 +1,66 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useTransition } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
 import { Card } from "../ui/card";
 import { Button } from "@/components/basic/buttons/button";
-import { ChevronLeft, ChevronRight, Plus, Zap, Cpu, Terminal, MoreHorizontal } from "lucide-react";
+import { ChevronLeft, ChevronRight, Plus, Zap, Cpu, Terminal, MoreHorizontal, Trash2 } from "lucide-react";
 import { Sheet } from "../ui/sheet";
 import { Input } from "@/components/basic/input/input";
 import { Textarea } from "@/components/basic/input/textarea";
 import { Dropdown } from "@/components/basic/input/dropdown";
+import { ActionMenu } from "@/components/basic/input/action-menu";
+import { createServiceAction, deleteServiceAction } from "@/app/workspace/[workspaceId]/personal/services/actions";
+import { type Service } from "@/lib/db/schema";
 
-interface Service {
-  id: string;
-  title: string;
-  description: string;
-  type: "trigger" | "action";
-}
-
-const services: Service[] = [
-  {
-    id: "1",
-    title: "Stripe Webhook",
-    description: "Listen for successful payments to trigger accounting workflows.",
-    type: "trigger",
-  },
-  {
-    id: "2",
-    title: "Zoho Contact Creator",
-    description: "Automatically create new contacts in Zoho CRM from integrated leads.",
-    type: "action",
-  },
-  {
-    id: "3",
-    title: "Telegram Message",
-    description: "Trigger on new incoming messages to specific bot channels.",
-    type: "trigger",
-  },
-  {
-    id: "4",
-    title: "Notion Page Creator",
-    description: "Generate new database entries or pages in Notion workspaces.",
-    type: "action",
-  },
-  {
-    id: "5",
-    title: "GitHub Webhook",
-    description: "Trigger on repository events like pushes, PRs, or new issues.",
-    type: "trigger",
-  },
-  {
-    id: "6",
-    title: "Slack Notification",
-    description: "Post automated updates or rich messages to designated channels.",
-    type: "action",
-  },
-];
-
-export function ServicesList() {
+export function ServicesList({ 
+  initialServices, 
+  workspaceId,
+  total,
+  currentPage,
+  pageSize
+}: { 
+  initialServices: Service[];
+  workspaceId: string;
+  total: number;
+  currentPage: number;
+  pageSize: number;
+}) {
   const [isSheetOpen, setIsSheetOpen] = useState(false);
+  const [isPending, startTransition] = useTransition();
   const [newServiceType, setNewServiceType] = useState("trigger");
   const [selectedWorkflow, setSelectedWorkflow] = useState("");
-  const pathname = usePathname();
-  const segments = pathname.split("/").filter(Boolean);
-  const workspaceId = segments[1];
+  const [title, setTitle] = useState("");
+  const [description, setDescription] = useState("");
+  const [searchTerm, setSearchTerm] = useState("");
 
-  const triggers = services.filter((s) => s.type === "trigger");
-  const actions = services.filter((s) => s.type === "action");
+  const filteredServices = initialServices.filter((s) => s.title.toLowerCase().includes(searchTerm.toLowerCase()));
+  const triggers = filteredServices.filter((s) => s.type === "trigger");
+  const actions = filteredServices.filter((s) => s.type === "action");
+
+  const handleCreateService = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (!title) return;
+    
+    // Workflow is required for triggers
+    if (newServiceType === "trigger" && !selectedWorkflow) return;
+
+    const formData = new FormData(e.currentTarget);
+    formData.append("type", newServiceType);
+
+    startTransition(async () => {
+      try {
+        await createServiceAction(workspaceId, formData);
+        setIsSheetOpen(false);
+        setTitle("");
+        setDescription("");
+        setNewServiceType("trigger");
+        setSelectedWorkflow("");
+      } catch (err) {
+        console.error("Failed to create service", err);
+      }
+    });
+  };
 
   return (
     <div className="flex w-full justify-center px-6 pb-20 pt-10">
@@ -89,43 +83,55 @@ export function ServicesList() {
           onClose={() => setIsSheetOpen(false)}
           title="Create New Service"
           description="Define a new trigger or action for your workspace."
-          footer={
-            <div className="flex justify-end gap-3">
-              <Button variant="ghost" onClick={() => setIsSheetOpen(false)}>Cancel</Button>
-              <Button onClick={() => setIsSheetOpen(false)}>Create Service</Button>
-            </div>
-          }
+          footer={<></>} // Handled inside form
         >
-          <div className="space-y-6">
-            <Input
-              label="Service Title"
-              placeholder="e.g. Stripe Webhook"
-            />
-            <Dropdown
-              label="Service Type"
-              value={newServiceType}
-              onChange={setNewServiceType}
-              options={[
-                { label: "Trigger (Event Source)", value: "trigger" },
-                { label: "Action (Endpoint)", value: "action" },
-              ]}
-            />
-            <Dropdown
-              label={newServiceType === "trigger" ? "Associated Workflow (Required)" : "Associated Workflow (Optional)"}
-              value={selectedWorkflow}
-              onChange={setSelectedWorkflow}
-              options={[
-                { label: "Select a workflow...", value: "" },
-                { label: "Post-Purchase Automation", value: "1" },
-                { label: "Lead Nurturing Sequence", value: "2" },
-                { label: "Technical Support Router", value: "3" },
-              ]}
-            />
-            <Textarea
-              label="Description"
-              placeholder="What should this service do?"
-            />
-          </div>
+          <form className="space-y-6" onSubmit={handleCreateService}>
+            <div className="space-y-6">
+              <Input
+                name="title"
+                label="Service Title"
+                placeholder="e.g. Stripe Webhook"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                required
+              />
+              <Dropdown
+                label="Service Type"
+                value={newServiceType}
+                onChange={setNewServiceType}
+                options={[
+                  { label: "Trigger (Event Source)", value: "trigger" },
+                  { label: "Action (Endpoint)", value: "action" },
+                ]}
+              />
+              <Dropdown
+                label={newServiceType === "trigger" ? "Associated Workflow (Required)" : "Associated Workflow (Optional)"}
+                value={selectedWorkflow}
+                onChange={setSelectedWorkflow}
+                options={[
+                  { label: "Select a workflow...", value: "" },
+                  { label: "Post-Purchase Automation", value: "workflow_123" },
+                  { label: "Lead Nurturing Sequence", value: "workflow_456" },
+                  { label: "Technical Support Router", value: "workflow_789" },
+                ]}
+              />
+              <input type="hidden" name="workflowId" value={selectedWorkflow} />
+              <Textarea
+                name="description"
+                label="Description"
+                placeholder="What should this service do?"
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+              />
+            </div>
+            
+            <div className="mt-8 flex justify-end gap-3 border-t border-[var(--border)] pt-4">
+              <Button type="button" variant="ghost" onClick={() => setIsSheetOpen(false)} disabled={isPending}>Cancel</Button>
+              <Button type="submit" disabled={isPending || !title || (newServiceType === "trigger" && !selectedWorkflow)}>
+                {isPending ? "Creating..." : "Create Service"}
+              </Button>
+            </div>
+          </form>
         </Sheet>
 
         {/* Triggers Section */}
@@ -138,6 +144,11 @@ export function ServicesList() {
             {triggers.map((service) => (
               <ServiceCard key={service.id} service={service} workspaceId={workspaceId} />
             ))}
+            {triggers.length === 0 && (
+              <div className="rounded-xl border border-dashed border-[var(--border)] p-8 text-center text-sm text-[var(--muted)]">
+                No triggers found.
+              </div>
+            )}
           </div>
         </section>
 
@@ -151,57 +162,78 @@ export function ServicesList() {
             {actions.map((service) => (
               <ServiceCard key={service.id} service={service} workspaceId={workspaceId} />
             ))}
+            {actions.length === 0 && (
+              <div className="rounded-xl border border-dashed border-[var(--border)] p-8 text-center text-sm text-[var(--muted)]">
+                No actions found.
+              </div>
+            )}
           </div>
         </section>
 
         {/* Pagination UI */}
-        <div className="mt-8 flex items-center justify-between px-2">
-          <div className="text-sm text-[var(--muted)]">
-            Showing <span className="font-medium text-[var(--foreground)]">1</span> to <span className="font-medium text-[var(--foreground)]">8</span> of <span className="font-medium text-[var(--foreground)]">24</span> services
-          </div>
-          <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="icon"
-              disabled
-              aria-label="Previous"
-            >
-              <ChevronLeft className="h-4 w-4" />
-            </Button>
-            <div className="flex gap-1">
-              {[1, 2, 3].map((page) => (
-                <Button
-                  key={page}
-                  variant={page === 1 ? "primary" : "outline"}
-                  size="icon"
-                  className="text-sm"
-                >
-                  {page}
-                </Button>
-              ))}
+        {total > 0 && (
+          <div className="mt-8 flex items-center justify-between px-2">
+            <div className="text-sm text-[var(--muted)]">
+              Showing <span className="font-medium text-[var(--foreground)]">{(currentPage - 1) * pageSize + 1}</span> to <span className="font-medium text-[var(--foreground)]">{Math.min(currentPage * pageSize, total)}</span> of <span className="font-medium text-[var(--foreground)]">{total}</span> services
             </div>
-            <Button
-              variant="outline"
-              size="icon"
-              aria-label="Next"
-            >
-              <ChevronRight className="h-4 w-4" />
-            </Button>
+            <div className="flex items-center gap-2">
+              <Link href={currentPage > 1 ? `?page=${currentPage - 1}` : "#"}>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  disabled={currentPage <= 1}
+                  aria-label="Previous"
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
+              </Link>
+              <div className="flex gap-1">
+                {Array.from({ length: Math.ceil(total / pageSize) }, (_, i) => i + 1).map((page) => (
+                  <Link key={page} href={`?page=${page}`}>
+                    <Button
+                      variant={page === currentPage ? "primary" : "outline"}
+                      size="icon"
+                      className="text-sm"
+                    >
+                      {page}
+                    </Button>
+                  </Link>
+                ))}
+              </div>
+              <Link href={currentPage < Math.ceil(total / pageSize) ? `?page=${currentPage + 1}` : "#"}>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  disabled={currentPage >= Math.ceil(total / pageSize)}
+                  aria-label="Next"
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              </Link>
+            </div>
           </div>
-        </div>
+        )}
       </div>
     </div>
   );
 }
 
 function ServiceCard({ service, workspaceId }: { service: Service; workspaceId: string }) {
-  const slug = service.title.toLowerCase().replace(/\s+/g, "-");
+  const [isPending, startTransition] = useTransition();
   const Icon = service.type === "trigger" ? Zap : Terminal;
   const iconColor = service.type === "trigger" ? "text-amber-500" : "text-[var(--accent)]";
 
+  const handleDelete = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    startTransition(async () => {
+      await deleteServiceAction(workspaceId, service.id);
+    });
+  };
+
   return (
-    <Link href={`/workspace/${workspaceId}/personal/services/${slug}`}>
-      <Card hoverable className="group cursor-pointer p-5">
+    <Link href={`/workspace/${workspaceId}/personal/services/${service.id}`}>
+      <Card hoverable className={`group cursor-pointer p-5 ${isPending ? "opacity-50 pointer-events-none" : ""}`}>
         <div className="flex items-start justify-between gap-4">
           <div className="flex flex-1 items-start gap-4">
             <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[var(--hover-bg)] ${iconColor}`}>
@@ -218,13 +250,24 @@ function ServiceCard({ service, workspaceId }: { service: Service; workspaceId: 
               <div className="mt-3 flex items-center gap-3">
                 <span className="text-[10px] font-bold uppercase text-emerald-500">Operational</span>
                 <div className="h-1 w-1 rounded-full bg-[var(--border)]" />
-                <span className="text-[10px] font-medium uppercase text-[var(--muted)]">Last sync 2m ago</span>
+                <span className="text-[10px] font-medium uppercase text-[var(--muted)]">Ready</span>
               </div>
             </div>
           </div>
-          <Button variant="ghost" size="icon" className="-mt-1">
-            <MoreHorizontal className="h-5 w-5" />
-          </Button>
+          <div className="shrink-0" onClick={(e) => e.preventDefault()}>
+            <ActionMenu
+              onSelect={(val) => {
+                if (val === "delete") {
+                  startTransition(async () => {
+                    await deleteServiceAction(workspaceId, service.id);
+                  });
+                }
+              }}
+              options={[
+                { label: "Delete", value: "delete", icon: <Trash2 className="h-4 w-4" />, destructive: true },
+              ]}
+            />
+          </div>
         </div>
       </Card>
     </Link>

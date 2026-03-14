@@ -15,6 +15,27 @@
       "when": 1773442656629,
       "tag": "0001_mysterious_sunset_bain",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1773443512170,
+      "tag": "0002_perpetual_lilandra",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1773444259850,
+      "tag": "0003_medical_marvex",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1773444898099,
+      "tag": "0004_soft_shockwave",
+      "breakpoints": true
     }
   ]
 }
