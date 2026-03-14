@@ -20,7 +20,7 @@ export default async function ServiceIdPage({ params }: PageProps) {
     notFound();
   }
 
-  const endpoints = await getEndpointsByServiceId(serviceId);
+  const endpoints = await getEndpointsByServiceId(serviceId, workspaceId);
 
   return (
     <DashboardLayout>

@@ -1,6 +1,8 @@
-import { redirect } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { auth } from "../../auth";
 import { findUserById, countUsers } from "./user.service";
+import { getWorkspaceOwnedByUser } from "./workspace.service";
+import { isValidUuid } from "../utils/uuid";
 
 /**
  * Validates the current session against the database.
@@ -24,4 +26,19 @@ export async function requireUser() {
   }
 
   return user;
+}
+
+export async function requireWorkspaceOwner(workspaceId: string) {
+  if (!isValidUuid(workspaceId)) {
+    notFound();
+  }
+
+  const user = await requireUser();
+  const workspace = await getWorkspaceOwnedByUser(workspaceId, user.id);
+
+  if (!workspace) {
+    notFound();
+  }
+
+  return { user, workspace };
 }

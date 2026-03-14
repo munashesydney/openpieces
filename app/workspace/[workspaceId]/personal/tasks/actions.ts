@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createTask, updateTask, deleteTask } from "../../../../../lib/services/task.service";
-import { requireUser } from "../../../../../lib/services/auth.service";
+import { requireWorkspaceOwner } from "../../../../../lib/services/auth.service";
 import { ValidationError } from "../../../../../lib/errors/validation-error";
 
 export type ActionResult = { error: string } | { success: true };
@@ -11,8 +11,7 @@ export async function createTaskAction(
   workspaceId: string,
   formData: FormData
 ): Promise<ActionResult> {
-  const user = await requireUser();
-  if (!user) return { error: "Unauthorized." };
+  await requireWorkspaceOwner(workspaceId);
 
   const title = (formData.get("title") as string)?.trim();
   const description = (formData.get("description") as string) ?? "";
@@ -42,29 +41,25 @@ export async function createTaskAction(
 }
 
 export async function pauseTaskAction(workspaceId: string, taskId: string) {
-  const user = await requireUser();
-  if (!user) throw new Error("Unauthorized");
+  await requireWorkspaceOwner(workspaceId);
   await updateTask(taskId, workspaceId, { status: "paused" });
   revalidatePath(`/workspace/${workspaceId}/personal/tasks`);
 }
 
 export async function resumeTaskAction(workspaceId: string, taskId: string) {
-  const user = await requireUser();
-  if (!user) throw new Error("Unauthorized");
+  await requireWorkspaceOwner(workspaceId);
   await updateTask(taskId, workspaceId, { status: "active" });
   revalidatePath(`/workspace/${workspaceId}/personal/tasks`);
 }
 
 export async function completeTaskAction(workspaceId: string, taskId: string) {
-  const user = await requireUser();
-  if (!user) throw new Error("Unauthorized");
+  await requireWorkspaceOwner(workspaceId);
   await updateTask(taskId, workspaceId, { status: "completed" });
   revalidatePath(`/workspace/${workspaceId}/personal/tasks`);
 }
 
 export async function deleteTaskAction(workspaceId: string, taskId: string) {
-  const user = await requireUser();
-  if (!user) throw new Error("Unauthorized");
+  await requireWorkspaceOwner(workspaceId);
   await deleteTask(taskId, workspaceId);
   revalidatePath(`/workspace/${workspaceId}/personal/tasks`);
 }

@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createService, deleteService } from "../../../../../lib/services/service.service";
-import { requireUser } from "../../../../../lib/services/auth.service";
+import { requireWorkspaceOwner } from "../../../../../lib/services/auth.service";
 import { ValidationError } from "../../../../../lib/errors/validation-error";
 
 export type ActionResult = { error: string } | { success: true };
@@ -11,8 +11,7 @@ export async function createServiceAction(
   workspaceId: string,
   formData: FormData
 ): Promise<ActionResult> {
-  const user = await requireUser();
-  if (!user) return { error: "Unauthorized." };
+  await requireWorkspaceOwner(workspaceId);
 
   const title = (formData.get("title") as string)?.trim();
   const description = (formData.get("description") as string) ?? "";
@@ -33,8 +32,7 @@ export async function createServiceAction(
 }
 
 export async function deleteServiceAction(workspaceId: string, serviceId: string) {
-  const user = await requireUser();
-  if (!user) throw new Error("Unauthorized");
+  await requireWorkspaceOwner(workspaceId);
 
   await deleteService(serviceId, workspaceId);
   revalidatePath(`/workspace/${workspaceId}/personal/services`);
