@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { PanelLeftOpen } from "lucide-react";
 import { Button } from "@/components/basic/buttons/button";
 import type { AiChatListItem, AiChatMessage } from "@/lib/ai-chat/types";
+import type { SendAiMessageActionResult } from "@/app/workspace/[workspaceId]/personal/actions";
 import { OverviewAiChatsSidebar } from "./overview-ai-chats-sidebar";
 import { OverviewChatArea, type ChatMessage } from "./overview-chat-area";
 import { OverviewComposer } from "./overview-composer";
@@ -14,6 +15,17 @@ type Chat = {
   title: string;
   status: AiChatListItem["status"];
   error: string | null;
+};
+
+type OverviewPersonalViewProps = {
+  workspaceId: string;
+  initialChats: AiChatListItem[];
+  initialSelectedChatId: string | null;
+  initialMessages: Record<string, AiChatMessage[]>;
+  sendMessageAction: (
+    chatId: string | null,
+    content: string
+  ) => Promise<SendAiMessageActionResult>;
 };
 
 function mapMessage(message: AiChatMessage): ChatMessage {
@@ -27,12 +39,36 @@ function mapMessage(message: AiChatMessage): ChatMessage {
   };
 }
 
-export function OverviewPersonalView({ workspaceId }: { workspaceId: string }) {
+function mapChat(chat: AiChatListItem): Chat {
+  return {
+    id: chat.id,
+    title: chat.title,
+    status: chat.status,
+    error: chat.error,
+  };
+}
+
+function upsertChat(currentChats: Chat[], chat: Chat): Chat[] {
+  return [chat, ...currentChats.filter((currentChat) => currentChat.id !== chat.id)];
+}
+
+export function OverviewPersonalView({
+  initialChats,
+  initialSelectedChatId,
+  initialMessages,
+  sendMessageAction,
+}: OverviewPersonalViewProps) {
   const [sidebarOpen, setSidebarOpen] = useState(true);
-  const [chats, setChats] = useState<Chat[]>([]);
-  const [selectedChatId, setSelectedChatId] = useState<string | null>(null);
-  const [messages, setMessages] = useState<Record<string, ChatMessage[]>>({});
-  const [loadingChats, setLoadingChats] = useState(true);
+  const [chats, setChats] = useState<Chat[]>(initialChats.map(mapChat));
+  const [selectedChatId, setSelectedChatId] = useState<string | null>(initialSelectedChatId);
+  const [messages, setMessages] = useState<Record<string, ChatMessage[]>>(() =>
+    Object.fromEntries(
+      Object.entries(initialMessages).map(([chatId, chatMessages]) => [
+        chatId,
+        chatMessages.map(mapMessage),
+      ])
+    )
+  );
   const [loadingMessages, setLoadingMessages] = useState(false);
   const [isSending, setIsSending] = useState(false);
   const pollingRef = useRef<number | null>(null);
@@ -54,38 +90,6 @@ export function OverviewPersonalView({ workspaceId }: { workspaceId: string }) {
     }
   };
 
-  const fetchChats = useCallback(async (preferredChatId?: string) => {
-    const response = await fetch(`/api/chats?workspaceId=${workspaceId}`);
-    const data = (await response.json()) as { chats?: AiChatListItem[]; error?: string };
-
-    if (!response.ok) {
-      throw new Error(data.error ?? "Failed to load chats.");
-    }
-
-    const nextChats =
-      data.chats?.map((chat) => ({
-        id: chat.id,
-        title: chat.title,
-        status: chat.status,
-        error: chat.error,
-      })) ?? [];
-
-    setChats(nextChats);
-
-    if (preferredChatId && nextChats.some((chat) => chat.id === preferredChatId)) {
-      setSelectedChatId(preferredChatId);
-      return;
-    }
-
-    setSelectedChatId((currentSelected) => {
-      if (currentSelected && nextChats.some((chat) => chat.id === currentSelected)) {
-        return currentSelected;
-      }
-
-      return nextChats[0]?.id ?? null;
-    });
-  }, [workspaceId]);
-
   const fetchMessages = useCallback(async (chatId: string) => {
     setLoadingMessages(true);
 
@@ -106,104 +110,68 @@ export function OverviewPersonalView({ workspaceId }: { workspaceId: string }) {
     }
   }, []);
 
-  const startPolling = useCallback((chatId: string) => {
-    clearPolling();
-
-    pollingRef.current = window.setInterval(async () => {
-      const response = await fetch(`/api/chats/${chatId}/status`);
-      const data = (await response.json()) as {
-        status?: Chat["status"];
-        error?: string | null;
-      };
-
-      if (!response.ok) {
-        clearPolling();
-        return;
-      }
-
-      setChats((currentChats) =>
-        currentChats.map((chat) =>
-          chat.id === chatId
-            ? {
-                ...chat,
-                status: data.status ?? chat.status,
-                error: data.error ?? null,
-              }
-            : chat
-        )
-      );
-
-      await fetchMessages(chatId);
-
-      if (data.status === "pending" || data.status === "processing") {
-        return;
-      }
-
+  const startPolling = useCallback(
+    (chatId: string) => {
       clearPolling();
-      await fetchChats(chatId);
-    }, 1500);
-  }, [fetchChats, fetchMessages]);
 
-  const createChat = async () => {
-    const response = await fetch("/api/chats", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        workspaceId,
-      }),
-    });
+      pollingRef.current = window.setInterval(async () => {
+        const response = await fetch(`/api/chats/${chatId}/status`);
+        const data = (await response.json()) as {
+          status?: Chat["status"];
+          error?: string | null;
+        };
 
-    const data = (await response.json()) as Partial<AiChatListItem> & { error?: string };
+        if (!response.ok) {
+          clearPolling();
+          return;
+        }
 
-    if (!response.ok || !data.id) {
-      throw new Error(data.error ?? "Failed to create chat.");
-    }
+        setChats((currentChats) =>
+          currentChats.map((chat) =>
+            chat.id === chatId
+              ? {
+                  ...chat,
+                  status: data.status ?? chat.status,
+                  error: data.error ?? null,
+                }
+              : chat
+          )
+        );
 
-    const nextChat: Chat = {
-      id: data.id,
-      title: data.title ?? "New chat",
-      status: data.status ?? "idle",
-      error: data.error ?? null,
-    };
+        await fetchMessages(chatId);
 
-    setChats((currentChats) => [nextChat, ...currentChats]);
-    setSelectedChatId(nextChat.id);
-    setMessages((currentMessages) => ({
-      ...currentMessages,
-      [nextChat.id]: [],
-    }));
+        if (data.status === "pending" || data.status === "processing") {
+          return;
+        }
 
-    return nextChat.id;
-  };
+        clearPolling();
+      }, 1500);
+    },
+    [fetchMessages]
+  );
 
   const handleSend = async (text: string) => {
+    const currentChatId = selectedChatId;
+    const optimisticMessage: ChatMessage = {
+      id: crypto.randomUUID(),
+      content: text,
+      role: "user",
+      status: "complete",
+      toolCalls: [],
+      toolResults: [],
+    };
+
     setIsSending(true);
 
-    try {
-      let chatId = selectedChatId;
-      if (!chatId) {
-        chatId = await createChat();
-      }
-
-      const optimisticMessage: ChatMessage = {
-        id: crypto.randomUUID(),
-        content: text,
-        role: "user",
-        status: "complete",
-        toolCalls: [],
-        toolResults: [],
-      };
-
+    if (currentChatId) {
       setMessages((currentMessages) => ({
         ...currentMessages,
-        [chatId]: [...(currentMessages[chatId] ?? []), optimisticMessage],
+        [currentChatId]: [...(currentMessages[currentChatId] ?? []), optimisticMessage],
       }));
 
       setChats((currentChats) =>
         currentChats.map((chat) =>
-          chat.id === chatId
+          chat.id === currentChatId
             ? {
                 ...chat,
                 title: chat.title === "New chat" ? text.slice(0, 48) || "New chat" : chat.title,
@@ -213,54 +181,39 @@ export function OverviewPersonalView({ workspaceId }: { workspaceId: string }) {
             : chat
         )
       );
+    }
 
-      const response = await fetch(`/api/chat?chatId=${chatId}`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          content: text,
-        }),
-      });
+    try {
+      const { chat } = await sendMessageAction(currentChatId, text);
+      const mappedChat = mapChat(chat);
 
-      const data = (await response.json()) as { error?: string };
+      setChats((currentChats) => upsertChat(currentChats, mappedChat));
+      setSelectedChatId(chat.id);
 
-      if (!response.ok) {
-        throw new Error(data.error ?? "Failed to send chat message.");
+      if (!currentChatId) {
+        setMessages((currentMessages) => ({
+          ...currentMessages,
+          [chat.id]: [],
+        }));
       }
 
-      await Promise.all([fetchChats(chatId), fetchMessages(chatId)]);
-      startPolling(chatId);
+      await fetchMessages(chat.id);
+      startPolling(chat.id);
     } catch (error) {
       console.error("Failed to send AI chat message:", error);
+      if (currentChatId) {
+        await fetchMessages(currentChatId);
+      }
     } finally {
       setIsSending(false);
     }
   };
 
   useEffect(() => {
-    let active = true;
-
-    const load = async () => {
-      try {
-        await fetchChats();
-      } catch (error) {
-        console.error("Failed to load chats:", error);
-      } finally {
-        if (active) {
-          setLoadingChats(false);
-        }
-      }
-    };
-
-    void load();
-
     return () => {
-      active = false;
       clearPolling();
     };
-  }, [workspaceId, fetchChats]);
+  }, []);
 
   useEffect(() => {
     if (!selectedChatId) {
@@ -314,11 +267,7 @@ export function OverviewPersonalView({ workspaceId }: { workspaceId: string }) {
           </div>
         )}
 
-        {loadingChats ? (
-          <div className="flex flex-1 items-center justify-center text-sm text-[var(--muted)]">
-            Loading chats...
-          </div>
-        ) : selectedChat ? (
+        {selectedChat ? (
           <>
             <header className="shrink-0 px-6 py-5 flex justify-center">
               <h2 className="text-sm font-semibold text-[var(--foreground)]">

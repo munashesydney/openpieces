@@ -1,0 +1,60 @@
+"use server";
+
+import type { AiChatListItem } from "@/lib/ai-chat/types";
+import { enqueueChatExecution } from "@/lib/queues/pg-boss";
+import { requireWorkspaceOwner } from "@/lib/services/auth.service";
+import {
+  appendUserMessageAndMarkPending,
+  createAiChat,
+  getAiChatById,
+  getAiChatRecordById,
+} from "@/lib/services/chat.service";
+
+export type SendAiMessageActionResult = {
+  chat: AiChatListItem;
+};
+
+export async function sendAiMessageAction(
+  workspaceId: string,
+  chatId: string | null,
+  content: string
+): Promise<SendAiMessageActionResult> {
+  const trimmedContent = content.trim();
+  if (!trimmedContent) {
+    throw new Error("content is required.");
+  }
+
+  const { user } = await requireWorkspaceOwner(workspaceId);
+
+  let effectiveChatId = chatId;
+  if (effectiveChatId) {
+    const existingChat = await getAiChatRecordById(effectiveChatId, user.id);
+    if (!existingChat) {
+      throw new Error("Chat not found.");
+    }
+  } else {
+    const chat = await createAiChat({
+      workspaceId,
+      userId: user.id,
+    });
+    effectiveChatId = chat.id;
+  }
+
+  await appendUserMessageAndMarkPending({
+    chatId: effectiveChatId,
+    content: trimmedContent,
+  });
+
+  await enqueueChatExecution({
+    chatId: effectiveChatId,
+    workspaceId,
+    userId: user.id,
+  });
+
+  const chat = await getAiChatById(effectiveChatId, user.id);
+  if (!chat) {
+    throw new Error("Chat not found.");
+  }
+
+  return { chat };
+}
