@@ -7,10 +7,28 @@ import { ModeToggle, type ComposerMode } from "./mode-toggle";
 import { Card } from "../ui/card";
 import { Button } from "@/components/basic/buttons/button";
 
-export function OverviewComposer() {
+type OverviewComposerProps = {
+  onSend?: (value: string) => void;
+};
+
+export function OverviewComposer({ onSend }: OverviewComposerProps) {
   const [mode, setMode] = useState<ComposerMode>("agent");
   const [value, setValue] = useState("");
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  const handleSend = () => {
+    const trimmed = value.trim();
+    if (!trimmed || !onSend) return;
+    onSend(trimmed);
+    setValue("");
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      handleSend();
+    }
+  };
 
   useEffect(() => {
     if (textareaRef.current) {
@@ -47,6 +65,7 @@ export function OverviewComposer() {
                   rows={1}
                   value={value}
                   onChange={(e) => setValue(e.target.value)}
+                  onKeyDown={handleKeyDown}
                   placeholder={
                     mode === "agent"
                       ? "What shall we automate today?"
@@ -100,6 +119,7 @@ export function OverviewComposer() {
               <Button
                 size="icon"
                 aria-label="Send"
+                onClick={handleSend}
               >
                 <Send className="h-4 w-4" />
               </Button>

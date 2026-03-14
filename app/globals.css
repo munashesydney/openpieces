@@ -50,3 +50,25 @@ body {
   background-image: radial-gradient(circle, var(--dot-grid) 1px, transparent 1px);
   background-size: 20px 20px;
 }
+
+@keyframes messageIn {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-40px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
