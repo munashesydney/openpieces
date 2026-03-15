@@ -67,18 +67,11 @@ export async function POST(
         content
       : content;
 
-    const rawMessage = await sendMessage(sessionId, fullContent);
-    
-    // Normalize response from sendMessage
-    const message = {
-      role: rawMessage.info?.role || "assistant",
-      content: (rawMessage.parts || [])
-        .filter((p: any) => p.type === "text")
-        .map((p: any) => p.text)
-        .join("\n")
-    };
+    sendMessage(sessionId, fullContent).catch((e) =>
+      console.error("sendMessage failed:", e)
+    );
 
-    return NextResponse.json(message);
+    return NextResponse.json({ accepted: true }, { status: 202 });
   } catch (error: any) {
     console.error(`POST /api/opencode/sessions/${await params.then(p => p.sessionId)}/messages error:`, error);
     return NextResponse.json(

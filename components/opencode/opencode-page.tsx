@@ -1,7 +1,9 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { Loader2, Send, Plus, Terminal, FolderOpen, X } from "lucide-react";
+import { Loader2, Send, Plus, Terminal, FolderOpen, X, Activity } from "lucide-react";
+
+type SessionEvent = { type: string; sessionId?: string; [key: string]: unknown };
 
 export function OpenCodePage() {
   const [sessions, setSessions] = useState<any[]>([]);
@@ -10,10 +12,12 @@ export function OpenCodePage() {
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [isSending, setIsSending] = useState(false);
+  const [events, setEvents] = useState<SessionEvent[]>([]);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [createDirectory, setCreateDirectory] = useState("");
   const [selectedSessionDirectory, setSelectedSessionDirectory] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const eventSourceRef = useRef<EventSource | null>(null);
 
   useEffect(() => {
     loadSessions();
@@ -26,15 +30,26 @@ export function OpenCodePage() {
         .then((res) => (res.ok ? res.json() : null))
         .then((data) => setSelectedSessionDirectory(data?.directory ?? null))
         .catch(() => setSelectedSessionDirectory(null));
+      setEvents([]);
     } else {
       setMessages([]);
       setSelectedSessionDirectory(null);
+      setEvents([]);
     }
+    eventSourceRef.current?.close();
+    eventSourceRef.current = null;
   }, [selectedSessionId]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
+  }, [messages, events]);
+
+  useEffect(() => {
+    return () => {
+      eventSourceRef.current?.close();
+      eventSourceRef.current = null;
+    };
+  }, []);
 
   const loadSessions = async () => {
     try {
@@ -103,6 +118,40 @@ export function OpenCodePage() {
     }
   };
 
+  const connectEventStream = (sessionId: string) => {
+    eventSourceRef.current?.close();
+    setEvents([]);
+    const url = `${window.location.origin}/api/opencode/sessions/${sessionId}/events`;
+    const es = new EventSource(url);
+    eventSourceRef.current = es;
+
+    es.onmessage = (e) => {
+      try {
+        const ev = JSON.parse(e.data) as SessionEvent;
+        setEvents((prev) => [...prev, ev]);
+        if (ev.type === "session.idle" || ev.type === "session.error") {
+          es.close();
+          eventSourceRef.current = null;
+          loadMessages(sessionId).finally(() => {
+            setIsSending(false);
+            setEvents([]);
+          });
+        }
+      } catch (err) {
+        console.error("Failed to parse event:", err);
+      }
+    };
+
+    es.onerror = () => {
+      es.close();
+      eventSourceRef.current = null;
+      loadMessages(sessionId).finally(() => {
+        setIsSending(false);
+        setEvents([]);
+      });
+    };
+  };
+
   const sendMessage = async () => {
     if (!input.trim() || !selectedSessionId) return;
 
@@ -117,16 +166,18 @@ export function OpenCodePage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ content: userMessage.content }),
       });
-      
-      if (res.ok) {
-        // Reload all messages to get the correct state and the assistant's reply
+
+      if (res.status === 202) {
+        connectEventStream(selectedSessionId);
+      } else if (res.ok) {
         await loadMessages(selectedSessionId);
+        setIsSending(false);
       } else {
         console.error("Failed to send message", await res.text());
+        setIsSending(false);
       }
     } catch (e) {
       console.error(e);
-    } finally {
       setIsSending(false);
     }
   };
@@ -257,10 +308,36 @@ export function OpenCodePage() {
                   </div>
                 </div>
               ))}
-              {isSending && (
+              {(isSending || events.length > 0) && (
                 <div className="flex justify-start">
-                  <div className="max-w-[80%] rounded-xl px-4 py-3 bg-[var(--input-bg)] border border-[var(--border)] text-[var(--foreground)]">
-                    <Loader2 className="h-4 w-4 animate-spin text-[var(--muted)]" />
+                  <div className="max-w-[80%] rounded-xl px-4 py-3 bg-[var(--input-bg)] border border-[var(--border)] text-[var(--foreground)] w-full">
+                    <div className="flex items-center gap-2 mb-2 text-[var(--muted)]">
+                      <Activity className="h-4 w-4 shrink-0" />
+                      <span className="text-xs font-medium">
+                        {isSending ? "Session in progress..." : "Activity"}
+                      </span>
+                    </div>
+                    <div className="space-y-1 max-h-48 overflow-y-auto text-xs">
+                      {events.map((ev, i) => {
+                        const e = ev as { input?: { tool?: string }; properties?: { status?: string } };
+                        let label = ev.type;
+                        if (ev.type === "tool.execute.before" && e.input?.tool)
+                          label = `Running ${e.input.tool}...`;
+                        else if (ev.type === "tool.execute.after" && e.input?.tool)
+                          label = `Finished ${e.input.tool}`;
+                        else if (ev.type === "session.status" && e.properties?.status)
+                          label = String(e.properties.status);
+                        else if (ev.type === "message.part.updated") label = "Updating message...";
+                        return (
+                          <div
+                            key={i}
+                            className="py-1 border-b border-[var(--border)]/50 last:border-0"
+                          >
+                            <span className="text-[var(--muted)]">[{ev.type}]</span> {label}
+                          </div>
+                        );
+                      })}
+                    </div>
                   </div>
                 </div>
               )}

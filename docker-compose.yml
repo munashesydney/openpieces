@@ -107,6 +107,7 @@ services:
       - DEEPSEEK_API_KEY=${DEEPSEEK_API_KEY}
       - OPENCODE_SERVER_PASSWORD=${OPENCODE_SERVER_PASSWORD}
       - OPENCODE_SERVER_USERNAME=opencode
+      - OPENPIECES_WEBHOOK_URL=http://app:3000/api/opencode/webhook
 
 volumes:
   postgres_data:
