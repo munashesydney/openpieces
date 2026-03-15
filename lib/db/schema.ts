@@ -149,3 +149,13 @@ export const aiMessages = pgTable(
 
 export type AiMessage = typeof aiMessages.$inferSelect;
 export type NewAiMessage = typeof aiMessages.$inferInsert;
+
+export const opencodeSessions = pgTable("opencode_sessions", {
+  sessionId: text("session_id").primaryKey(),
+  directory: text("directory").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export type OpenCodeSessionRow = typeof opencodeSessions.$inferSelect;
+export type NewOpenCodeSessionRow = typeof opencodeSessions.$inferInsert;

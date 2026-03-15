@@ -50,6 +50,13 @@
       "when": 1773529862955,
       "tag": "0006_safe_gateway",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1773566435712,
+      "tag": "0007_slippery_black_panther",
+      "breakpoints": true
     }
   ]
 }

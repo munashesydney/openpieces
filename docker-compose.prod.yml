@@ -95,11 +95,11 @@ services:
   opencode:
     image: ghcr.io/anomalyco/opencode:latest
     command: serve --hostname 0.0.0.0
-    working_dir: /app/pieces
+    working_dir: /pieces
     expose:
       - "4096"
     volumes:
-      - ./pieces:/app/pieces
+      - ./pieces:/pieces
       - ./opencode-data:/root/.local/share/opencode
     environment:
       - PORT=4096

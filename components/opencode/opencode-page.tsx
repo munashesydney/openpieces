@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { Loader2, Send, Plus, Terminal } from "lucide-react";
+import { Loader2, Send, Plus, Terminal, FolderOpen, X } from "lucide-react";
 
 export function OpenCodePage() {
   const [sessions, setSessions] = useState<any[]>([]);
@@ -10,6 +10,9 @@ export function OpenCodePage() {
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [isSending, setIsSending] = useState(false);
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [createDirectory, setCreateDirectory] = useState("");
+  const [selectedSessionDirectory, setSelectedSessionDirectory] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -19,8 +22,13 @@ export function OpenCodePage() {
   useEffect(() => {
     if (selectedSessionId) {
       loadMessages(selectedSessionId);
+      fetch(`/api/opencode/sessions/${selectedSessionId}/directory`)
+        .then((res) => (res.ok ? res.json() : null))
+        .then((data) => setSelectedSessionDirectory(data?.directory ?? null))
+        .catch(() => setSelectedSessionDirectory(null));
     } else {
       setMessages([]);
+      setSelectedSessionDirectory(null);
     }
   }, [selectedSessionId]);
 
@@ -34,7 +42,6 @@ export function OpenCodePage() {
       const res = await fetch("/api/opencode/sessions");
       if (res.ok) {
         const data = await res.json();
-        // Handle if data is directly an array or wrapped in an object
         const sessionsList = Array.isArray(data) ? data : (data.sessions || []);
         setSessions(sessionsList);
       }
@@ -45,16 +52,31 @@ export function OpenCodePage() {
     }
   };
 
+  const openCreateModal = () => {
+    setCreateDirectory("");
+    setShowCreateModal(true);
+  };
+
   const createSession = async () => {
+    const directory = createDirectory.trim();
+    if (!directory) return;
     try {
       setIsLoading(true);
-      const res = await fetch("/api/opencode/sessions", { method: "POST" });
+      const res = await fetch("/api/opencode/sessions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ directory }),
+      });
       if (res.ok) {
         const newSession = await res.json();
-        // Safely extract the session ID
         const id = newSession.session_id || newSession.id;
         setSelectedSessionId(id);
+        setShowCreateModal(false);
+        setCreateDirectory("");
         await loadSessions();
+      } else {
+        const err = await res.json().catch(() => ({}));
+        console.error("Failed to create session", err);
       }
     } catch (e) {
       console.error(e);
@@ -118,7 +140,7 @@ export function OpenCodePage() {
             <Terminal className="h-4 w-4" /> Sessions
           </h2>
           <button
-            onClick={createSession}
+            onClick={openCreateModal}
             disabled={isLoading}
             className="p-1.5 hover:bg-[var(--hover-bg)] rounded-md transition-colors"
             title="New Session"
@@ -126,6 +148,56 @@ export function OpenCodePage() {
             <Plus className="h-4 w-4" />
           </button>
         </div>
+        {showCreateModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+            <div className="bg-[var(--background)] border border-[var(--border)] rounded-xl shadow-xl w-full max-w-md mx-4 p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold flex items-center gap-2">
+                  <FolderOpen className="h-5 w-5" /> New session
+                </h3>
+                <button
+                  onClick={() => setShowCreateModal(false)}
+                  className="p-1.5 hover:bg-[var(--hover-bg)] rounded-md transition-colors"
+                  aria-label="Close"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+              <p className="text-sm text-[var(--muted)] mb-3">
+                Working directory is required. The AI will create this path if needed and work only inside it.
+              </p>
+              <input
+                type="text"
+                value={createDirectory}
+                onChange={(e) => setCreateDirectory(e.target.value)}
+                placeholder="/path/to/your/project"
+                className="w-full bg-[var(--input-bg)] border border-[var(--border)] rounded-lg py-2.5 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") createSession();
+                }}
+              />
+              <div className="flex justify-end gap-2 mt-4">
+                <button
+                  onClick={() => setShowCreateModal(false)}
+                  className="px-4 py-2 rounded-lg border border-[var(--border)] hover:bg-[var(--hover-bg)] transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={createSession}
+                  disabled={!createDirectory.trim() || isLoading}
+                  className="px-4 py-2 rounded-lg bg-[var(--accent)] text-white hover:opacity-90 disabled:opacity-50 transition-opacity"
+                >
+                  {isLoading ? (
+                    <Loader2 className="h-4 w-4 animate-spin inline" />
+                  ) : (
+                    "Create"
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
         <div className="flex-1 overflow-y-auto p-2">
           {sessions.length === 0 && !isLoading && (
             <div className="text-[var(--muted)] text-center mt-4">No sessions found</div>
@@ -158,6 +230,14 @@ export function OpenCodePage() {
           </div>
         ) : (
           <>
+            {selectedSessionDirectory && (
+              <div className="px-6 py-2 border-b border-[var(--border)] bg-[var(--hover-bg)]/50 flex items-center gap-2 text-xs text-[var(--muted)]">
+                <FolderOpen className="h-3.5 w-3.5 shrink-0" />
+                <span className="truncate" title={selectedSessionDirectory}>
+                  {selectedSessionDirectory}
+                </span>
+              </div>
+            )}
             <div className="flex-1 overflow-y-auto p-6 space-y-6">
               {messages.map((msg, i) => (
                 <div
