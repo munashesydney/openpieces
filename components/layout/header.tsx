@@ -11,6 +11,7 @@ import {
   Monitor,
   Menu,
   Puzzle,
+  Terminal,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -47,6 +48,12 @@ export function Header() {
       href: workspaceId ? `/workspace/${workspaceId}/personal/tasks` : "/tasks",
       icon: Calendar,
       activePattern: workspaceId ? `/workspace/${workspaceId}/personal/tasks` : "/tasks",
+    },
+    {
+      label: "OpenCode",
+      href: workspaceId ? `/workspace/${workspaceId}/personal/opencode` : "/opencode",
+      icon: Terminal,
+      activePattern: workspaceId ? `/workspace/${workspaceId}/personal/opencode` : "/opencode",
     },
   ];
 
