@@ -1,0 +1,95 @@
+import {
+  getServices,
+  getServicesByWorkflowId,
+  getServiceById,
+  createService,
+  updateService,
+  deleteService,
+} from "@/lib/services/service.service";
+import type { ToolContext } from "@/lib/tools/registry";
+import type { ServiceToolInput } from "./definition";
+
+export async function executeService(input: ServiceToolInput, context: ToolContext) {
+  const { action, serviceId, workflowId, page, limit, createDetails, updateDetails } = input;
+  const { workspaceId } = context;
+
+  if (!workspaceId) {
+    throw new Error("Workspace ID is required in context");
+  }
+
+  switch (action) {
+    case "list": {
+      if (workflowId) {
+        const data = await getServicesByWorkflowId(workflowId, workspaceId);
+        return { data, total: data.length };
+      }
+      return await getServices(workspaceId, page ?? 1, limit ?? 10);
+    }
+
+    case "get": {
+      if (!serviceId) {
+        throw new Error("serviceId is required for action 'get'");
+      }
+      const service = await getServiceById(serviceId, workspaceId);
+      if (!service) {
+        throw new Error(`Service not found: ${serviceId}`);
+      }
+      return service;
+    }
+
+    case "create": {
+      if (!createDetails) {
+        throw new Error("createDetails is required for action 'create'");
+      }
+      if (!createDetails.title?.trim()) {
+        throw new Error("createDetails.title is required for action 'create'");
+      }
+      if (createDetails.type === "trigger" && !createDetails.workflowId) {
+        throw new Error("createDetails.workflowId is required when type is 'trigger'");
+      }
+      return await createService({
+        workspaceId,
+        title: createDetails.title,
+        description: createDetails.description ?? "",
+        type: createDetails.type,
+        workflowId: createDetails.workflowId ?? null,
+      });
+    }
+
+    case "update": {
+      if (!serviceId) {
+        throw new Error("serviceId is required for action 'update'");
+      }
+      if (!updateDetails || Object.keys(updateDetails).length === 0) {
+        throw new Error("updateDetails with at least one field is required for action 'update'");
+      }
+      const updated = await updateService(serviceId, workspaceId, {
+        ...(updateDetails.title !== undefined && { title: updateDetails.title }),
+        ...(updateDetails.description !== undefined && { description: updateDetails.description }),
+        ...(updateDetails.type !== undefined && { type: updateDetails.type }),
+        ...(updateDetails.workflowId !== undefined && { workflowId: updateDetails.workflowId || null }),
+      });
+      if (!updated) {
+        throw new Error(`Service not found or update failed: ${serviceId}`);
+      }
+      return updated;
+    }
+
+    case "delete": {
+      if (!serviceId) {
+        throw new Error("serviceId is required for action 'delete'");
+      }
+      const deleted = await deleteService(serviceId, workspaceId);
+      if (!deleted) {
+        throw new Error(`Service not found or delete failed: ${serviceId}`);
+      }
+      return { success: true, deleted: serviceId };
+    }
+
+    default: {
+      throw new Error(
+        `Unknown action: ${action}. Valid actions are: list, get, create, update, delete.`
+      );
+    }
+  }
+}

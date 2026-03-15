@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { Calendar, Clock, Plus, Repeat, Timer, Play, Pause, Trash2, CheckCircle2 } from "lucide-react";
+import Link from "next/link";
+import { Calendar, Clock, Plus, Repeat, Timer, Play, Pause, Trash2, CheckCircle2, ChevronLeft, ChevronRight } from "lucide-react";
 import { Card } from "../ui/card";
 import { Button } from "@/components/basic/buttons/button";
 import { Sheet } from "../ui/sheet";
@@ -16,11 +17,18 @@ export function TasksList({
   initialTasks,
   workspaceId,
   workflows,
+  total,
+  currentPage,
+  pageSize,
 }: {
   initialTasks: Task[];
   workspaceId: string;
   workflows: Workflow[];
+  total: number;
+  currentPage: number;
+  pageSize: number;
 }) {
+  const totalPages = Math.ceil(total / pageSize);
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
   const [frequency, setFrequency] = useState("one-time");
@@ -270,6 +278,49 @@ export function TasksList({
               ))}
             </div>
           </section>
+        )}
+
+        {/* Pagination */}
+        {total > 0 && totalPages > 1 && (
+          <div className="mt-8 flex items-center justify-between px-2">
+            <div className="text-sm text-[var(--muted)]">
+              Showing{" "}
+              <span className="font-medium text-[var(--foreground)]">
+                {(currentPage - 1) * pageSize + 1}
+              </span>{" "}
+              to{" "}
+              <span className="font-medium text-[var(--foreground)]">
+                {Math.min(currentPage * pageSize, total)}
+              </span>{" "}
+              of{" "}
+              <span className="font-medium text-[var(--foreground)]">{total}</span> tasks
+            </div>
+            <div className="flex items-center gap-2">
+              <Link href={currentPage > 1 ? `?page=${currentPage - 1}` : "#"}>
+                <Button variant="outline" size="icon" disabled={currentPage <= 1} aria-label="Previous">
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
+              </Link>
+              <div className="flex gap-1">
+                {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                  <Link key={page} href={`?page=${page}`}>
+                    <Button
+                      variant={page === currentPage ? "primary" : "outline"}
+                      size="icon"
+                      className="text-sm"
+                    >
+                      {page}
+                    </Button>
+                  </Link>
+                ))}
+              </div>
+              <Link href={currentPage < totalPages ? `?page=${currentPage + 1}` : "#"}>
+                <Button variant="outline" size="icon" disabled={currentPage >= totalPages} aria-label="Next">
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              </Link>
+            </div>
+          </div>
         )}
       </div>
     </div>

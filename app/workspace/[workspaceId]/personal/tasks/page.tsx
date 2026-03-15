@@ -6,18 +6,29 @@ import { getWorkflows } from "../../../../../lib/services/workflow.service";
 
 export default async function TasksPage(props: {
   params: Promise<{ workspaceId: string }>;
+  searchParams: Promise<{ page?: string }>;
 }) {
   const params = await props.params;
+  const searchParams = await props.searchParams;
+  const currentPage = Number(searchParams?.page ?? 1);
+  const pageSize = 10;
 
-  const [tasks, { data: workflows }] = await Promise.all([
-    getTasks(params.workspaceId),
+  const [{ data: tasks, total }, { data: workflows }] = await Promise.all([
+    getTasks(params.workspaceId, currentPage, pageSize),
     getWorkflows(params.workspaceId, 1, 100),
   ]);
 
   return (
     <DashboardLayout>
       <MainArea>
-        <TasksList initialTasks={tasks} workspaceId={params.workspaceId} workflows={workflows} />
+        <TasksList
+          initialTasks={tasks}
+          workspaceId={params.workspaceId}
+          workflows={workflows}
+          total={total}
+          currentPage={currentPage}
+          pageSize={pageSize}
+        />
       </MainArea>
     </DashboardLayout>
   );

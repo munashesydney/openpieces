@@ -1,4 +1,4 @@
-import { eq, and } from "drizzle-orm";
+import { eq, and, count } from "drizzle-orm";
 import { db } from "../db";
 import { tasks, workflows, type NewTask, type Task } from "../db/schema";
 import { isValidUuid } from "../utils/uuid";
@@ -6,9 +6,33 @@ import { ValidationError } from "../errors/validation-error";
 
 const VALID_TASK_TYPES = ["one-time", "recurring"] as const;
 
-export async function getTasks(workspaceId: string): Promise<Task[]> {
-  if (!isValidUuid(workspaceId)) return [];
-  return db.select().from(tasks).where(eq(tasks.workspaceId, workspaceId));
+export async function getTasks(
+  workspaceId: string,
+  page: number = 1,
+  pageSize: number = 10
+): Promise<{ data: Task[]; total: number }> {
+  if (!isValidUuid(workspaceId)) return { data: [], total: 0 };
+
+  const offset = (page - 1) * pageSize;
+
+  const [data, totalResult] = await Promise.all([
+    db
+      .select()
+      .from(tasks)
+      .where(eq(tasks.workspaceId, workspaceId))
+      .limit(pageSize)
+      .offset(offset)
+      .orderBy(tasks.createdAt),
+    db
+      .select({ count: count() })
+      .from(tasks)
+      .where(eq(tasks.workspaceId, workspaceId)),
+  ]);
+
+  return {
+    data,
+    total: totalResult[0].count,
+  };
 }
 
 export async function getTasksByWorkflowId(workflowId: string, workspaceId: string): Promise<Task[]> {
