@@ -1,30 +1,109 @@
-import { eq } from "drizzle-orm";
+import { and, desc, eq, count } from "drizzle-orm";
 import { db } from "@/lib/db";
-import { opencodeSessions } from "@/lib/db/schema";
+import { opencodeSessions, services } from "@/lib/db/schema";
+
+export type SessionWithService = {
+  sessionId: string;
+  serviceId: string;
+  serviceTitle: string;
+  directory: string | null;
+  createdAt: Date;
+};
+
+export async function listSessionsForWorkspace(
+  workspaceId: string,
+  page: number = 1,
+  pageSize: number = 20
+): Promise<{ data: SessionWithService[]; total: number }> {
+  const offset = (page - 1) * pageSize;
+  const rows = await db
+    .select({
+      sessionId: opencodeSessions.sessionId,
+      serviceId: services.id,
+      serviceTitle: services.title,
+      directory: services.directory,
+      createdAt: opencodeSessions.createdAt,
+    })
+    .from(opencodeSessions)
+    .innerJoin(services, eq(opencodeSessions.serviceId, services.id))
+    .where(eq(services.workspaceId, workspaceId))
+    .orderBy(desc(opencodeSessions.createdAt))
+    .limit(pageSize)
+    .offset(offset);
+
+  const [totalResult] = await db
+    .select({ count: count() })
+    .from(opencodeSessions)
+    .innerJoin(services, eq(opencodeSessions.serviceId, services.id))
+    .where(eq(services.workspaceId, workspaceId));
+
+  return {
+    data: rows.map((r) => ({
+      sessionId: r.sessionId,
+      serviceId: r.serviceId,
+      serviceTitle: r.serviceTitle,
+      directory: r.directory,
+      createdAt: r.createdAt,
+    })),
+    total: totalResult?.count ?? rows.length,
+  };
+}
+
+export async function getSessionInfo(sessionId: string, workspaceId: string): Promise<SessionWithService | null> {
+  const rows = await db
+    .select({
+      sessionId: opencodeSessions.sessionId,
+      serviceId: services.id,
+      serviceTitle: services.title,
+      directory: services.directory,
+      createdAt: opencodeSessions.createdAt,
+    })
+    .from(opencodeSessions)
+    .innerJoin(services, eq(opencodeSessions.serviceId, services.id))
+    .where(
+      and(
+        eq(opencodeSessions.sessionId, sessionId),
+        eq(services.workspaceId, workspaceId)
+      )
+    )
+    .limit(1);
+
+  const r = rows[0];
+  if (!r) return null;
+  return {
+    sessionId: r.sessionId,
+    serviceId: r.serviceId,
+    serviceTitle: r.serviceTitle,
+    directory: r.directory,
+    createdAt: r.createdAt,
+  };
+}
 
 export async function getDirectory(sessionId: string): Promise<string | null> {
   const rows = await db
-    .select({ directory: opencodeSessions.directory })
+    .select({ directory: services.directory })
     .from(opencodeSessions)
+    .innerJoin(services, eq(opencodeSessions.serviceId, services.id))
     .where(eq(opencodeSessions.sessionId, sessionId))
     .limit(1);
-  return rows[0]?.directory ?? null;
+  const dir = rows[0]?.directory;
+  return dir && typeof dir === "string" && dir.trim() !== "" ? dir : null;
 }
 
-export async function setDirectory(
+export async function setService(
   sessionId: string,
-  directory: string
+  serviceId: string
 ): Promise<void> {
   await db
     .insert(opencodeSessions)
     .values({
       sessionId,
-      directory,
+      serviceId,
     })
     .onConflictDoUpdate({
       target: opencodeSessions.sessionId,
       set: {
-        directory,
+        serviceId,
         updatedAt: new Date(),
       },
     });

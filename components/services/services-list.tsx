@@ -34,6 +34,7 @@ export function ServicesList({
   const [selectedWorkflow, setSelectedWorkflow] = useState("");
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
+  const [directory, setDirectory] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
   const [formError, setFormError] = useState<string | null>(null);
 
@@ -59,6 +60,7 @@ export function ServicesList({
       setIsSheetOpen(false);
       setTitle("");
       setDescription("");
+      setDirectory("");
       setNewServiceType("trigger");
       setSelectedWorkflow("");
       setFormError(null);
@@ -126,6 +128,13 @@ export function ServicesList({
                 placeholder="What should this service do?"
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
+              />
+              <Input
+                name="directory"
+                label="Directory (for OpenCode)"
+                placeholder="/path/to/project (optional)"
+                value={directory}
+                onChange={(e) => setDirectory(e.target.value)}
               />
             </div>
             

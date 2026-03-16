@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { listSessions, createSession } from "@/lib/services/opencode.service";
-import { setDirectory } from "@/lib/services/opencode-session.service";
+import { setService } from "@/lib/services/opencode-session.service";
+import { getServiceById } from "@/lib/services/service.service";
 
 export async function GET() {
   try {
@@ -18,7 +19,31 @@ export async function GET() {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json().catch(() => ({}));
-    const directory = typeof body.directory === "string" ? body.directory.trim() : undefined;
+    const serviceId = typeof body.serviceId === "string" ? body.serviceId.trim() : undefined;
+    const workspaceId = typeof body.workspaceId === "string" ? body.workspaceId.trim() : undefined;
+
+    if (!serviceId || !workspaceId) {
+      return NextResponse.json(
+        { error: "serviceId and workspaceId are required" },
+        { status: 400 }
+      );
+    }
+
+    const service = await getServiceById(serviceId, workspaceId);
+    if (!service) {
+      return NextResponse.json(
+        { error: "Service not found or does not belong to this workspace" },
+        { status: 400 }
+      );
+    }
+
+    const directory = service.directory?.trim();
+    if (!directory) {
+      return NextResponse.json(
+        { error: "Selected service has no directory set. Set a directory on the service first." },
+        { status: 400 }
+      );
+    }
 
     const session = await createSession();
     const sessionId = session.session_id ?? (session as { id?: string }).id;
@@ -29,9 +54,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (directory) {
-      await setDirectory(sessionId, directory);
-    }
+    await setService(sessionId, serviceId);
 
     return NextResponse.json(session);
   } catch (error: any) {

@@ -12,6 +12,11 @@ export async function createService(data: NewService): Promise<Service> {
     throw new ValidationError("Title is required.");
   }
 
+  // ── Validate directory ────────────────────────────────────────────────────
+  if (!data.directory || data.directory.trim() === "") {
+    throw new ValidationError("Directory is required.");
+  }
+
   // ── Validate type ─────────────────────────────────────────────────────────
   if (!VALID_SERVICE_TYPES.includes(data.type as typeof VALID_SERVICE_TYPES[number])) {
     throw new ValidationError(

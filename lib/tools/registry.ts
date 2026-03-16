@@ -1,6 +1,8 @@
 import { createWorkflowTool } from "@/lib/tools/workflows";
 import { createServiceTool } from "@/lib/tools/services";
 import { createTaskTool } from "@/lib/tools/tasks";
+import { createSessionsTool } from "@/lib/tools/sessions";
+import { createMessagesTool } from "@/lib/tools/messages";
 
 export type ToolContext = {
   workspaceId: string;
@@ -13,5 +15,7 @@ export function createTools(context: ToolContext) {
     manage_workflows: createWorkflowTool(context),
     manage_services: createServiceTool(context),
     manage_tasks: createTaskTool(context),
+    manage_opencode_sessions: createSessionsTool(context),
+    manage_opencode_messages: createMessagesTool(context),
   };
 }

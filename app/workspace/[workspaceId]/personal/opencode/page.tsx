@@ -1,8 +1,14 @@
 import { DashboardLayout } from "@/components/layout/dashboard-layout";
 import { MainArea } from "@/components/layout/main-area";
 import { OpenCodePage } from "@/components/opencode/opencode-page";
+import { getServices } from "@/lib/services/service.service";
 
-export default function OpenCode() {
+export default async function OpenCodePageRoute(props: {
+  params: Promise<{ workspaceId: string }>;
+}) {
+  const { workspaceId } = await props.params;
+  const { data: services } = await getServices(workspaceId, 1, 100);
+
   return (
     <DashboardLayout>
       <MainArea>
@@ -16,7 +22,7 @@ export default function OpenCode() {
             </p>
           </div>
           <div className="flex-1 overflow-hidden">
-            <OpenCodePage />
+            <OpenCodePage workspaceId={workspaceId} services={services} />
           </div>
         </div>
       </MainArea>

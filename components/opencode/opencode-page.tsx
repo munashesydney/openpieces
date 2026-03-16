@@ -2,10 +2,18 @@
 
 import { useState, useEffect, useRef } from "react";
 import { Loader2, Send, Plus, Terminal, FolderOpen, X, Activity } from "lucide-react";
+import { Dropdown } from "@/components/basic/input/dropdown";
+import type { Service } from "@/lib/db/schema";
 
 type SessionEvent = { type: string; sessionId?: string; [key: string]: unknown };
 
-export function OpenCodePage() {
+export function OpenCodePage({
+  workspaceId,
+  services,
+}: {
+  workspaceId: string;
+  services: Service[];
+}) {
   const [sessions, setSessions] = useState<any[]>([]);
   const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null);
   const [messages, setMessages] = useState<any[]>([]);
@@ -14,8 +22,12 @@ export function OpenCodePage() {
   const [isSending, setIsSending] = useState(false);
   const [events, setEvents] = useState<SessionEvent[]>([]);
   const [showCreateModal, setShowCreateModal] = useState(false);
-  const [createDirectory, setCreateDirectory] = useState("");
+  const [selectedServiceId, setSelectedServiceId] = useState("");
   const [selectedSessionDirectory, setSelectedSessionDirectory] = useState<string | null>(null);
+
+  const servicesWithDirectory = services.filter(
+    (s) => s.directory && typeof s.directory === "string" && s.directory.trim() !== ""
+  );
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const eventSourceRef = useRef<EventSource | null>(null);
 
@@ -68,26 +80,25 @@ export function OpenCodePage() {
   };
 
   const openCreateModal = () => {
-    setCreateDirectory("");
+    setSelectedServiceId("");
     setShowCreateModal(true);
   };
 
   const createSession = async () => {
-    const directory = createDirectory.trim();
-    if (!directory) return;
+    if (!selectedServiceId) return;
     try {
       setIsLoading(true);
       const res = await fetch("/api/opencode/sessions", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ directory }),
+        body: JSON.stringify({ serviceId: selectedServiceId, workspaceId }),
       });
       if (res.ok) {
         const newSession = await res.json();
         const id = newSession.session_id || newSession.id;
         setSelectedSessionId(id);
         setShowCreateModal(false);
-        setCreateDirectory("");
+        setSelectedServiceId("");
         await loadSessions();
       } else {
         const err = await res.json().catch(() => ({}));
@@ -215,18 +226,26 @@ export function OpenCodePage() {
                 </button>
               </div>
               <p className="text-sm text-[var(--muted)] mb-3">
-                Working directory is required. The AI will create this path if needed and work only inside it.
+                Select a service with a directory. The session will use that directory for OpenCode.
               </p>
-              <input
-                type="text"
-                value={createDirectory}
-                onChange={(e) => setCreateDirectory(e.target.value)}
-                placeholder="/path/to/your/project"
-                className="w-full bg-[var(--input-bg)] border border-[var(--border)] rounded-lg py-2.5 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") createSession();
-                }}
-              />
+              {servicesWithDirectory.length === 0 ? (
+                <p className="text-sm text-amber-600 dark:text-amber-500 py-2">
+                  No services with a directory set. Create a service and set its directory first.
+                </p>
+              ) : (
+                <Dropdown
+                  label="Service"
+                  value={selectedServiceId}
+                  onChange={setSelectedServiceId}
+                  options={[
+                    { label: "Select a service...", value: "" },
+                    ...servicesWithDirectory.map((s) => ({
+                      label: `${s.title} (${s.directory})`,
+                      value: s.id,
+                    })),
+                  ]}
+                />
+              )}
               <div className="flex justify-end gap-2 mt-4">
                 <button
                   onClick={() => setShowCreateModal(false)}
@@ -236,7 +255,7 @@ export function OpenCodePage() {
                 </button>
                 <button
                   onClick={createSession}
-                  disabled={!createDirectory.trim() || isLoading}
+                  disabled={!selectedServiceId || isLoading || servicesWithDirectory.length === 0}
                   className="px-4 py-2 rounded-lg bg-[var(--accent)] text-white hover:opacity-90 disabled:opacity-50 transition-opacity"
                 >
                   {isLoading ? (

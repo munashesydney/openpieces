@@ -18,9 +18,10 @@ export async function createServiceAction(
   const workflowIdStr = formData.get("workflowId") as string | null;
   const workflowId = workflowIdStr || null;
   const type = formData.get("type") as "trigger" | "action";
+  const directory = (formData.get("directory") as string)?.trim() || null;
 
   try {
-    await createService({ workspaceId, workflowId, title, description, type });
+    await createService({ workspaceId, workflowId, title, description, type, directory });
   } catch (err) {
     if (err instanceof ValidationError) return { error: err.message };
     console.error("Unexpected error creating service:", err);

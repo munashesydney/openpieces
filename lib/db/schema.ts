@@ -69,6 +69,7 @@ export const services = pgTable("services", {
   title: text("title").notNull(),
   description: text("description").notNull().default(""),
   type: text("type", { enum: ["trigger", "action"] }).notNull(),
+  directory: text("directory"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
@@ -152,7 +153,9 @@ export type NewAiMessage = typeof aiMessages.$inferInsert;
 
 export const opencodeSessions = pgTable("opencode_sessions", {
   sessionId: text("session_id").primaryKey(),
-  directory: text("directory").notNull(),
+  serviceId: uuid("service_id")
+    .notNull()
+    .references(() => services.id, { onDelete: "cascade" }),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });

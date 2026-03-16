@@ -57,6 +57,13 @@
       "when": 1773566435712,
       "tag": "0007_slippery_black_panther",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1773570000000,
+      "tag": "0008_opencode_sessions_tied_to_services",
+      "breakpoints": true
     }
   ]
 }

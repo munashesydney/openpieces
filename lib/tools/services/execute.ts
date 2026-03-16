@@ -47,12 +47,16 @@ export async function executeService(input: ServiceToolInput, context: ToolConte
       if (createDetails.type === "trigger" && !createDetails.workflowId) {
         throw new Error("createDetails.workflowId is required when type is 'trigger'");
       }
+      if (!createDetails.directory?.trim()) {
+        throw new Error("createDetails.directory is required for action 'create'");
+      }
       return await createService({
         workspaceId,
         title: createDetails.title,
         description: createDetails.description ?? "",
         type: createDetails.type,
         workflowId: createDetails.workflowId ?? null,
+        directory: createDetails.directory.trim(),
       });
     }
 
@@ -68,6 +72,7 @@ export async function executeService(input: ServiceToolInput, context: ToolConte
         ...(updateDetails.description !== undefined && { description: updateDetails.description }),
         ...(updateDetails.type !== undefined && { type: updateDetails.type }),
         ...(updateDetails.workflowId !== undefined && { workflowId: updateDetails.workflowId || null }),
+        ...(updateDetails.directory !== undefined && { directory: updateDetails.directory.trim() || null }),
       });
       if (!updated) {
         throw new Error(`Service not found or update failed: ${serviceId}`);
