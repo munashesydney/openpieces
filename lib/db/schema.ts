@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { index, integer, jsonb, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
+import { index, integer, jsonb, pgTable, text, timestamp, uuid, uniqueIndex } from "drizzle-orm/pg-core";
 
 export const users = pgTable("users", {
   id: uuid("id").defaultRandom().primaryKey(),
@@ -163,3 +163,28 @@ export const opencodeSessions = pgTable("opencode_sessions", {
 
 export type OpenCodeSessionRow = typeof opencodeSessions.$inferSelect;
 export type NewOpenCodeSessionRow = typeof opencodeSessions.$inferInsert;
+
+export const secrets = pgTable(
+  "secrets",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    workspaceId: uuid("workspace_id")
+      .notNull()
+      .references(() => workspaces.id, { onDelete: "cascade" }),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    key: text("key").notNull(),
+    valueEncrypted: text("value_encrypted").notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (table) => [
+    uniqueIndex("secrets_workspace_user_key_idx").on(table.workspaceId, table.userId, table.key),
+    index("secrets_workspace_id_idx").on(table.workspaceId),
+    index("secrets_user_id_idx").on(table.userId),
+  ]
+);
+
+export type SecretRow = typeof secrets.$inferSelect;
+export type NewSecretRow = typeof secrets.$inferInsert;

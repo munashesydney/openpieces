@@ -71,6 +71,13 @@
       "when": 1773574000000,
       "tag": "0009_service_port",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1773669241401,
+      "tag": "0010_charming_valeria_richards",
+      "breakpoints": true
     }
   ]
 }

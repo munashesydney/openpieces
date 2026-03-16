@@ -1,90 +1,126 @@
  "use client";
 
- import { useState } from "react";
+ import { useState, useTransition } from "react";
  import { Eye, Plus, Shield, Trash2 } from "lucide-react";
  import { Button } from "@/components/basic/buttons/button";
  import { Input } from "@/components/basic/input/input";
  import { Sheet } from "@/components/ui/sheet";
+ import type { ActionResult } from "@/app/workspace/[workspaceId]/personal/secrets/actions";
+ import {
+   createSecretAction,
+   updateSecretAction,
+   deleteSecretAction,
+ } from "@/app/workspace/[workspaceId]/personal/secrets/actions";
 
  type Secret = {
    id: string;
-   name: string;
+   key: string;
    value: string;
    createdAt: string;
    updatedAt: string;
  };
 
- const initialSecrets: Secret[] = [
-   {
-     id: "1",
-     name: "OPENAI_API_KEY",
-     value: "sk-live-************************",
-     createdAt: new Date().toISOString(),
-     updatedAt: new Date().toISOString(),
-   },
-   {
-     id: "2",
-     name: "GITHUB_TOKEN",
-     value: "ghp_****************************",
-     createdAt: new Date().toISOString(),
-     updatedAt: new Date().toISOString(),
-   },
- ];
+ type SecretsPageProps = {
+   initialSecrets: {
+     id: string;
+     workspaceId: string;
+     userId: string;
+     key: string;
+     value: string;
+     createdAt: Date;
+     updatedAt: Date;
+   }[];
+   workspaceId: string;
+ };
 
-export function SecretsPage() {
-  const [secrets, setSecrets] = useState<Secret[]>(initialSecrets);
-  const [name, setName] = useState("");
-  const [value, setValue] = useState("");
-  const [isSheetOpen, setIsSheetOpen] = useState(false);
-  const [editingId, setEditingId] = useState<string | null>(null);
+ export function SecretsPage({ initialSecrets, workspaceId }: SecretsPageProps) {
+   const [secrets, setSecrets] = useState<Secret[]>(
+     initialSecrets.map((s) => ({
+       id: s.id,
+       key: s.key,
+       value: s.value,
+       createdAt: s.createdAt.toISOString(),
+       updatedAt: s.updatedAt.toISOString(),
+     }))
+   );
+   const [key, setKey] = useState("");
+   const [value, setValue] = useState("");
+   const [isSheetOpen, setIsSheetOpen] = useState(false);
+   const [editingId, setEditingId] = useState<string | null>(null);
+   const [formError, setFormError] = useState<string | null>(null);
+   const [isPending, startTransition] = useTransition();
 
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    if (!name || !value) return;
+   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+     e.preventDefault();
+     if (!key || !value) return;
 
-    const now = new Date().toISOString();
+     setFormError(null);
 
-    // Edit existing
-    if (editingId) {
-      setSecrets((prev) =>
-        prev.map((s) =>
-          s.id === editingId
-            ? {
-                ...s,
-                name,
-                value,
-                updatedAt: now,
-              }
-            : s
-        )
-      );
-    } else {
-      const next: Secret = {
-        id: crypto.randomUUID(),
-        name,
-        value,
-        createdAt: now,
-        updatedAt: now,
-      };
-      setSecrets((prev) => [next, ...prev]);
-    }
+     const formData = new FormData();
+     formData.set("key", key);
+     formData.set("value", value);
 
-    setName("");
-    setValue("");
-    setEditingId(null);
-    setIsSheetOpen(false);
-  };
+     startTransition(async () => {
+       let result: ActionResult;
+       if (editingId) {
+         result = await updateSecretAction(workspaceId, editingId, formData);
+       } else {
+         result = await createSecretAction(workspaceId, formData);
+       }
 
-  const handleDelete = (id: string) => {
-    setSecrets((prev) => prev.filter((s) => s.id !== id));
-  };
+       if ("error" in result) {
+         setFormError(result.error);
+         return;
+       }
 
-  const handleEdit = (secret: Secret) => {
-    setEditingId(secret.id);
-    setName(secret.name);
-    setValue(secret.value);
-    setIsSheetOpen(true);
-  };
+       setKey("");
+       setValue("");
+       setEditingId(null);
+       setIsSheetOpen(false);
+       // Re-fetch is handled via revalidatePath; for now, update local list optimistically
+       const now = new Date().toISOString();
+       if (editingId) {
+         setSecrets((prev) =>
+           prev.map((s) =>
+             s.id === editingId
+               ? {
+                   ...s,
+                   key,
+                   value,
+                   updatedAt: now,
+                 }
+               : s
+           )
+         );
+       } else {
+         setSecrets((prev) => [
+           {
+             id: crypto.randomUUID(),
+             key,
+             value,
+             createdAt: now,
+             updatedAt: now,
+           },
+           ...prev,
+         ]);
+       }
+     });
+   };
+
+   const handleDelete = (id: string) => {
+     startTransition(async () => {
+       await deleteSecretAction(workspaceId, id);
+       setSecrets((prev) => prev.filter((s) => s.id !== id));
+     });
+   };
+
+   const handleEdit = (secret: Secret) => {
+     setEditingId(secret.id);
+     setKey(secret.key);
+     setValue(secret.value);
+     setFormError(null);
+     setIsSheetOpen(true);
+   };
 
    return (
      <div className="flex w-full justify-center px-6 pb-20 pt-10">
@@ -118,10 +154,10 @@ export function SecretsPage() {
           <form className="space-y-4" onSubmit={handleSubmit}>
             <Input
               label="Name"
-              name="name"
+              name="key"
               placeholder="e.g. OPENAI_API_KEY"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
+              value={key}
+              onChange={(e) => setKey(e.target.value)}
               required
             />
             <Input
@@ -134,6 +170,12 @@ export function SecretsPage() {
               required
             />
 
+            {formError && (
+              <div className="rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-500">
+                {formError}
+              </div>
+            )}
+
             <div className="mt-6 flex justify-end gap-3 border-t border-[var(--border)] pt-4">
               <Button
                 type="button"
@@ -145,10 +187,10 @@ export function SecretsPage() {
               <Button
                 type="submit"
                 className="gap-2"
-                disabled={!name || !value}
+                disabled={isPending || !key || !value}
               >
                 <Plus className="h-4 w-4" />
-                {editingId ? "Save changes" : "Add secret"}
+                {isPending ? "Saving..." : editingId ? "Save changes" : "Add secret"}
               </Button>
             </div>
           </form>
@@ -225,7 +267,7 @@ function SecretRow({
        <div className="min-w-0">
          <div className="flex items-center gap-2">
            <span className="truncate font-medium text-[var(--foreground)]">
-             {secret.name}
+            {secret.key}
            </span>
          </div>
          <p className="mt-0.5 text-[11px] text-[var(--muted)]">

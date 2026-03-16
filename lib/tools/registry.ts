@@ -3,6 +3,7 @@ import { createServiceTool } from "@/lib/tools/services";
 import { createTaskTool } from "@/lib/tools/tasks";
 import { createSessionsTool } from "@/lib/tools/sessions";
 import { createMessagesTool } from "@/lib/tools/messages";
+import { createSecretsTool } from "@/lib/tools/secrets";
 
 export type ToolContext = {
   workspaceId: string;
@@ -17,5 +18,6 @@ export function createTools(context: ToolContext) {
     manage_tasks: createTaskTool(context),
     manage_opencode_sessions: createSessionsTool(context),
     manage_opencode_messages: createMessagesTool(context),
+    manage_secrets: createSecretsTool(context),
   };
 }
