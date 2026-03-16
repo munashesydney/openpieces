@@ -15,9 +15,17 @@ RUN npm ci
 # =============================================================================
 # Stage 3: Development - hot-reload dev server with source mounted at runtime
 # =============================================================================
+FROM denoland/deno:bin AS deno-bin
+FROM gcr.io/distroless/cc AS deno-cc
+
 FROM base AS development
 ENV NODE_ENV=development
 ENV NEXT_TELEMETRY_DISABLED=1
+# Glibc libs isolated in /opt/deno-glibc so they don't interfere with musl Node.js
+COPY --from=deno-cc --chown=root:root --chmod=755 /lib/*-linux-gnu/* /opt/deno-glibc/
+COPY --from=deno-cc --chown=root:root --chmod=755 /lib/ld-linux-* /opt/deno-glibc/
+RUN mkdir -p /lib64 && ln -sf /opt/deno-glibc/ld-linux-* /lib64/
+COPY --from=deno-bin /deno /usr/local/bin/deno
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 EXPOSE 3000

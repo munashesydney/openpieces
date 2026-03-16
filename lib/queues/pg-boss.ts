@@ -1,6 +1,7 @@
 import { PgBoss } from "pg-boss";
 
 export const CHAT_EXECUTION_QUEUE = "ai-chat-execution";
+export const SERVICE_SPAWN_QUEUE = "service-spawn";
 
 declare global {
   var __openpiecesPgBoss: PgBoss | undefined;
@@ -30,6 +31,11 @@ export async function getPgBoss(): Promise<PgBoss> {
         await boss.createQueue(CHAT_EXECUTION_QUEUE);
       }
 
+      const existingSpawnQueue = await boss.getQueue(SERVICE_SPAWN_QUEUE);
+      if (!existingSpawnQueue) {
+        await boss.createQueue(SERVICE_SPAWN_QUEUE);
+      }
+
       globalThis.__openpiecesPgBoss = boss;
       return boss;
     })();
@@ -47,4 +53,14 @@ export type ChatExecutionJob = {
 export async function enqueueChatExecution(job: ChatExecutionJob) {
   const boss = await getPgBoss();
   return boss.send(CHAT_EXECUTION_QUEUE, job);
+}
+
+export type ServiceSpawnJob = {
+  serviceId: string;
+  workspaceId: string;
+};
+
+export async function enqueueServiceSpawn(job: ServiceSpawnJob) {
+  const boss = await getPgBoss();
+  return boss.send(SERVICE_SPAWN_QUEUE, job);
 }

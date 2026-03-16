@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useTransition } from "react";
-import { ChevronLeft, Activity, Code, Clock, ShieldCheck, Zap, Plus, Trash2 } from "lucide-react";
+import { useState, useTransition, useEffect, useCallback } from "react";
+import { ChevronLeft, Activity, Code, Clock, ShieldCheck, Zap, Plus, Trash2, Play, Loader2 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "../ui/card";
@@ -12,7 +12,7 @@ import { Textarea } from "@/components/basic/input/textarea";
 import { Dropdown } from "@/components/basic/input/dropdown";
 import { ActionMenu } from "@/components/basic/input/action-menu";
 import { type Service, type ServiceEndpoint } from "@/lib/db/schema";
-import { createEndpointAction, deleteEndpointAction } from "@/app/workspace/[workspaceId]/personal/services/[serviceId]/actions";
+import { createEndpointAction, deleteEndpointAction, spawnServiceAction } from "@/app/workspace/[workspaceId]/personal/services/[serviceId]/actions";
 
 interface ServiceDetailProps {
   service: Service;
@@ -20,14 +20,56 @@ interface ServiceDetailProps {
   workspaceId: string;
 }
 
+type HealthStatus = { healthy: boolean; port: number | null; reason?: string } | null;
+
 export function ServiceDetail({ service, endpoints, workspaceId }: ServiceDetailProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
+  const [isSpawning, setIsSpawning] = useState(false);
+  const [spawnError, setSpawnError] = useState<string | null>(null);
+  const [health, setHealth] = useState<HealthStatus>(null);
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   
   const [method, setMethod] = useState("GET");
   const [path, setPath] = useState("");
   const [description, setDescription] = useState("");
+
+  const checkHealth = useCallback(async () => {
+    try {
+      const res = await fetch(
+        `/api/services/${service.id}/health?workspaceId=${encodeURIComponent(workspaceId)}`
+      );
+      if (res.ok) {
+        const data = await res.json();
+        setHealth(data);
+      }
+    } catch {
+      setHealth({ healthy: false, port: null, reason: "unreachable" });
+    }
+  }, [service.id, workspaceId]);
+
+  useEffect(() => {
+    checkHealth();
+    const interval = setInterval(checkHealth, 5000);
+    return () => clearInterval(interval);
+  }, [checkHealth]);
+
+  const handleSpawn = () => {
+    setIsSpawning(true);
+    setSpawnError(null);
+    startTransition(async () => {
+      try {
+        const result = await spawnServiceAction(workspaceId, service.id);
+        if ("error" in result) {
+          setSpawnError(result.error);
+        }
+      } catch (err: any) {
+        setSpawnError(err?.message ?? "Failed to launch service");
+      } finally {
+        setIsSpawning(false);
+      }
+    });
+  };
 
   const handleCreateEndpoint = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -86,18 +128,48 @@ export function ServiceDetail({ service, endpoints, workspaceId }: ServiceDetail
 
         {/* Top Stats/Status */}
         <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
+          {/* Health / Launch card */}
           <Card className="p-6">
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[var(--hover-bg)] text-[var(--muted)]">
-                <Activity className="h-5 w-5" />
-              </div>
-              <div>
-                <p className="text-xs font-medium uppercase tracking-wider text-[var(--muted)]">Status</p>
-                <div className="flex items-center gap-2">
-                  <div className="h-2 w-2 rounded-full bg-emerald-500" />
-                  <span className="text-sm font-semibold text-[var(--foreground)]">Operational</span>
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[var(--hover-bg)] text-[var(--muted)]">
+                  <Activity className="h-5 w-5" />
+                </div>
+                <div>
+                  <p className="text-xs font-medium uppercase tracking-wider text-[var(--muted)]">Status</p>
+                  {health === null ? (
+                    <span className="text-sm text-[var(--muted)]">Checking…</span>
+                  ) : health.healthy ? (
+                    <div className="flex items-center gap-2">
+                      <div className="h-2 w-2 rounded-full bg-emerald-500" />
+                      <span className="text-sm font-semibold text-[var(--foreground)]">
+                        Healthy{health.port ? ` :${health.port}` : ""}
+                      </span>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2">
+                      <div className="h-2 w-2 rounded-full bg-[var(--muted)]" />
+                      <span className="text-sm font-semibold text-[var(--muted)]">Stopped</span>
+                    </div>
+                  )}
+                  {spawnError && (
+                    <p className="mt-1 text-xs text-red-500">{spawnError}</p>
+                  )}
                 </div>
               </div>
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={handleSpawn}
+                disabled={isSpawning || isPending || !service.directory}
+                title={!service.directory ? "No directory set" : "Launch service process"}
+              >
+                {isSpawning || isPending ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Play className="h-4 w-4" />
+                )}
+              </Button>
             </div>
           </Card>
 
@@ -107,8 +179,10 @@ export function ServiceDetail({ service, endpoints, workspaceId }: ServiceDetail
                 <Clock className="h-5 w-5" />
               </div>
               <div>
-                <p className="text-xs font-medium uppercase tracking-wider text-[var(--muted)]">Uptime</p>
-                <span className="text-sm font-semibold text-[var(--foreground)]">99.98%</span>
+                <p className="text-xs font-medium uppercase tracking-wider text-[var(--muted)]">Directory</p>
+                <span className="text-sm font-semibold text-[var(--foreground)] truncate max-w-[140px] block" title={service.directory ?? ""}>
+                  {service.directory ?? <span className="text-[var(--muted)]">Not set</span>}
+                </span>
               </div>
             </div>
           </Card>
@@ -119,8 +193,10 @@ export function ServiceDetail({ service, endpoints, workspaceId }: ServiceDetail
                 <Zap className="h-5 w-5" />
               </div>
               <div>
-                <p className="text-xs font-medium uppercase tracking-wider text-[var(--muted)]">Avg Latency</p>
-                <span className="text-sm font-semibold text-[var(--foreground)]">42ms</span>
+                <p className="text-xs font-medium uppercase tracking-wider text-[var(--muted)]">Port</p>
+                <span className="text-sm font-semibold text-[var(--foreground)]">
+                  {service.port ?? <span className="text-[var(--muted)]">—</span>}
+                </span>
               </div>
             </div>
           </Card>

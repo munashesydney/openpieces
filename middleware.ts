@@ -10,6 +10,6 @@ export const config = {
      * - /_next/* (Next.js internals)
      * - Static files with extensions (e.g. .ico, .png, .svg)
      */
-    "/((?!login|setup|api/auth|api/setup|api/opencode/webhook|_next/static|_next/image|favicon.ico|.*\\..*).*)",
+    "/((?!login|setup|api/auth|api/setup|api/opencode/webhook|api/s/|_next/static|_next/image|favicon.ico|.*\\..*).*)",
   ],
 };

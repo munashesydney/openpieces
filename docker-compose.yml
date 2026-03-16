@@ -34,6 +34,7 @@ services:
     environment:
       - WATCHPACK_POLLING=true
       - OPENCODE_INTERNAL_URL=http://opencode:4096
+      - SERVICE_HOST=http://worker
     env_file:
       - .env
     depends_on:
@@ -54,6 +55,7 @@ services:
       - .:/app
       - /app/node_modules
       - /app/.next
+      - ./pieces:/app/pieces
     command: sh -c "node_modules/.bin/tsx lib/db/migrate.ts && node_modules/.bin/tsx scripts/ai-worker.ts"
     environment:
       - WATCHPACK_POLLING=true

@@ -64,6 +64,13 @@
       "when": 1773570000000,
       "tag": "0008_opencode_sessions_tied_to_services",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1773574000000,
+      "tag": "0009_service_port",
+      "breakpoints": true
     }
   ]
 }

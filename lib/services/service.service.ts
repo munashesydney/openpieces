@@ -91,6 +91,12 @@ export async function getServicesByWorkflowId(workflowId: string, workspaceId: s
     .where(and(eq(services.workflowId, workflowId), eq(services.workspaceId, workspaceId)));
 }
 
+export async function getServiceByIdOnly(serviceId: string): Promise<Service | null> {
+  if (!isValidUuid(serviceId)) return null;
+  const result = await db.select().from(services).where(eq(services.id, serviceId)).limit(1);
+  return result[0] ?? null;
+}
+
 export async function getServiceById(serviceId: string, workspaceId: string): Promise<Service | null> {
   if (!isValidUuid(serviceId) || !isValidUuid(workspaceId)) return null;
 
