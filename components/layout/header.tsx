@@ -1,18 +1,19 @@
-"use client";
+ "use client";
 
-import {
-  LayoutDashboard,
-  Workflow,
-  Calendar,
-  Settings,
-  Shield,
-  Bell,
-  Globe,
-  Monitor,
-  Menu,
-  Puzzle,
-  Terminal,
-} from "lucide-react";
+ import {
+   LayoutDashboard,
+   Workflow,
+   Calendar,
+   Settings,
+   Shield,
+   Bell,
+   Globe,
+   Monitor,
+   Menu,
+   Puzzle,
+   Terminal,
+   KeyRound,
+ } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { ThemeToggle } from "../theme-toggle";
@@ -50,11 +51,17 @@ export function Header() {
       activePattern: workspaceId ? `/workspace/${workspaceId}/personal/tasks` : "/tasks",
     },
     {
+      label: "Secrets",
+      href: workspaceId ? `/workspace/${workspaceId}/personal/secrets` : "/secrets",
+      icon: KeyRound,
+      activePattern: workspaceId ? `/workspace/${workspaceId}/personal/secrets` : "/secrets",
+    },
+    {
       label: "OpenCode",
       href: workspaceId ? `/workspace/${workspaceId}/personal/opencode` : "/opencode",
       icon: Terminal,
       activePattern: workspaceId ? `/workspace/${workspaceId}/personal/opencode` : "/opencode",
-    },
+    }, 
   ];
 
   const settingsNavItems = [
