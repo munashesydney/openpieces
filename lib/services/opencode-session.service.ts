@@ -79,6 +79,15 @@ export async function getSessionInfo(sessionId: string, workspaceId: string): Pr
   };
 }
 
+export async function getServiceId(sessionId: string): Promise<string | null> {
+  const rows = await db
+    .select({ serviceId: opencodeSessions.serviceId })
+    .from(opencodeSessions)
+    .where(eq(opencodeSessions.sessionId, sessionId))
+    .limit(1);
+  return rows[0]?.serviceId ?? null;
+}
+
 export async function getDirectory(sessionId: string): Promise<string | null> {
   const rows = await db
     .select({ directory: services.directory })

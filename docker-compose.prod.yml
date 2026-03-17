@@ -32,6 +32,7 @@ services:
       - ./pieces:/app/pieces
     environment:
       - OPENCODE_INTERNAL_URL=http://opencode:4096
+      - SERVICE_HOST=http://worker
     env_file:
       - .env
     depends_on:

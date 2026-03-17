@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getMessages, sendMessage } from "@/lib/services/opencode.service";
-import { getDirectory } from "@/lib/services/opencode-session.service";
+import { getDirectory, getServiceId } from "@/lib/services/opencode-session.service";
 import { requireUser } from "@/lib/services/auth.service";
 import { getDefaultWorkspace } from "@/lib/services/workspace.service";
 
@@ -69,12 +69,14 @@ export async function POST(
     if (isFirstMessage) {
       const user = await requireUser();
       const workspace = await getDefaultWorkspace(user.id);
+      const serviceId = await getServiceId(sessionId);
 
       const workspaceId = workspace?.id ?? "unknown";
       const contextBlock =
         `__OPENPIECES_CONTEXT_START__\n` +
         `workspaceId=${workspaceId}\n` +
         `userId=${user.id}\n` +
+        `serviceId=${serviceId ?? "unknown"}\n` +
         `__OPENPIECES_CONTEXT_END__\n\n`;
 
       fullContent =
