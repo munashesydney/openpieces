@@ -46,3 +46,14 @@ export async function getDefaultWorkspace(
     .limit(1);
   return result[0] ?? null;
 }
+
+export async function getWorkspaceOwnerId(
+  workspaceId: string
+): Promise<string | null> {
+  const result = await db
+    .select({ userId: workspaces.userId })
+    .from(workspaces)
+    .where(eq(workspaces.id, workspaceId))
+    .limit(1);
+  return result[0]?.userId ?? null;
+}

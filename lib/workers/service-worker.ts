@@ -3,6 +3,8 @@ import net from "net";
 import { eq } from "drizzle-orm";
 import { SERVICE_SPAWN_QUEUE, type ServiceSpawnJob, getPgBoss } from "@/lib/queues/pg-boss";
 import { getServiceById, updateService } from "@/lib/services/service.service";
+import { getWorkspaceOwnerId } from "@/lib/services/workspace.service";
+import { getSecrets } from "@/lib/services/secret.service";
 import { db } from "@/lib/db";
 import { services } from "@/lib/db/schema";
 
@@ -65,6 +67,26 @@ async function executeServiceSpawnJob(job: ServiceSpawnJob) {
     throw new Error(`Service ${serviceId} has no directory set`);
   }
 
+  // Derive the workspace owner user ID so we can pass it into the service process.
+  const workspaceOwnerId = (await getWorkspaceOwnerId(workspaceId)) ?? "";
+
+  // Load all personal secrets for this workspace/user and inject as environment variables.
+  let secretEnv: Record<string, string> = {};
+  try {
+    const { data: secrets } = await getSecrets(workspaceId, workspaceOwnerId, 1, 500);
+    secretEnv = secrets.reduce<Record<string, string>>((acc, secret) => {
+      if (secret.key && typeof secret.value === "string") {
+        acc[secret.key] = secret.value;
+      }
+      return acc;
+    }, {});
+  } catch (err) {
+    console.error(
+      `[service-worker] Failed to load secrets for workspace ${workspaceId} and user ${workspaceOwnerId}:`,
+      err
+    );
+  }
+
   const port = await findFreePort();
   const entryPoint = `./pieces/${service.directory.trim()}/index.ts`;
 
@@ -76,7 +98,13 @@ async function executeServiceSpawnJob(job: ServiceSpawnJob) {
     {
       detached: true,
       stdio: ["ignore", "pipe", "pipe"],
-      env: { ...process.env, LD_LIBRARY_PATH: "/opt/deno-glibc" },
+      env: {
+        ...process.env,
+        ...secretEnv,
+        LD_LIBRARY_PATH: "/opt/deno-glibc",
+        OPENPIECES_USER_ID: workspaceOwnerId,
+        OPENPIECES_WORKSPACE_ID: service.workspaceId,
+      },
     }
   );
 
