@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getMessages, sendMessage } from "@/lib/services/opencode.service";
 import { getDirectory } from "@/lib/services/opencode-session.service";
+import { requireUser } from "@/lib/services/auth.service";
+import { getDefaultWorkspace } from "@/lib/services/workspace.service";
 
 const DIRECTORY_INSTRUCTION_PREFIX =
   "Before doing anything else: ensure the directory '";
@@ -59,13 +61,29 @@ export async function POST(
     }
 
     const existingMessages = await getMessages(sessionId);
-    const isFirstMessage = !Array.isArray(existingMessages) || existingMessages.length === 0;
-    const fullContent = isFirstMessage
-      ? DIRECTORY_INSTRUCTION_PREFIX +
+    const isFirstMessage =
+      !Array.isArray(existingMessages) || existingMessages.length === 0;
+
+    let fullContent = content;
+
+    if (isFirstMessage) {
+      const user = await requireUser();
+      const workspace = await getDefaultWorkspace(user.id);
+
+      const workspaceId = workspace?.id ?? "unknown";
+      const contextBlock =
+        `__OPENPIECES_CONTEXT_START__\n` +
+        `workspaceId=${workspaceId}\n` +
+        `userId=${user.id}\n` +
+        `__OPENPIECES_CONTEXT_END__\n\n`;
+
+      fullContent =
+        DIRECTORY_INSTRUCTION_PREFIX +
         directory +
         DIRECTORY_INSTRUCTION_SUFFIX +
-        content
-      : content;
+        contextBlock +
+        content;
+    }
 
     sendMessage(sessionId, fullContent).catch((e) =>
       console.error("sendMessage failed:", e)
