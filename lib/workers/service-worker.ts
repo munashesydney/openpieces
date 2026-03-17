@@ -5,6 +5,7 @@ import { SERVICE_SPAWN_QUEUE, type ServiceSpawnJob, getPgBoss } from "@/lib/queu
 import { getServiceById, updateService } from "@/lib/services/service.service";
 import { getWorkspaceOwnerId } from "@/lib/services/workspace.service";
 import { getSecrets } from "@/lib/services/secret.service";
+import { appendServiceLog, resetServiceLog } from "@/lib/services/service-log-stream";
 import { db } from "@/lib/db";
 import { services } from "@/lib/db/schema";
 
@@ -90,6 +91,13 @@ async function executeServiceSpawnJob(job: ServiceSpawnJob) {
   const port = await findFreePort();
   const entryPoint = `./pieces/${service.directory.trim()}/index.ts`;
 
+  await resetServiceLog(workspaceId, serviceId);
+  await appendServiceLog(
+    workspaceId,
+    serviceId,
+    "info",
+    `Spawning service "${service.title}" on port ${port}: ${entryPoint}`
+  );
   console.log(`[service-worker] Spawning service "${service.title}" on port ${port}: ${entryPoint}`);
 
   const proc = spawn(
@@ -109,19 +117,30 @@ async function executeServiceSpawnJob(job: ServiceSpawnJob) {
   );
 
   proc.stdout?.on("data", (data: Buffer) => {
-    console.log(`[service-worker][${service.title}] ${data.toString().trim()}`);
+    const message = data.toString().trim();
+    if (message) {
+      console.log(`[service-worker][${service.title}] ${message}`);
+      void appendServiceLog(workspaceId, serviceId, "info", message);
+    }
   });
   proc.stderr?.on("data", (data: Buffer) => {
-    console.error(`[service-worker][${service.title}] ${data.toString().trim()}`);
+    const message = data.toString().trim();
+    if (message) {
+      console.error(`[service-worker][${service.title}] ${message}`);
+      void appendServiceLog(workspaceId, serviceId, "error", message);
+    }
   });
   proc.on("error", (err) => {
     console.error(`[service-worker][${service.title}] spawn error:`, err.message);
+    void appendServiceLog(workspaceId, serviceId, "error", `Spawn error: ${err.message}`);
   });
   proc.on("exit", (code, signal) => {
     if (code !== null) {
       console.error(`[service-worker][${service.title}] exited with code ${code}`);
+      void appendServiceLog(workspaceId, serviceId, "error", `Process exited with code ${code}`);
     } else if (signal) {
       console.error(`[service-worker][${service.title}] killed by signal ${signal}`);
+      void appendServiceLog(workspaceId, serviceId, "error", `Process killed by signal ${signal}`);
     }
   });
 
@@ -131,8 +150,10 @@ async function executeServiceSpawnJob(job: ServiceSpawnJob) {
 
   if (healthy) {
     await updateService(serviceId, workspaceId, { port });
+    await appendServiceLog(workspaceId, serviceId, "info", `Service is healthy on port ${port}`);
     console.log(`[service-worker] Service "${service.title}" is healthy on port ${port}`);
   } else {
+    await appendServiceLog(workspaceId, serviceId, "error", `Service did not become healthy on port ${port}`);
     console.error(`[service-worker] Service "${service.title}" did not become healthy on port ${port}`);
   }
 }

@@ -11,6 +11,7 @@ import { Input } from "@/components/basic/input/input";
 import { Textarea } from "@/components/basic/input/textarea";
 import { Dropdown } from "@/components/basic/input/dropdown";
 import { ActionMenu } from "@/components/basic/input/action-menu";
+import { ServiceLogsPanel } from "./service-logs-panel";
 import { type Service, type ServiceEndpoint } from "@/lib/db/schema";
 import { createEndpointAction, deleteEndpointAction, spawnServiceAction } from "@/app/workspace/[workspaceId]/personal/services/[serviceId]/actions";
 
@@ -48,11 +49,11 @@ export function ServiceDetail({ service, endpoints, workspaceId }: ServiceDetail
     }
   }, [service.id, workspaceId]);
 
-  useEffect(() => {
+  /*useEffect(() => {
     checkHealth();
     const interval = setInterval(checkHealth, 5000);
     return () => clearInterval(interval);
-  }, [checkHealth]);
+  }, [checkHealth]);*/
 
   const handleSpawn = () => {
     setIsSpawning(true);
@@ -201,6 +202,8 @@ export function ServiceDetail({ service, endpoints, workspaceId }: ServiceDetail
             </div>
           </Card>
         </div>
+
+        <ServiceLogsPanel workspaceId={workspaceId} serviceId={service.id} />
 
         {/* Endpoints Section */}
         <Card>

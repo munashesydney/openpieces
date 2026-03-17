@@ -38,3 +38,6 @@ next-env.d.ts
 README.md
 .eslintrc*
 eslint.config*
+
+# logs
+tmp
