@@ -24,7 +24,11 @@ export async function executeMessages(input: MessagesToolInput, context: ToolCon
     throw new Error("content is required");
   }
 
-  await sendMessage(sessionId, content.trim());
+  // Fire-and-forget: do not block the AI/tool call on long-running OpenCode processing
+  sendMessage(sessionId, content.trim()).catch((error) => {
+    console.error("Failed to send OpenCode message:", error);
+  });
+
   return {
     success: true,
     sessionId,
