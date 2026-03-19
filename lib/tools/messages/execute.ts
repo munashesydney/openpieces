@@ -1,4 +1,4 @@
-import { sendMessage } from "@/lib/services/opencode.service";
+import { sendMessageWithContext } from "@/lib/services/opencode.service";
 import { getSessionInfo } from "@/lib/services/opencode-session.service";
 import type { ToolContext } from "@/lib/tools/registry";
 import type { MessagesToolInput } from "./definition";
@@ -25,7 +25,7 @@ export async function executeMessages(input: MessagesToolInput, context: ToolCon
   }
 
   // Fire-and-forget: do not block the AI/tool call on long-running OpenCode processing
-  sendMessage(sessionId, content.trim()).catch((error) => {
+  sendMessageWithContext(sessionId, content.trim()).catch((error) => {
     console.error("Failed to send OpenCode message:", error);
   });
 

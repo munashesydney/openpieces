@@ -1,14 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getMessages, sendMessage } from "@/lib/services/opencode.service";
-import { getDirectory, getServiceId } from "@/lib/services/opencode-session.service";
+import { getMessages, sendMessageWithContext } from "@/lib/services/opencode.service";
 import { requireUser } from "@/lib/services/auth.service";
-import { getDefaultWorkspace } from "@/lib/services/workspace.service";
-
-const DIRECTORY_INSTRUCTION_PREFIX =
-  "Before doing anything else: ensure the directory '";
-
-const DIRECTORY_INSTRUCTION_SUFFIX =
-  "' exists (create it if needed), then cd into it. You are only allowed to work inside this directory.\n\n";
 
 export async function GET(
   request: NextRequest,
@@ -49,47 +41,7 @@ export async function POST(
       return NextResponse.json({ error: "Message content is required" }, { status: 400 });
     }
 
-    const directory = await getDirectory(sessionId);
-    if (!directory) {
-      return NextResponse.json(
-        {
-          error:
-            "No directory set for this session. Create the session with a working directory.",
-        },
-        { status: 400 }
-      );
-    }
-
-    const existingMessages = await getMessages(sessionId);
-    const isFirstMessage =
-      !Array.isArray(existingMessages) || existingMessages.length === 0;
-
-    let fullContent = content;
-
-    if (isFirstMessage) {
-      const user = await requireUser();
-      const workspace = await getDefaultWorkspace(user.id);
-      const serviceId = await getServiceId(sessionId);
-
-      const workspaceId = workspace?.id ?? "unknown";
-      const contextBlock =
-        `__OPENPIECES_CONTEXT_START__\n` +
-        `workspaceId=${workspaceId}\n` +
-        `userId=${user.id}\n` +
-        `serviceId=${serviceId ?? "unknown"}\n` +
-        `__OPENPIECES_CONTEXT_END__\n\n`;
-
-      fullContent =
-        DIRECTORY_INSTRUCTION_PREFIX +
-        directory +
-        DIRECTORY_INSTRUCTION_SUFFIX +
-        contextBlock +
-        content;
-    }
-
-    sendMessage(sessionId, fullContent).catch((e) =>
-      console.error("sendMessage failed:", e)
-    );
+    await sendMessageWithContext(sessionId, content);
 
     return NextResponse.json({ accepted: true }, { status: 202 });
   } catch (error: any) {

@@ -100,6 +100,12 @@ export async function getMessages(sessionId: string): Promise<any[]> {
   }
 }
 
+const DIRECTORY_INSTRUCTION_PREFIX =
+  "Before doing anything else: ensure the directory '";
+
+const DIRECTORY_INSTRUCTION_SUFFIX =
+  "' exists (create it if needed), then cd into it. You are only allowed to work inside this directory.\n\n";
+
 export async function sendMessage(sessionId: string, content: string): Promise<OpenCodeMessage> {
   const response = await fetch(`${getBaseUrl()}/session/${sessionId}/message`, {
     method: "POST",
@@ -127,4 +133,45 @@ export async function sendMessage(sessionId: string, content: string): Promise<O
     console.error("Failed to parse send message JSON:", text);
     throw new Error("Invalid format returned from OpenCode API.");
   }
+}
+
+// Business logic for sending a message with context - used by the API route
+export async function sendMessageWithContext(sessionId: string, content: string): Promise<void> {
+  const { getDirectory } = await import("@/lib/services/opencode-session.service");
+  const { requireUser } = await import("@/lib/services/auth.service");
+  const { getDefaultWorkspace } = await import("@/lib/services/workspace.service");
+  const { getServiceId } = await import("@/lib/services/opencode-session.service");
+
+  const directory = await getDirectory(sessionId);
+  if (!directory) {
+    throw new Error("No directory set for this session. Create the session with a working directory.");
+  }
+
+  const existingMessages = await getMessages(sessionId);
+  const isFirstMessage = !Array.isArray(existingMessages) || existingMessages.length === 0;
+
+  let fullContent = content;
+
+  if (isFirstMessage) {
+    const user = await requireUser();
+    const workspace = await getDefaultWorkspace(user.id);
+    const serviceId = await getServiceId(sessionId);
+
+    const workspaceId = workspace?.id ?? "unknown";
+    const contextBlock =
+      `__OPENPIECES_CONTEXT_START__\n` +
+      `workspaceId=${workspaceId}\n` +
+      `userId=${user.id}\n` +
+      `serviceId=${serviceId ?? "unknown"}\n` +
+      `__OPENPIECES_CONTEXT_END__\n\n`;
+
+    fullContent =
+      DIRECTORY_INSTRUCTION_PREFIX +
+      directory +
+      DIRECTORY_INSTRUCTION_SUFFIX +
+      contextBlock +
+      content;
+  }
+
+  await sendMessage(sessionId, fullContent);
 }
