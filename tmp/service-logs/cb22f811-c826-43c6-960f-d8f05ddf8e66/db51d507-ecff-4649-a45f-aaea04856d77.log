@@ -1,8 +1,0 @@
-[2026-03-17T07:40:23.114Z] [info] Spawning service "Successfull stripe payment" on port 8003: ./pieces/stripelisten/index.ts
-[2026-03-17T07:40:23.176Z] [error] Listening on http://0.0.0.0:8003/ (http://localhost:8003/)
-[2026-03-17T07:40:23.653Z] [info] Service is healthy on port 8003
-[2026-03-17T07:40:23.653Z] [info] Health check endpoint hit
-[2026-03-17T07:40:28.554Z] [info] Documentation endpoint hit
-[2026-03-17T07:44:16.938Z] [info] Documentation endpoint hit
-[2026-03-17T07:44:36.352Z] [info] Documentation endpoint hit
-[2026-03-17T07:49:18.358Z] [info] Documentation endpoint hit

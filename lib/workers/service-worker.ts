@@ -96,11 +96,11 @@ async function executeServiceSpawnJob(job: ServiceSpawnJob) {
 
   const port = await findFreePort();
   const entryPoint = `./pieces/${service.directory.trim()}/index.ts`;
+  const directory = service.directory.trim();
 
-  await resetServiceLog(workspaceId, serviceId);
+  await resetServiceLog(directory);
   await appendServiceLog(
-    workspaceId,
-    serviceId,
+    directory,
     "info",
     `Spawning service "${service.title}" on port ${port}: ${entryPoint}`
   );
@@ -128,27 +128,27 @@ async function executeServiceSpawnJob(job: ServiceSpawnJob) {
     const message = data.toString().trim();
     if (message) {
       console.log(`[service-worker][${service.title}] ${message}`);
-      void appendServiceLog(workspaceId, serviceId, "info", message);
+      void appendServiceLog(directory, "info", message);
     }
   });
   proc.stderr?.on("data", (data: Buffer) => {
     const message = data.toString().trim();
     if (message) {
       console.error(`[service-worker][${service.title}] ${message}`);
-      void appendServiceLog(workspaceId, serviceId, "error", message);
+      void appendServiceLog(directory, "error", message);
     }
   });
   proc.on("error", (err) => {
     console.error(`[service-worker][${service.title}] spawn error:`, err.message);
-    void appendServiceLog(workspaceId, serviceId, "error", `Spawn error: ${err.message}`);
+    void appendServiceLog(directory, "error", `Spawn error: ${err.message}`);
   });
   proc.on("exit", (code, signal) => {
     if (code !== null) {
       console.error(`[service-worker][${service.title}] exited with code ${code}`);
-      void appendServiceLog(workspaceId, serviceId, "error", `Process exited with code ${code}`);
+      void appendServiceLog(directory, "error", `Process exited with code ${code}`);
     } else if (signal) {
       console.error(`[service-worker][${service.title}] killed by signal ${signal}`);
-      void appendServiceLog(workspaceId, serviceId, "error", `Process killed by signal ${signal}`);
+      void appendServiceLog(directory, "error", `Process killed by signal ${signal}`);
     }
   });
 
@@ -158,10 +158,10 @@ async function executeServiceSpawnJob(job: ServiceSpawnJob) {
 
   if (healthy) {
     await updateService(serviceId, workspaceId, { port, pid: proc.pid, status: "running" });
-    await appendServiceLog(workspaceId, serviceId, "info", `Service is healthy on port ${port}`);
+    await appendServiceLog(directory, "info", `Service is healthy on port ${port}`);
     console.log(`[service-worker] Service "${service.title}" is healthy on port ${port}`);
   } else {
-    await appendServiceLog(workspaceId, serviceId, "error", `Service did not become healthy on port ${port}`);
+    await appendServiceLog(directory, "error", `Service did not become healthy on port ${port}`);
     console.error(`[service-worker] Service "${service.title}" did not become healthy on port ${port}`);
   }
 }
@@ -174,13 +174,15 @@ async function executeServiceStopJob(job: ServiceStopJob) {
     throw new Error(`Service not found: ${serviceId}`);
   }
 
+  const directory = service.directory?.trim() ?? "";
+
   if (!service.pid) {
-    await appendServiceLog(workspaceId, serviceId, "info", "Service is not running (no PID found)");
+    await appendServiceLog(directory, "info", "Service is not running (no PID found)");
     console.log(`[service-worker] Service ${serviceId} has no PID, nothing to stop`);
     return;
   }
 
-  await appendServiceLog(workspaceId, serviceId, "info", `Stopping service (PID: ${service.pid})`);
+  await appendServiceLog(directory, "info", `Stopping service (PID: ${service.pid})`);
   console.log(`[service-worker] Stopping service ${serviceId} (PID: ${service.pid})`);
 
   try {
@@ -211,11 +213,11 @@ async function executeServiceStopJob(job: ServiceStopJob) {
     });
 
     await updateService(serviceId, workspaceId, { port: null, pid: null, status: "stopped" });
-    await appendServiceLog(workspaceId, serviceId, "info", "Service stopped successfully");
+    await appendServiceLog(directory, "info", "Service stopped successfully");
     console.log(`[service-worker] Service ${serviceId} stopped successfully`);
   } catch (err) {
     const errorMessage = err instanceof Error ? err.message : "Unknown error";
-    await appendServiceLog(workspaceId, serviceId, "error", `Failed to stop service: ${errorMessage}`);
+    await appendServiceLog(directory, "error", `Failed to stop service: ${errorMessage}`);
     console.error(`[service-worker] Failed to stop service ${serviceId}:`, errorMessage);
     // Still mark as stopped in DB even if kill failed
     await updateService(serviceId, workspaceId, { port: null, pid: null, status: "stopped" });

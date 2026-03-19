@@ -1,6 +1,0 @@
-[2026-03-19T06:58:53.286Z] [info] Spawning service "test" on port 8001: ./pieces/test/index.ts
-[2026-03-19T06:58:53.483Z] [error] Listening on http://0.0.0.0:8001/ (http://localhost:8001/)
-[2026-03-19T06:58:53.831Z] [info] Service is healthy on port 8001
-[2026-03-19T06:59:21.261Z] [info] Stopping service (PID: 89)
-[2026-03-19T06:59:21.272Z] [error] Process killed by signal SIGTERM
-[2026-03-19T06:59:21.776Z] [info] Service stopped successfully

@@ -1,23 +1,24 @@
 import { mkdir, open, readFile, truncate, writeFile } from "fs/promises";
 import path from "path";
 
-const LOG_ROOT = path.join(process.cwd(), "tmp", "service-logs");
+const LOG_ROOT = path.join(process.cwd(), "pieces");
 
-function getServiceDirectory(workspaceId: string): string {
-  return path.join(LOG_ROOT, workspaceId);
+function getServiceDirectory(directory: string): string {
+  return path.join(LOG_ROOT, directory, "logs");
 }
 
-export function getServiceLogPath(workspaceId: string, serviceId: string): string {
-  return path.join(getServiceDirectory(workspaceId), `${serviceId}.log`);
+export function getServiceLogPath(directory: string): string {
+  const today = new Date().toISOString().split("T")[0];
+  return path.join(getServiceDirectory(directory), `${today}.log`);
 }
 
-async function ensureServiceLogDirectory(workspaceId: string): Promise<void> {
-  await mkdir(getServiceDirectory(workspaceId), { recursive: true });
+async function ensureServiceLogDirectory(directory: string): Promise<void> {
+  await mkdir(getServiceDirectory(directory), { recursive: true });
 }
 
-export async function resetServiceLog(workspaceId: string, serviceId: string): Promise<void> {
-  await ensureServiceLogDirectory(workspaceId);
-  const logPath = getServiceLogPath(workspaceId, serviceId);
+export async function resetServiceLog(directory: string): Promise<void> {
+  await ensureServiceLogDirectory(directory);
+  const logPath = getServiceLogPath(directory);
 
   try {
     await truncate(logPath, 0);
@@ -27,13 +28,12 @@ export async function resetServiceLog(workspaceId: string, serviceId: string): P
 }
 
 export async function appendServiceLog(
-  workspaceId: string,
-  serviceId: string,
+  directory: string,
   level: "info" | "error",
   message: string
 ): Promise<void> {
-  await ensureServiceLogDirectory(workspaceId);
-  const logPath = getServiceLogPath(workspaceId, serviceId);
+  await ensureServiceLogDirectory(directory);
+  const logPath = getServiceLogPath(directory);
   const timestamp = new Date().toISOString();
   const normalized = message.replace(/\r\n/g, "\n").replace(/\r/g, "\n");
   const lines = normalized.split("\n");
@@ -55,11 +55,10 @@ export async function appendServiceLog(
 }
 
 export async function readServiceLogTail(
-  workspaceId: string,
-  serviceId: string,
+  directory: string,
   maxBytes = 48 * 1024
 ): Promise<{ content: string; nextOffset: number }> {
-  const logPath = getServiceLogPath(workspaceId, serviceId);
+  const logPath = getServiceLogPath(directory);
 
   try {
     const content = await readFile(logPath, "utf8");
@@ -71,11 +70,10 @@ export async function readServiceLogTail(
 }
 
 export async function readServiceLogChunk(
-  workspaceId: string,
-  serviceId: string,
+  directory: string,
   offset: number
 ): Promise<{ content: string; nextOffset: number }> {
-  const logPath = getServiceLogPath(workspaceId, serviceId);
+  const logPath = getServiceLogPath(directory);
 
   try {
     const file = await open(logPath, "r");

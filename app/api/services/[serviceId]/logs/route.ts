@@ -36,6 +36,11 @@ export async function GET(
     return NextResponse.json({ error: "Service not found" }, { status: 404 });
   }
 
+  const directory = service.directory?.trim();
+  if (!directory) {
+    return NextResponse.json({ error: "Service has no directory set" }, { status: 400 });
+  }
+
   const stream = new ReadableStream<Uint8Array>({
     start(controller) {
       let closed = false;
@@ -54,7 +59,7 @@ export async function GET(
 
       void (async () => {
         try {
-          const initial = await readServiceLogTail(workspaceId, serviceId);
+          const initial = await readServiceLogTail(directory);
           let offset = initial.nextOffset;
 
           if (initial.content) {
@@ -64,7 +69,7 @@ export async function GET(
           let heartbeatCounter = 0;
 
           while (!closed && !request.signal.aborted) {
-            const next = await readServiceLogChunk(workspaceId, serviceId, offset);
+            const next = await readServiceLogChunk(directory, offset);
             offset = next.nextOffset;
 
             if (next.content) {
