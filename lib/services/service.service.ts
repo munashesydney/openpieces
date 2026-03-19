@@ -17,6 +17,20 @@ export async function createService(data: NewService): Promise<Service> {
     throw new ValidationError("Directory is required.");
   }
 
+  const directory = data.directory.trim();
+  // Directory must be a single word (no paths, no spaces)
+  if (directory.includes("/") || directory.includes("\\") || directory.includes(" ")) {
+    throw new ValidationError("Directory must be a single word without slashes or spaces.");
+  }
+  // Don't allow leading dots or special prefixes
+  if (directory.startsWith(".") || directory.startsWith("-") || directory.startsWith("_")) {
+    throw new ValidationError("Directory must start with a letter or number.");
+  }
+  // Only allow alphanumeric, hyphens, and underscores
+  if (!/^[a-zA-Z0-9_-]+$/.test(directory)) {
+    throw new ValidationError("Directory can only contain letters, numbers, hyphens, and underscores.");
+  }
+
   // ── Validate type ─────────────────────────────────────────────────────────
   if (!VALID_SERVICE_TYPES.includes(data.type as typeof VALID_SERVICE_TYPES[number])) {
     throw new ValidationError(

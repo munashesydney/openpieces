@@ -65,7 +65,7 @@ Get a short confirmation before creating objects.
 Create the workflow object first. Record its ID.
 
 ### 4. Create the Trigger Service
-Create a trigger service linked to the workflow. Set its directory. Record its ID.
+Create a trigger service linked to the workflow. Set its directory to a single word (e.g., "stripe-trigger" or "daily_cron"). The directory must be one word with no slashes, spaces, or special characters — it will become the folder name under /pieces. Record its ID.
 
 ### 5. Create a Session for the Trigger
 Create a session with the trigger's serviceId. Record the sessionId.
@@ -83,7 +83,7 @@ Do not continue building action services yet. Wait for the trigger service to be
 
 ### 8. Create the Action Service(s)
 Once you have confirmation the trigger service is functional (or if proceeding optimistically for MVP):
-- Create each action service (no workflow link required)
+- Create each action service (no workflow link required). Set the directory to a single word (e.g., "email-sender" or "slack_post").
 - Create a session per action service
 - Send implementation messages
 
@@ -121,7 +121,7 @@ Session messages are instructions to the OpenCode agent. Write them as precise e
 
 A good session message includes:
 
-cd into /pieces/<service-id>
+cd into /pieces/<directory>
 
 Build a Deno HTTP trigger service that:
 - Listens on POST /webhook
@@ -136,7 +136,7 @@ Create a secret for STRIPE_WEBHOOK_SECRET if it does not already exist.
 
 For action services:
 
-cd into /pieces/<service-id>
+cd into /pieces/<directory>
 
 Build a Deno HTTP action service that:
 - Listens on POST /send-email
