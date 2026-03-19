@@ -42,4 +42,10 @@ next-env.d.ts
 
 # opencode
 opencode-data/
-pieces/
+
+# pieces - only track specific files
+/pieces/*
+!/pieces/.opencode
+!/pieces/AGENTS.md
+!/pieces/test
+!/pieces/test/**

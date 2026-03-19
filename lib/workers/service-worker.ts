@@ -118,6 +118,8 @@ async function executeServiceSpawnJob(job: ServiceSpawnJob) {
         LD_LIBRARY_PATH: "/opt/deno-glibc",
         OPENPIECES_USER_ID: workspaceOwnerId,
         OPENPIECES_WORKSPACE_ID: service.workspaceId,
+        OPENPIECES_SERVICE_ID: serviceId,
+        OPENPIECES_WORKFLOW_ID: service.workflowId ?? "",
       },
     }
   );
