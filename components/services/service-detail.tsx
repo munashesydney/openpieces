@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition, useEffect, useCallback } from "react";
-import { ChevronLeft, Activity, Code, Clock, ShieldCheck, Zap, Plus, Trash2, Play, Loader2 } from "lucide-react";
+import { ChevronLeft, Activity, Code, Clock, ShieldCheck, Zap, Plus, Trash2, Play, Loader2, Square } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "../ui/card";
@@ -13,7 +13,7 @@ import { Dropdown } from "@/components/basic/input/dropdown";
 import { ActionMenu } from "@/components/basic/input/action-menu";
 import { ServiceLogsPanel } from "./service-logs-panel";
 import { type Service, type ServiceEndpoint } from "@/lib/db/schema";
-import { createEndpointAction, deleteEndpointAction, spawnServiceAction } from "@/app/workspace/[workspaceId]/personal/services/[serviceId]/actions";
+import { createEndpointAction, deleteEndpointAction, spawnServiceAction, stopServiceAction } from "@/app/workspace/[workspaceId]/personal/services/[serviceId]/actions";
 
 interface ServiceDetailProps {
   service: Service;
@@ -27,7 +27,9 @@ export function ServiceDetail({ service, endpoints, workspaceId }: ServiceDetail
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [isSpawning, setIsSpawning] = useState(false);
+  const [isStopping, setIsStopping] = useState(false);
   const [spawnError, setSpawnError] = useState<string | null>(null);
+  const [stopError, setStopError] = useState<string | null>(null);
   const [health, setHealth] = useState<HealthStatus>(null);
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   
@@ -49,11 +51,11 @@ export function ServiceDetail({ service, endpoints, workspaceId }: ServiceDetail
     }
   }, [service.id, workspaceId]);
 
-  /*useEffect(() => {
+  useEffect(() => {
     checkHealth();
     const interval = setInterval(checkHealth, 5000);
     return () => clearInterval(interval);
-  }, [checkHealth]);*/
+  }, [checkHealth]);
 
   const handleSpawn = () => {
     setIsSpawning(true);
@@ -68,6 +70,23 @@ export function ServiceDetail({ service, endpoints, workspaceId }: ServiceDetail
         setSpawnError(err?.message ?? "Failed to launch service");
       } finally {
         setIsSpawning(false);
+      }
+    });
+  };
+
+  const handleStop = () => {
+    setIsStopping(true);
+    setStopError(null);
+    startTransition(async () => {
+      try {
+        const result = await stopServiceAction(workspaceId, service.id);
+        if ("error" in result) {
+          setStopError(result.error);
+        }
+      } catch (err: any) {
+        setStopError(err?.message ?? "Failed to stop service");
+      } finally {
+        setIsStopping(false);
       }
     });
   };
@@ -156,21 +175,40 @@ export function ServiceDetail({ service, endpoints, workspaceId }: ServiceDetail
                   {spawnError && (
                     <p className="mt-1 text-xs text-red-500">{spawnError}</p>
                   )}
+                  {stopError && (
+                    <p className="mt-1 text-xs text-red-500">{stopError}</p>
+                  )}
                 </div>
               </div>
-              <Button
-                size="sm"
-                variant="ghost"
-                onClick={handleSpawn}
-                disabled={isSpawning || isPending || !service.directory}
-                title={!service.directory ? "No directory set" : "Launch service process"}
-              >
-                {isSpawning || isPending ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <Play className="h-4 w-4" />
-                )}
-              </Button>
+              {service.status === "running" ? (
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={handleStop}
+                  disabled={isStopping || isPending}
+                  title="Stop service"
+                >
+                  {isStopping || isPending ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Square className="h-4 w-4" />
+                  )}
+                </Button>
+              ) : (
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={handleSpawn}
+                  disabled={isSpawning || isPending || !service.directory}
+                  title={!service.directory ? "No directory set" : "Launch service process"}
+                >
+                  {isSpawning || isPending ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Play className="h-4 w-4" />
+                  )}
+                </Button>
+              )}
             </div>
           </Card>
 

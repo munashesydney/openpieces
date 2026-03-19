@@ -1,7 +1,13 @@
-import { spawn } from "child_process";
+import { spawn, ChildProcess } from "child_process";
 import net from "net";
 import { eq } from "drizzle-orm";
-import { SERVICE_SPAWN_QUEUE, type ServiceSpawnJob, getPgBoss } from "@/lib/queues/pg-boss";
+import {
+  SERVICE_SPAWN_QUEUE,
+  SERVICE_STOP_QUEUE,
+  type ServiceSpawnJob,
+  type ServiceStopJob,
+  getPgBoss,
+} from "@/lib/queues/pg-boss";
 import { getServiceById, updateService } from "@/lib/services/service.service";
 import { getWorkspaceOwnerId } from "@/lib/services/workspace.service";
 import { getSecrets } from "@/lib/services/secret.service";
@@ -149,12 +155,68 @@ async function executeServiceSpawnJob(job: ServiceSpawnJob) {
   const healthy = await pollHealth(port);
 
   if (healthy) {
-    await updateService(serviceId, workspaceId, { port });
+    await updateService(serviceId, workspaceId, { port, pid: proc.pid, status: "running" });
     await appendServiceLog(workspaceId, serviceId, "info", `Service is healthy on port ${port}`);
     console.log(`[service-worker] Service "${service.title}" is healthy on port ${port}`);
   } else {
     await appendServiceLog(workspaceId, serviceId, "error", `Service did not become healthy on port ${port}`);
     console.error(`[service-worker] Service "${service.title}" did not become healthy on port ${port}`);
+  }
+}
+
+async function executeServiceStopJob(job: ServiceStopJob) {
+  const { serviceId, workspaceId } = job;
+
+  const service = await getServiceById(serviceId, workspaceId);
+  if (!service) {
+    throw new Error(`Service not found: ${serviceId}`);
+  }
+
+  if (!service.pid) {
+    await appendServiceLog(workspaceId, serviceId, "info", "Service is not running (no PID found)");
+    console.log(`[service-worker] Service ${serviceId} has no PID, nothing to stop`);
+    return;
+  }
+
+  await appendServiceLog(workspaceId, serviceId, "info", `Stopping service (PID: ${service.pid})`);
+  console.log(`[service-worker] Stopping service ${serviceId} (PID: ${service.pid})`);
+
+  try {
+    process.kill(service.pid, "SIGTERM");
+
+    // Wait for process to exit gracefully
+    await new Promise<void>((resolve) => {
+      const checkExit = setInterval(() => {
+        try {
+          process.kill(service.pid!, 0);
+          // Process still running
+        } catch {
+          clearInterval(checkExit);
+          resolve();
+        }
+      }, 500);
+
+      // Timeout after 5 seconds, force kill
+      setTimeout(() => {
+        clearInterval(checkExit);
+        try {
+          process.kill(service.pid!, "SIGKILL");
+        } catch {
+          // Process already gone
+        }
+        resolve();
+      }, 5000);
+    });
+
+    await updateService(serviceId, workspaceId, { port: null, pid: null, status: "stopped" });
+    await appendServiceLog(workspaceId, serviceId, "info", "Service stopped successfully");
+    console.log(`[service-worker] Service ${serviceId} stopped successfully`);
+  } catch (err) {
+    const errorMessage = err instanceof Error ? err.message : "Unknown error";
+    await appendServiceLog(workspaceId, serviceId, "error", `Failed to stop service: ${errorMessage}`);
+    console.error(`[service-worker] Failed to stop service ${serviceId}:`, errorMessage);
+    // Still mark as stopped in DB even if kill failed
+    await updateService(serviceId, workspaceId, { port: null, pid: null, status: "stopped" });
   }
 }
 
@@ -167,6 +229,12 @@ export async function startServiceWorker() {
     await executeServiceSpawnJob(job.data as ServiceSpawnJob);
   });
 
-  console.log("[service-worker] listening for service spawn jobs");
+  await boss.work(SERVICE_STOP_QUEUE, async (jobs) => {
+    const job = jobs[0];
+    if (!job) return;
+    await executeServiceStopJob(job.data as ServiceStopJob);
+  });
+
+  console.log("[service-worker] listening for service spawn and stop jobs");
   return boss;
 }

@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { createEndpoint, updateEndpoint, deleteEndpoint } from "../../../../../../lib/services/service-endpoint.service";
 import { requireWorkspaceOwner } from "../../../../../../lib/services/auth.service";
 import { getServiceById } from "../../../../../../lib/services/service.service";
-import { enqueueServiceSpawn } from "../../../../../../lib/queues/pg-boss";
+import { enqueueServiceSpawn, enqueueServiceStop } from "../../../../../../lib/queues/pg-boss";
 
 export type ActionResult = { error: string } | { success: true };
 
@@ -16,6 +16,18 @@ export async function spawnServiceAction(workspaceId: string, serviceId: string)
   if (!service.directory?.trim()) return { error: "Service has no directory set" };
 
   await enqueueServiceSpawn({ serviceId, workspaceId });
+  revalidatePath(`/workspace/${workspaceId}/personal/services/${serviceId}`);
+  return { success: true };
+}
+
+export async function stopServiceAction(workspaceId: string, serviceId: string): Promise<ActionResult> {
+  await requireWorkspaceOwner(workspaceId);
+
+  const service = await getServiceById(serviceId, workspaceId);
+  if (!service) return { error: "Service not found" };
+  if (!service.pid) return { error: "Service is not running" };
+
+  await enqueueServiceStop({ serviceId, workspaceId });
   revalidatePath(`/workspace/${workspaceId}/personal/services/${serviceId}`);
   return { success: true };
 }
