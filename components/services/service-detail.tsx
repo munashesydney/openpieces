@@ -309,6 +309,12 @@ export function ServiceDetail({ service, endpoints, requiredSecrets, workspaceSe
                       <code className="text-sm font-mono text-[var(--foreground)] opacity-80">{endpoint.path}</code>
                     </div>
                     {endpoint.description && <p className="text-sm text-[var(--muted)]">{endpoint.description}</p>}
+                    {endpoint.inputSchema && Object.keys(endpoint.inputSchema).length > 0 && (
+                      <div className="mt-2 rounded-md border border-[var(--border)] bg-[var(--hover-bg)] p-3">
+                        <p className="text-xs font-medium uppercase tracking-wider text-[var(--muted)] mb-2">Input Schema</p>
+                        <pre className="text-xs font-mono text-[var(--foreground)] overflow-auto whitespace-pre-wrap">{JSON.stringify(endpoint.inputSchema, null, 2)}</pre>
+                      </div>
+                    )}
                   </div>
                   <div className="shrink-0">
                      <ActionMenu

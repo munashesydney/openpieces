@@ -44,6 +44,27 @@ export async function getEndpointById(
   return row?.endpoint ?? null;
 }
 
+export async function getEndpointByIdForWorkspace(
+  endpointId: string,
+  workspaceId: string
+): Promise<ServiceEndpoint | null> {
+  if (!isValidUuid(endpointId) || !isValidUuid(workspaceId)) {
+    return null;
+  }
+  const [row] = await db
+    .select({ endpoint: serviceEndpoints })
+    .from(serviceEndpoints)
+    .innerJoin(services, eq(serviceEndpoints.serviceId, services.id))
+    .where(
+      and(
+        eq(serviceEndpoints.id, endpointId),
+        eq(services.workspaceId, workspaceId)
+      )
+    )
+    .limit(1);
+  return row?.endpoint ?? null;
+}
+
 export async function createEndpoint(data: NewServiceEndpoint): Promise<ServiceEndpoint> {
   const result = await db.insert(serviceEndpoints).values(data).returning();
   return result[0];

@@ -22,6 +22,7 @@ type ServiceEndpointsRequestBody = {
   method?: "GET" | "POST" | "PUT" | "DELETE" | "PATCH";
   path?: string;
   description?: string;
+  inputSchema?: Record<string, unknown>;
 };
 
 const INTERNAL_HEADER_NAME = "x-internal-secret";
@@ -99,6 +100,7 @@ export async function POST(request: NextRequest) {
           method: body.method,
           path: body.path,
           description: body.description ?? "",
+          inputSchema: body.inputSchema ?? {},
         });
         return NextResponse.json(created, { status: 201 });
       }
@@ -114,13 +116,15 @@ export async function POST(request: NextRequest) {
           method?: "GET" | "POST" | "PUT" | "DELETE" | "PATCH";
           path?: string;
           description?: string;
+          inputSchema?: Record<string, unknown>;
         } = {};
         if (body.method != null) updateData.method = body.method;
         if (body.path != null) updateData.path = body.path;
         if (body.description != null) updateData.description = body.description;
+        if (body.inputSchema != null) updateData.inputSchema = body.inputSchema;
         if (Object.keys(updateData).length === 0) {
           return NextResponse.json(
-            { error: "method, path, or description is required for action 'update'" },
+            { error: "method, path, description, or inputSchema is required for action 'update'" },
             { status: 400 }
           );
         }

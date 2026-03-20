@@ -92,6 +92,13 @@
       "when": 1774000000000,
       "tag": "0012_service_required_secrets",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1774060000000,
+      "tag": "0013_endpoint_input_schema",
+      "breakpoints": true
     }
   ]
 }

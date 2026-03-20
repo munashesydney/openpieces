@@ -2,7 +2,7 @@ import { tool } from "@opencode-ai/plugin";
 
 export const manageServiceEndpoints = tool({
   description:
-    "Manage HTTP endpoints for the current OpenPieces service. Supports list, get, create, update, delete. Use workspaceId and serviceId from OPENPIECES_CONTEXT. list: serviceId+workspaceId. get/update/delete: endpointId. create: method (GET/POST/PUT/DELETE/PATCH), path, optional description. Pass all fields as a single JSON string in the 'input' argument.",
+    "Manage HTTP endpoints for the current OpenPieces service. Supports list, get, create, update, delete. Use workspaceId and serviceId from OPENPIECES_CONTEXT. list: serviceId+workspaceId. get/update/delete: endpointId. create: method (GET/POST/PUT/DELETE/PATCH), path, optional description, optional inputSchema (JSON Schema describing body/query params). Pass all fields as a single JSON string in the 'input' argument.",
   args: {
     input: tool.schema
       .string()
@@ -43,6 +43,7 @@ export const manageServiceEndpoints = tool({
     if (parsed.method) body.method = parsed.method;
     if (parsed.path) body.path = parsed.path;
     if (parsed.description != null) body.description = parsed.description;
+    if (parsed.inputSchema != null) body.inputSchema = parsed.inputSchema;
 
     try {
       const response = await fetch(`${baseUrl}/api/internal/service-endpoints`, {

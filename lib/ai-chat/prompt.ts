@@ -219,8 +219,27 @@ Use this tool to query what HTTP endpoints a service has registered. This tells 
 action list — list all endpoints for a service:
 { action: "list", serviceId: "<service-id>" }
 
-action get — get details of a specific endpoint:
+action get — get details of a specific endpoint (returns method, path, description, and inputSchema):
 { action: "get", serviceId: "<service-id>", endpointId: "<endpoint-id>" }
+
+---
+
+## Tool: Call Endpoint
+
+Call an HTTP endpoint on a running action service. The endpoint must have an inputSchema describing its body or query parameters.
+
+First, look up the endpoint with manage_service_endpoints to see the inputSchema. Then call it with:
+
+{ endpointId: "<endpoint-id>", body: { ... } }          for POST/PUT/PATCH
+{ endpointId: "<endpoint-id>", query: { ... } }          for GET
+
+For path parameters (e.g. /users/:id), use pathParams:
+{ endpointId: "<endpoint-id>", pathParams: { id: "123" }, body: { ... } }
+
+Input is validated against the endpoint's inputSchema. If validation fails, you get a clear error — fix the payload and retry.
+
+Example — calling POST /send-email:
+{ endpointId: "abc-123", body: { to: "user@example.com", subject: "Hello", body: "Hi there" } }
 
 ---
 

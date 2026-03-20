@@ -91,14 +91,29 @@ Every HTTP endpoint you implement (except `/health`) must be registered using th
 **When to call it:**
 - Immediately after you write a new route handler
 - Call `action: "list"` first to avoid registering duplicates
-- Register with the correct `method`, `path`, and a clear `description`
+- Register with the correct `method`, `path`, `description`, and `inputSchema`
 
-Example — after writing `POST /webhook`:
+**About `inputSchema`:**
+- A JSON Schema (Draft-07) describing the request body or query parameters the caller must provide
+- For POST/PUT/PATCH: describe the JSON body fields
+- For GET: describe the query string parameters
+- Path parameters like `:id` in `/users/:id` are extracted from the path automatically — do not include them in `inputSchema`
+
+Example — after writing `POST /send-email`:
 ```
 action: "create"
 method: "POST"
-path: "/webhook"
-description: "Receives Stripe webhook events and notifies the orchestrator"
+path: "/send-email"
+description: "Sends a transactional email via Resend"
+inputSchema: {
+  "type": "object",
+  "properties": {
+    "to":      { "type": "string", "description": "Recipient email address" },
+    "subject": { "type": "string", "description": "Email subject line" },
+    "body":    { "type": "string", "description": "Plain text email body" }
+  },
+  "required": ["to", "subject", "body"]
+}
 ```
 
 Do this for every endpoint, every session. The orchestrator depends on this registry to know what your service can do.

@@ -88,6 +88,7 @@ export const serviceEndpoints = pgTable("service_endpoints", {
   method: text("method", { enum: ["GET", "POST", "PUT", "DELETE", "PATCH"] }).notNull(),
   path: text("path").notNull(),
   description: text("description").notNull().default(""),
+  inputSchema: jsonb("input_schema").$type<Record<string, unknown>>().default({}),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });

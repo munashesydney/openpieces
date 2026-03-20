@@ -5,6 +5,7 @@ import { createSessionsTool } from "@/lib/tools/sessions";
 import { createMessagesTool } from "@/lib/tools/messages";
 import { createSecretsTool } from "@/lib/tools/secrets";
 import { createEndpointsTool } from "@/lib/tools/service-endpoints";
+import { createCallEndpointTool } from "@/lib/tools/call-endpoint";
 
 export type ToolContext = {
   workspaceId: string;
@@ -21,5 +22,6 @@ export function createTools(context: ToolContext) {
     manage_opencode_messages: createMessagesTool(context),
     manage_secrets: createSecretsTool(context),
     manage_service_endpoints: createEndpointsTool(context),
+    call_endpoint: createCallEndpointTool(context),
   };
 }
