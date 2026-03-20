@@ -315,7 +315,7 @@ export async function executeAiChatJob(input: {
         userId: input.userId,
         chatId: input.chatId,
       }),
-      stopWhen: stepCountIs(6),
+      stopWhen: stepCountIs(20),
     });
 
     for await (const part of result.fullStream) {

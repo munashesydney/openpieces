@@ -11,7 +11,7 @@ export default async function Home(props: {
   const { workspaceId } = await props.params;
   const { user } = await requireWorkspaceOwner(workspaceId);
   const initialChats = await getAiChatsForWorkspace(workspaceId, user.id);
-  const initialSelectedChatId = initialChats[0]?.id ?? null;
+  const initialSelectedChatId = null;
   const initialMessages = initialSelectedChatId
     ? { [initialSelectedChatId]: await getAiMessages(initialSelectedChatId) }
     : {};

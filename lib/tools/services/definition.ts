@@ -5,7 +5,7 @@ const serviceTypeEnum = z.enum(["trigger", "action"]);
 export const serviceToolDefinition = {
   name: "manage_services",
   description:
-    "Manage services in the workspace. Use to list services, get one by id, list by workflow, create, update, or delete a service. Services can be type 'trigger' (requires workflowId) or 'action'. Directory is required when creating a service (used for OpenCode sessions).",
+    "Manage services in the workspace. Use to list services, get one by id, list by workflow, create, update, or delete a service. Services can be type 'trigger' (requires workflowId) or 'action' (standalone, linked to workflows via workflow_action_services). Directory is required when creating a service (used for OpenCode sessions).",
   inputSchema: z.object({
     action: z
       .enum(["list", "get", "create", "update", "delete"])
@@ -17,7 +17,7 @@ export const serviceToolDefinition = {
     workflowId: z
       .string()
       .optional()
-      .describe("Workflow ID. Optional for list (filter by workflow). Required in createDetails when type is 'trigger'."),
+      .describe("Workflow ID. Optional for list (filter by workflow). Required in createDetails when type is 'trigger'. Not allowed for 'action' services."),
     page: z
       .number()
       .optional()
@@ -32,11 +32,11 @@ export const serviceToolDefinition = {
       .object({
         title: z.string().describe("Title of the service"),
         description: z.string().optional().describe("Description of the service"),
-        type: serviceTypeEnum.describe("Service type: trigger or action. Trigger requires workflowId."),
+        type: serviceTypeEnum.describe("Service type: trigger or action. Trigger requires workflowId. Action services are standalone."),
         workflowId: z
           .string()
           .optional()
-          .describe("Workflow ID. Required when type is 'trigger'."),
+          .describe("Workflow ID. Required when type is 'trigger'. Not allowed when type is 'action'."),
         directory: z
           .string()
           .describe("Directory path for the service. Required for OpenCode sessions."),

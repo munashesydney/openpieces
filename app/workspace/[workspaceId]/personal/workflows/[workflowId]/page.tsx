@@ -3,8 +3,9 @@ import { DashboardLayout } from "@/components/layout/dashboard-layout";
 import { MainArea } from "@/components/layout/main-area";
 import { WorkflowDetail } from "@/components/workflows/workflow-detail";
 import { getWorkflowById } from "@/lib/services/workflow.service";
-import { getServicesByWorkflowId } from "@/lib/services/service.service";
+import { getServicesByWorkflowId, getServices } from "@/lib/services/service.service";
 import { getTasksByWorkflowId } from "@/lib/services/task.service";
+import { getActionServicesForWorkflow } from "@/lib/services/workflow-action.service";
 
 export default async function WorkflowDetailPage({
   params,
@@ -13,13 +14,22 @@ export default async function WorkflowDetailPage({
 }) {
   const { workspaceId, workflowId } = await params;
 
-  const [workflow, services, tasks] = await Promise.all([
-    getWorkflowById(workflowId, workspaceId),
-    getServicesByWorkflowId(workflowId, workspaceId),
-    getTasksByWorkflowId(workflowId, workspaceId),
+  const [[workflow, triggerServices, tasks, linkedActionServices], allServicesResult] = await Promise.all([
+    Promise.all([
+      getWorkflowById(workflowId, workspaceId),
+      getServicesByWorkflowId(workflowId, workspaceId),
+      getTasksByWorkflowId(workflowId, workspaceId),
+      getActionServicesForWorkflow(workflowId, workspaceId),
+    ]),
+    getServices(workspaceId, 1, 1000), // Get all services for linking sheet
   ]);
 
   if (!workflow) notFound();
+
+  // Filter to get only action services for the linking dropdown
+  const availableActionServices = allServicesResult.data.filter(
+    (s) => s.type === "action"
+  );
 
   return (
     <DashboardLayout>
@@ -27,8 +37,10 @@ export default async function WorkflowDetailPage({
         <WorkflowDetail
           workflow={workflow}
           workspaceId={workspaceId}
-          services={services}
+          triggerServices={triggerServices}
           tasks={tasks}
+          linkedActionServices={linkedActionServices}
+          availableActionServices={availableActionServices}
         />
       </MainArea>
     </DashboardLayout>

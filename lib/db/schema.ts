@@ -203,3 +203,23 @@ export const secrets = pgTable(
 
 export type SecretRow = typeof secrets.$inferSelect;
 export type NewSecretRow = typeof secrets.$inferInsert;
+
+export const workflowActionServices = pgTable(
+  "workflow_action_services",
+  {
+    workflowId: uuid("workflow_id")
+      .notNull()
+      .references(() => workflows.id, { onDelete: "cascade" }),
+    actionServiceId: uuid("action_service_id")
+      .notNull()
+      .references(() => services.id, { onDelete: "cascade" }),
+  },
+  (table) => [
+    {
+      pk: { columns: [table.workflowId, table.actionServiceId] },
+    },
+  ]
+);
+
+export type WorkflowActionService = typeof workflowActionServices.$inferSelect;
+export type NewWorkflowActionService = typeof workflowActionServices.$inferInsert;

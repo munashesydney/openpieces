@@ -6,6 +6,7 @@ import {
   SERVICE_STOP_QUEUE,
   type ServiceSpawnJob,
   type ServiceStopJob,
+  enqueueServiceSpawn,
   getPgBoss,
 } from "@/lib/queues/pg-boss";
 import { getServiceById, updateService } from "@/lib/services/service.service";

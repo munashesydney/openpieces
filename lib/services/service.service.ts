@@ -39,9 +39,13 @@ export async function createService(data: NewService): Promise<Service> {
   }
 
   // ── Validate workflowId ───────────────────────────────────────────────────
-  // Required for triggers; optional for actions
+  // Required for triggers; not allowed for actions (they are standalone)
   if (data.type === "trigger" && !data.workflowId) {
     throw new ValidationError("A workflow is required when creating a trigger service.");
+  }
+
+  if (data.type === "action" && data.workflowId) {
+    throw new ValidationError("Action services are standalone and cannot be assigned to a workflow. Use the workflow's action links instead.");
   }
 
   if (data.workflowId) {

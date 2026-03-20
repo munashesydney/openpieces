@@ -47,6 +47,9 @@ export async function executeService(input: ServiceToolInput, context: ToolConte
       if (createDetails.type === "trigger" && !createDetails.workflowId) {
         throw new Error("createDetails.workflowId is required when type is 'trigger'");
       }
+      if (createDetails.type === "action" && createDetails.workflowId) {
+        throw new Error("Action services are standalone and cannot be assigned to a workflow.");
+      }
       if (!createDetails.directory?.trim()) {
         throw new Error("createDetails.directory is required for action 'create'");
       }

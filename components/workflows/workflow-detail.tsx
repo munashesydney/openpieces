@@ -1,6 +1,6 @@
 "use client";
 
-import { useTransition } from "react";
+import { useState, useTransition } from "react";
 import {
   ChevronLeft,
   Zap,
@@ -9,30 +9,45 @@ import {
   Calendar,
   Play,
   Trash2,
+  Plus,
+  Unlink,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { Card } from "../ui/card";
 import { Button } from "@/components/basic/buttons/button";
 import { ActionMenu } from "@/components/basic/input/action-menu";
+import { Sheet } from "../ui/sheet";
+import { Dropdown } from "@/components/basic/input/dropdown";
 import { type Workflow, type Service, type Task } from "@/lib/db/schema";
-import { deleteWorkflowAction } from "@/app/workspace/[workspaceId]/personal/workflows/actions";
+import {
+  deleteWorkflowAction,
+  linkActionServiceToWorkflowAction,
+  unlinkActionServiceFromWorkflowAction,
+} from "@/app/workspace/[workspaceId]/personal/workflows/actions";
 import Link from "next/link";
 
 interface WorkflowDetailProps {
   workflow: Workflow;
   workspaceId: string;
-  services: Service[];
+  triggerServices: Service[];
   tasks: Task[];
+  linkedActionServices: Service[];
+  availableActionServices: Service[];
 }
 
 export function WorkflowDetail({
   workflow,
   workspaceId,
-  services,
+  triggerServices,
   tasks,
+  linkedActionServices,
+  availableActionServices,
 }: WorkflowDetailProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
+  const [isLinkSheetOpen, setIsLinkSheetOpen] = useState(false);
+  const [selectedActionServiceId, setSelectedActionServiceId] = useState("");
+  const [linkError, setLinkError] = useState<string | null>(null);
 
   const handleDelete = () => {
     startTransition(async () => {
@@ -41,9 +56,30 @@ export function WorkflowDetail({
     });
   };
 
-  // Triggers = trigger-type services + all tasks
-  const triggerServices = services.filter((s) => s.type === "trigger");
-  const actionServices = services.filter((s) => s.type === "action");
+  const handleLinkActionService = async () => {
+    if (!selectedActionServiceId) return;
+    setLinkError(null);
+    startTransition(async () => {
+      const result = await linkActionServiceToWorkflowAction(
+        workspaceId,
+        workflow.id,
+        selectedActionServiceId
+      );
+      if ("error" in result) {
+        setLinkError(result.error);
+        return;
+      }
+      setIsLinkSheetOpen(false);
+      setSelectedActionServiceId("");
+      setLinkError(null);
+    });
+  };
+
+  const handleUnlinkActionService = (actionServiceId: string) => {
+    startTransition(async () => {
+      await unlinkActionServiceFromWorkflowAction(workspaceId, workflow.id, actionServiceId);
+    });
+  };
 
   return (
     <div className="flex w-full justify-center px-6 pb-20 pt-10 font-Inter">
@@ -146,19 +182,85 @@ export function WorkflowDetail({
           )}
         </div>
 
-        {/* Actions: action services only */}
+        {/* Actions: linked action services */}
         <div className="space-y-4">
-          <div className="flex items-center gap-2 px-1">
-            <Terminal className="h-4 w-4 text-[var(--accent)]" />
-            <h2 className="text-sm font-bold uppercase tracking-wider text-[var(--muted)]">Actions</h2>
+          <div className="flex items-center justify-between px-1">
+            <div className="flex items-center gap-2">
+              <Terminal className="h-4 w-4 text-[var(--accent)]" />
+              <h2 className="text-sm font-bold uppercase tracking-wider text-[var(--muted)]">Actions</h2>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-1"
+              onClick={() => setIsLinkSheetOpen(true)}
+            >
+              <Plus className="h-3 w-3" />
+              Link Action
+            </Button>
           </div>
 
-          {actionServices.length === 0 ? (
+          {/* Link Action Sheet */}
+          <Sheet
+            isOpen={isLinkSheetOpen}
+            onClose={() => {
+              setIsLinkSheetOpen(false);
+              setLinkError(null);
+              setSelectedActionServiceId("");
+            }}
+            title="Link Action Service"
+            description="Select an action service to link to this workflow."
+            footer={<></>}
+          >
+            <div className="space-y-6">
+              <Dropdown
+                label="Action Service"
+                value={selectedActionServiceId}
+                onChange={setSelectedActionServiceId}
+                options={[
+                  { label: "Select an action service...", value: "" },
+                  ...availableActionServices
+                    .filter((s) => !linkedActionServices.some((linked) => linked.id === s.id))
+                    .map((s) => ({ label: s.title, value: s.id })),
+                ]}
+              />
+
+              {linkError && (
+                <div className="rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-500">
+                  {linkError}
+                </div>
+              )}
+
+              <div className="mt-6 flex justify-end gap-3 border-t border-[var(--border)] pt-4">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={() => setIsLinkSheetOpen(false)}
+                  disabled={isPending}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleLinkActionService}
+                  disabled={isPending || !selectedActionServiceId}
+                >
+                  {isPending ? "Linking..." : "Link Action"}
+                </Button>
+              </div>
+            </div>
+          </Sheet>
+
+          {linkedActionServices.length === 0 ? (
             <EmptySlot label="No actions linked to this workflow." />
           ) : (
             <div className="flex flex-col gap-4">
-              {actionServices.map((s) => (
-                <ServiceRow key={s.id} service={s} workspaceId={workspaceId} />
+              {linkedActionServices.map((s) => (
+                <LinkedActionRow
+                  key={s.id}
+                  service={s}
+                  workspaceId={workspaceId}
+                  onUnlink={() => handleUnlinkActionService(s.id)}
+                />
               ))}
             </div>
           )}
@@ -257,6 +359,56 @@ function TaskRow({ task }: { task: Task }) {
             {task.status}
           </span>
         </div>
+      </div>
+    </Card>
+  );
+}
+
+function LinkedActionRow({
+  service,
+  workspaceId,
+  onUnlink,
+}: {
+  service: Service;
+  workspaceId: string;
+  onUnlink: () => void;
+}) {
+  const [isPending, startTransition] = useTransition();
+
+  return (
+    <Card hoverable className={`p-4 ${isPending ? "opacity-50 pointer-events-none" : ""}`}>
+      <div className="flex items-center gap-4">
+        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[var(--accent-glow)]/10 text-[var(--accent)]">
+          <Terminal className="h-4 w-4" />
+        </div>
+        <Link href={`/workspace/${workspaceId}/personal/services/${service.id}`} className="flex-1 min-w-0">
+          <p className="text-sm font-medium text-[var(--foreground)] truncate">
+            {service.title}
+          </p>
+          {service.description && (
+            <p className="text-xs text-[var(--muted)] truncate mt-0.5">
+              {service.description}
+            </p>
+          )}
+        </Link>
+        <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)]">
+          action
+        </span>
+        <ActionMenu
+          onSelect={(val) => {
+            if (val === "unlink") {
+              startTransition(onUnlink);
+            }
+          }}
+          options={[
+            {
+              label: "Unlink",
+              value: "unlink",
+              icon: <Unlink className="h-4 w-4" />,
+              destructive: true,
+            },
+          ]}
+        />
       </div>
     </Card>
   );
