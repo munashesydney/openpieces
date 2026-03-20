@@ -95,6 +95,18 @@ export const serviceEndpoints = pgTable("service_endpoints", {
 export type ServiceEndpoint = typeof serviceEndpoints.$inferSelect;
 export type NewServiceEndpoint = typeof serviceEndpoints.$inferInsert;
 
+export const serviceRequiredSecrets = pgTable("service_required_secrets", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  serviceId: uuid("service_id")
+    .notNull()
+    .references(() => services.id, { onDelete: "cascade" }),
+  secretKey: text("secret_key").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export type ServiceRequiredSecret = typeof serviceRequiredSecrets.$inferSelect;
+export type NewServiceRequiredSecret = typeof serviceRequiredSecrets.$inferInsert;
+
 export const aiChats = pgTable(
   "ai_chats",
   {

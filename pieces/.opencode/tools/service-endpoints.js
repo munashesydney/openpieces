@@ -45,7 +45,7 @@ export const manageServiceEndpoints = tool({
     if (parsed.description != null) body.description = parsed.description;
 
     try {
-      const response = await fetch(`${baseUrl}/api/service-endpoints`, {
+      const response = await fetch(`${baseUrl}/api/internal/service-endpoints`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

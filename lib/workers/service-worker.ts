@@ -11,6 +11,7 @@ import {
 import { getServiceById, updateService } from "@/lib/services/service.service";
 import { getWorkspaceOwnerId } from "@/lib/services/workspace.service";
 import { getSecrets } from "@/lib/services/secret.service";
+import { getRequiredSecrets } from "@/lib/services/service-required-secrets.service";
 import { appendServiceLog, resetServiceLog } from "@/lib/services/service-log-stream";
 import { db } from "@/lib/db";
 import { services } from "@/lib/db/schema";
@@ -72,6 +73,22 @@ async function executeServiceSpawnJob(job: ServiceSpawnJob) {
   }
   if (!service.directory?.trim()) {
     throw new Error(`Service ${serviceId} has no directory set`);
+  }
+
+  // Check if all required secrets are set
+  const requiredSecrets = await getRequiredSecrets(serviceId);
+  if (requiredSecrets.length > 0) {
+    const workspaceOwnerId = (await getWorkspaceOwnerId(workspaceId)) ?? "";
+    const { data: secrets } = await getSecrets(workspaceId, workspaceOwnerId, 1, 500);
+    const secretKeys = new Set(secrets.map(s => s.key));
+    
+    const missingSecrets = requiredSecrets
+      .filter(req => !secretKeys.has(req.secretKey))
+      .map(req => req.secretKey);
+    
+    if (missingSecrets.length > 0) {
+      throw new Error(`Missing required secrets: ${missingSecrets.join(", ")}`);
+    }
   }
 
   // Derive the workspace owner user ID so we can pass it into the service process.

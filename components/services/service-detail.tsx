@@ -1,8 +1,7 @@
 "use client";
 
 import { useState, useTransition, useEffect, useCallback } from "react";
-import { ChevronLeft, Activity, Code, Clock, ShieldCheck, Zap, Plus, Trash2, Play, Loader2, Square } from "lucide-react";
-import Link from "next/link";
+import { ChevronLeft, Activity, Code, Clock, ShieldCheck, Zap, Plus, Trash2, Play, Loader2, Square, KeyRound } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "../ui/card";
 import { Button } from "@/components/basic/buttons/button";
@@ -12,18 +11,20 @@ import { Textarea } from "@/components/basic/input/textarea";
 import { Dropdown } from "@/components/basic/input/dropdown";
 import { ActionMenu } from "@/components/basic/input/action-menu";
 import { ServiceLogsPanel } from "./service-logs-panel";
-import { type Service, type ServiceEndpoint } from "@/lib/db/schema";
-import { createEndpointAction, deleteEndpointAction, spawnServiceAction, stopServiceAction } from "@/app/workspace/[workspaceId]/personal/services/[serviceId]/actions";
+import { type Service, type ServiceEndpoint, type ServiceRequiredSecret } from "@/lib/db/schema";
+import { createEndpointAction, deleteEndpointAction, spawnServiceAction, stopServiceAction, addRequiredSecretAction, removeRequiredSecretAction } from "@/app/workspace/[workspaceId]/personal/services/[serviceId]/actions";
 
 interface ServiceDetailProps {
   service: Service;
   endpoints: ServiceEndpoint[];
+  requiredSecrets: ServiceRequiredSecret[];
+  workspaceSecrets: { key: string; id: string }[];
   workspaceId: string;
 }
 
 type HealthStatus = { healthy: boolean; port: number | null; reason?: string } | null;
 
-export function ServiceDetail({ service, endpoints, workspaceId }: ServiceDetailProps) {
+export function ServiceDetail({ service, endpoints, requiredSecrets, workspaceSecrets, workspaceId }: ServiceDetailProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [isSpawning, setIsSpawning] = useState(false);
@@ -32,10 +33,13 @@ export function ServiceDetail({ service, endpoints, workspaceId }: ServiceDetail
   const [stopError, setStopError] = useState<string | null>(null);
   const [health, setHealth] = useState<HealthStatus>(null);
   const [isSheetOpen, setIsSheetOpen] = useState(false);
+  const [isSecretsSheetOpen, setIsSecretsSheetOpen] = useState(false);
+  const [localRequiredSecrets, setLocalRequiredSecrets] = useState(requiredSecrets);
   
   const [method, setMethod] = useState("GET");
   const [path, setPath] = useState("");
   const [description, setDescription] = useState("");
+  const [selectedSecretKey, setSelectedSecretKey] = useState("");
 
   const checkHealth = useCallback(async () => {
     try {
@@ -117,6 +121,36 @@ export function ServiceDetail({ service, endpoints, workspaceId }: ServiceDetail
         await deleteEndpointAction(workspaceId, service.id, endpointId);
       } catch (err) {
         console.error("Failed to delete endpoint", err);
+      }
+    });
+  };
+
+  const handleAddRequiredSecret = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedSecretKey) return;
+
+    startTransition(async () => {
+      try {
+        await addRequiredSecretAction(workspaceId, service.id, selectedSecretKey);
+        const updated = await fetch(`/api/services/${service.id}/required-secrets?workspaceId=${encodeURIComponent(workspaceId)}`)
+          .then(r => r.json())
+          .then(d => d.data);
+        setLocalRequiredSecrets(updated);
+        setIsSecretsSheetOpen(false);
+        setSelectedSecretKey("");
+      } catch (err) {
+        console.error("Failed to add required secret", err);
+      }
+    });
+  };
+
+  const handleRemoveRequiredSecret = (id: string) => {
+    startTransition(async () => {
+      try {
+        await removeRequiredSecretAction(workspaceId, service.id, id);
+        setLocalRequiredSecrets(prev => prev.filter(s => s.id !== id));
+      } catch (err) {
+        console.error("Failed to remove required secret", err);
       }
     });
   };
@@ -342,6 +376,89 @@ export function ServiceDetail({ service, endpoints, workspaceId }: ServiceDetail
               <Button type="button" variant="ghost" onClick={() => setIsSheetOpen(false)} disabled={isPending}>Cancel</Button>
               <Button type="submit" disabled={isPending || !path}>
                 {isPending ? "Creating..." : "Create Endpoint"}
+              </Button>
+            </div>
+          </form>
+        </Sheet>
+
+        {/* Required Secrets Section */}
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between">
+            <div className="space-y-1.5">
+              <div className="flex items-center gap-2">
+                <KeyRound className="h-5 w-5 text-[var(--muted)]" />
+                <CardTitle>Required Secrets</CardTitle>
+              </div>
+              <CardDescription>Secrets that must be set before starting this service.</CardDescription>
+            </div>
+            <Button size="sm" onClick={() => setIsSecretsSheetOpen(true)}>
+              <Plus className="h-4 w-4 mr-2" />
+              Add Required Secret
+            </Button>
+          </CardHeader>
+          <CardContent>
+            <div className="divide-y divide-[var(--border)]">
+              {localRequiredSecrets.map((req) => {
+                const hasSecret = workspaceSecrets.some(s => s.key === req.secretKey);
+                return (
+                  <div key={req.id} className={`group flex items-start justify-between gap-4 py-6 first:pt-0 last:pb-0 ${isPending ? "opacity-50" : ""}`}>
+                    <div className="flex flex-col gap-2">
+                      <div className="flex items-center gap-3">
+                        <code className="text-sm font-mono text-[var(--foreground)] opacity-80">{req.secretKey}</code>
+                        {hasSecret ? (
+                          <span className="rounded-md bg-emerald-500/10 px-2 py-0.5 text-[9px] font-medium text-emerald-500">Set</span>
+                        ) : (
+                          <span className="rounded-md bg-amber-500/10 px-2 py-0.5 text-[9px] font-medium text-amber-500">Missing</span>
+                        )}
+                      </div>
+                    </div>
+                    <div className="shrink-0">
+                      <ActionMenu
+                        onSelect={(val) => {
+                          if (val === "delete") {
+                            handleRemoveRequiredSecret(req.id);
+                          }
+                        }}
+                        options={[
+                          { label: "Remove", value: "delete", icon: <Trash2 className="h-4 w-4" />, destructive: true },
+                        ]}
+                      />
+                    </div>
+                  </div>
+                );
+              })}
+              {localRequiredSecrets.length === 0 && (
+                <div className="rounded-xl border border-dashed border-[var(--border)] p-8 text-center text-sm text-[var(--muted)]">
+                  No required secrets defined yet.
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Add Required Secret Sheet */}
+        <Sheet
+          isOpen={isSecretsSheetOpen}
+          onClose={() => setIsSecretsSheetOpen(false)}
+          title="Add Required Secret"
+          description="Select a secret that this service requires to run."
+          footer={<></>}
+        >
+          <form className="space-y-6" onSubmit={handleAddRequiredSecret}>
+            <div className="space-y-6">
+              <Dropdown
+                label="Secret Key"
+                value={selectedSecretKey}
+                onChange={setSelectedSecretKey}
+                options={workspaceSecrets.map(s => ({ label: s.key, value: s.key }))}
+                placeholder="Select a secret..."
+              />
+            </div>
+            
+            <div className="mt-8 flex justify-end gap-3 border-t border-[var(--border)] pt-4">
+              <Button type="button" variant="ghost" onClick={() => setIsSecretsSheetOpen(false)} disabled={isPending}>Cancel</Button>
+              <Button type="submit" disabled={isPending || !selectedSecretKey}>
+                {isPending ? "Adding..." : "Add Secret"}
               </Button>
             </div>
           </form>

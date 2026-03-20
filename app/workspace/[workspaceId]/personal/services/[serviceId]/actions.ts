@@ -5,6 +5,9 @@ import { createEndpoint, updateEndpoint, deleteEndpoint } from "../../../../../.
 import { requireWorkspaceOwner } from "../../../../../../lib/services/auth.service";
 import { getServiceById } from "../../../../../../lib/services/service.service";
 import { enqueueServiceSpawn, enqueueServiceStop } from "../../../../../../lib/queues/pg-boss";
+import { addRequiredSecret, removeRequiredSecret, getRequiredSecrets } from "../../../../../../lib/services/service-required-secrets.service";
+import { getSecrets } from "../../../../../../lib/services/secret.service";
+import { getWorkspaceOwnerId } from "../../../../../../lib/services/workspace.service";
 
 export type ActionResult = { error: string } | { success: true };
 
@@ -14,6 +17,22 @@ export async function spawnServiceAction(workspaceId: string, serviceId: string)
   const service = await getServiceById(serviceId, workspaceId);
   if (!service) return { error: "Service not found" };
   if (!service.directory?.trim()) return { error: "Service has no directory set" };
+
+  // Check if all required secrets are set before enqueueing
+  const requiredSecrets = await getRequiredSecrets(serviceId);
+  if (requiredSecrets.length > 0) {
+    const workspaceOwnerId = (await getWorkspaceOwnerId(workspaceId)) ?? "";
+    const { data: secrets } = await getSecrets(workspaceId, workspaceOwnerId, 1, 500);
+    const secretKeys = new Set(secrets.map(s => s.key));
+    
+    const missingSecrets = requiredSecrets
+      .filter(req => !secretKeys.has(req.secretKey))
+      .map(req => req.secretKey);
+    
+    if (missingSecrets.length > 0) {
+      return { error: `Missing required secrets: ${missingSecrets.join(", ")}` };
+    }
+  }
 
   await enqueueServiceSpawn({ serviceId, workspaceId });
   revalidatePath(`/workspace/${workspaceId}/personal/services/${serviceId}`);
@@ -79,4 +98,30 @@ export async function deleteEndpointAction(workspaceId: string, serviceId: strin
   const deleted = await deleteEndpoint(endpointId, serviceId, workspaceId);
   if (!deleted) throw new Error("Endpoint not found");
   revalidatePath(`/workspace/${workspaceId}/personal/services/${serviceId}`);
+}
+
+export async function addRequiredSecretAction(workspaceId: string, serviceId: string, secretKey: string) {
+  await requireWorkspaceOwner(workspaceId);
+  const service = await getServiceById(serviceId, workspaceId);
+  if (!service) throw new Error("Service not found");
+
+  await addRequiredSecret(serviceId, secretKey);
+  revalidatePath(`/workspace/${workspaceId}/personal/services/${serviceId}`);
+}
+
+export async function removeRequiredSecretAction(workspaceId: string, serviceId: string, id: string) {
+  await requireWorkspaceOwner(workspaceId);
+  const service = await getServiceById(serviceId, workspaceId);
+  if (!service) throw new Error("Service not found");
+
+  await removeRequiredSecret(id);
+  revalidatePath(`/workspace/${workspaceId}/personal/services/${serviceId}`);
+}
+
+export async function getRequiredSecretsAction(workspaceId: string, serviceId: string) {
+  await requireWorkspaceOwner(workspaceId);
+  const service = await getServiceById(serviceId, workspaceId);
+  if (!service) throw new Error("Service not found");
+
+  return getRequiredSecrets(serviceId);
 }

@@ -103,6 +103,30 @@ Do this for every endpoint, every session. The orchestrator depends on this regi
 
 ---
 
+## Tool: Required Secrets
+
+Use this tool to declare which secrets your service **must have** before it can be started. This prevents the user from accidentally starting the service without setting required secrets.
+
+**When to call it:**
+- After you create a secret using the secrets tool, immediately call this tool with `action: "add"` to mark it as required
+- Call `action: "list"` to see what secrets are already required
+- If you remove a secret dependency, call `action: "remove"` to clean up
+
+**Why this matters:**
+- The service will fail to start if any required secret is missing
+- The user sees a clear "Missing" indicator in the UI
+- The orchestrator will not attempt to start the service until all required secrets are set
+
+Example — after creating `STRIPE_API_KEY` secret:
+```
+action: "add"
+secretKey: "STRIPE_API_KEY"
+```
+
+The user will see "Required Secrets" card in the service detail page with STRIPE_API_KEY marked as "Missing" until they set the value.
+
+---
+
 ## Notifying the Orchestrator
 
 When a **trigger** service receives an event, it must notify the orchestrator so it can execute the downstream workflow.

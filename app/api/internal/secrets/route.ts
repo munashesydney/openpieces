@@ -170,7 +170,7 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
-    console.error("POST /api/secrets error:", err);
+    console.error("POST /api/internal/secrets error:", err);
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

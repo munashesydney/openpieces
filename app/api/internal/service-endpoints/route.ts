@@ -167,7 +167,7 @@ export async function POST(request: NextRequest) {
       }
     }
   } catch (err: unknown) {
-    console.error("POST /api/service-endpoints error:", err);
+    console.error("POST /api/internal/service-endpoints error:", err);
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

@@ -1,13 +1,13 @@
 import { tool } from "@opencode-ai/plugin";
 
-export const manageSecrets = tool({
+export const manageServiceRequiredSecrets = tool({
   description:
-    "Manage encrypted secrets for this workspace and user. Supports list, get, create, update, delete actions. Required fields vary by action: list needs workspaceId+userId, get/delete needs secretId, create needs key+value, update needs secretId+key or value. Pass all fields as a single JSON string in the 'input' argument.",
+    "Manage required secrets for the current OpenPieces service. These are secrets that MUST be set before the service can be started. Supports list, add, remove actions. Use workspaceId and serviceId from OPENPIECES_CONTEXT. list: serviceId+workspaceId. add: secretKey (the key name like STRIPE_API_KEY). remove: id (the required secret ID from list). Pass all fields as a single JSON string in the 'input' argument.",
   args: {
     input: tool.schema
       .string()
       .describe(
-        'JSON object with fields: action (required, one of: list/get/create/update/delete), workspaceId (required), userId (required), secretId (for get/update/delete), key (for create/update), value (for create/update)'
+        'JSON object: action (required, one of: list/add/remove), workspaceId (required), serviceId (required), secretKey (for add), id (for remove)'
       ),
   },
   async execute(args) {
@@ -28,7 +28,7 @@ export const manageSecrets = tool({
       return "Error: input must be a valid JSON string.";
     }
 
-    const validActions = ["list", "get", "create", "update", "delete"];
+    const validActions = ["list", "add", "remove"];
     if (!validActions.includes(parsed.action)) {
       return `Error: Invalid action "${parsed.action}". Valid: ${validActions.join(", ")}`;
     }
@@ -36,15 +36,14 @@ export const manageSecrets = tool({
     const body = {
       action: parsed.action,
       workspaceId: parsed.workspaceId,
-      userId: parsed.userId,
+      serviceId: parsed.serviceId,
     };
 
-    if (parsed.secretId) body.secretId = parsed.secretId;
-    if (parsed.key) body.key = parsed.key;
-    if (parsed.value) body.value = parsed.value;
+    if (parsed.secretKey) body.secretKey = parsed.secretKey;
+    if (parsed.id) body.id = parsed.id;
 
     try {
-      const response = await fetch(`${baseUrl}/api/internal/secrets`, {
+      const response = await fetch(`${baseUrl}/api/internal/service-required-secrets`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
