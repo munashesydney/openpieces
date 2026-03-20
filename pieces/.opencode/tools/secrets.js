@@ -41,7 +41,7 @@ export const manageSecrets = tool({
 
     if (parsed.secretId) body.secretId = parsed.secretId;
     if (parsed.key) body.key = parsed.key;
-    if (parsed.value) body.value = parsed.value;
+    if (parsed.value !== undefined) body.value = parsed.value;
 
     try {
       const response = await fetch(`${baseUrl}/api/internal/secrets`, {

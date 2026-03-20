@@ -136,9 +136,8 @@ export async function sendMessage(sessionId: string, content: string): Promise<O
 }
 
 // Business logic for sending a message with context - used by the API route
-export async function sendMessageWithContext(sessionId: string, content: string): Promise<void> {
+export async function sendMessageWithContext(sessionId: string, content: string, userId?: string): Promise<void> {
   const { getDirectory } = await import("@/lib/services/opencode-session.service");
-  const { requireUser } = await import("@/lib/services/auth.service");
   const { getDefaultWorkspace } = await import("@/lib/services/workspace.service");
   const { getServiceId } = await import("@/lib/services/opencode-session.service");
 
@@ -153,15 +152,22 @@ export async function sendMessageWithContext(sessionId: string, content: string)
   let fullContent = content;
 
   if (isFirstMessage) {
-    const user = await requireUser();
-    const workspace = await getDefaultWorkspace(user.id);
+    // If userId is not provided, we can't get the context - this should only happen
+    // when called from the UI where there's a valid session
+    if (!userId) {
+      const { requireUser } = await import("@/lib/services/auth.service");
+      const user = await requireUser();
+      userId = user.id;
+    }
+
+    const workspace = await getDefaultWorkspace(userId);
     const serviceId = await getServiceId(sessionId);
 
     const workspaceId = workspace?.id ?? "unknown";
     const contextBlock =
       `__OPENPIECES_CONTEXT_START__\n` +
       `workspaceId=${workspaceId}\n` +
-      `userId=${user.id}\n` +
+      `userId=${userId}\n` +
       `serviceId=${serviceId ?? "unknown"}\n` +
       `__OPENPIECES_CONTEXT_END__\n\n`;
 

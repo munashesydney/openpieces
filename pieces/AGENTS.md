@@ -69,6 +69,8 @@ Use this tool whenever your service needs a secret (API key, token, connection s
 - Call it with `action: "list"` first to check if the secret already exists under that key
 - If it does not exist, call it with `action: "create"` to register it
 
+**Important:** When creating a secret, do NOT set an example or placeholder value. Leave the value empty — the user will fill it in.
+
 **After creating a secret**, add a comment in the code near the `Deno.env.get` call:
 ```ts
 // Secret: STRIPE_WEBHOOK_SECRET — set this in OpenPieces → Secrets

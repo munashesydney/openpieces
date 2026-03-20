@@ -41,7 +41,9 @@ export async function POST(
       return NextResponse.json({ error: "Message content is required" }, { status: 400 });
     }
 
-    await sendMessageWithContext(sessionId, content);
+    // Get user from session - this is the UI path where there's a valid request context
+    const user = await requireUser();
+    await sendMessageWithContext(sessionId, content, user.id);
 
     return NextResponse.json({ accepted: true }, { status: 202 });
   } catch (error: any) {

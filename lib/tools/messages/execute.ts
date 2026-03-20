@@ -9,7 +9,7 @@ export async function executeMessages(input: MessagesToolInput, context: ToolCon
   if (action !== "send") {
     throw new Error(`Unknown action: ${action}. Valid action is: send.`);
   }
-  const { workspaceId } = context;
+  const { workspaceId, userId } = context;
 
   if (!workspaceId) {
     throw new Error("Workspace ID is required in context");
@@ -25,7 +25,7 @@ export async function executeMessages(input: MessagesToolInput, context: ToolCon
   }
 
   // Fire-and-forget: do not block the AI/tool call on long-running OpenCode processing
-  sendMessageWithContext(sessionId, content.trim()).catch((error) => {
+  sendMessageWithContext(sessionId, content.trim(), userId).catch((error) => {
     console.error("Failed to send OpenCode message:", error);
   });
 
