@@ -12,8 +12,16 @@ export async function GET(request: NextRequest) {
         { status: 400 }
       );
     }
-    const { data: sessions } = await listSessionsForWorkspace(workspaceId, 1, 100);
-    return NextResponse.json(sessions);
+    const page = Math.max(1, parseInt(request.nextUrl.searchParams.get("page") ?? "1", 10) || 1);
+    const pageSize = Math.min(50, Math.max(1, parseInt(request.nextUrl.searchParams.get("pageSize") ?? "20", 10) || 20));
+    const result = await listSessionsForWorkspace(workspaceId, page, pageSize);
+    return NextResponse.json({
+      sessions: result.data,
+      total: result.total,
+      page,
+      pageSize,
+      hasMore: page * pageSize < result.total,
+    });
   } catch (error: any) {
     console.error("GET /api/opencode/sessions error:", error);
     return NextResponse.json(

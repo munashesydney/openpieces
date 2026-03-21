@@ -26,6 +26,9 @@ export function OpenCodePage({
   const [selectedSessionDirectory, setSelectedSessionDirectory] = useState<string | null>(null);
   const [selectedSessionStatus, setSelectedSessionStatus] = useState<string | null>(null);
   const [selectedSessionLastMessage, setSelectedSessionLastMessage] = useState<string | null>(null);
+  const [sessionsPage, setSessionsPage] = useState(1);
+  const [sessionsHasMore, setSessionsHasMore] = useState(false);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
 
   const servicesWithDirectory = services.filter(
     (s) => s.directory && typeof s.directory === "string" && s.directory.trim() !== ""
@@ -225,23 +228,35 @@ export function OpenCodePage({
     };
   }, [selectedSessionId, sessions, isSending]);
 
-  const loadSessions = async () => {
+  const loadSessions = async (page = 1, append = false) => {
     try {
-      setIsLoading(true);
-      const res = await fetch(`/api/opencode/sessions?workspaceId=${workspaceId}`);
+      if (page === 1) setIsLoading(true);
+      else setIsLoadingMore(true);
+      const res = await fetch(`/api/opencode/sessions?workspaceId=${workspaceId}&page=${page}&pageSize=20`);
       const data = await res.json();
       if (!res.ok) {
         console.error("Failed to load sessions:", data);
-        setSessions([]);
         return;
       }
-      const sessionsList = Array.isArray(data) ? data : (data.sessions || []);
-      setSessions(sessionsList);
+      const sessionsList = Array.isArray(data.sessions) ? data.sessions : [];
+      if (append) {
+        setSessions((prev) => [...prev, ...sessionsList]);
+      } else {
+        setSessions(sessionsList);
+      }
+      setSessionsHasMore(data.hasMore ?? false);
+      setSessionsPage(page);
     } catch (e) {
       console.error(e);
-      setSessions([]);
     } finally {
       setIsLoading(false);
+      setIsLoadingMore(false);
+    }
+  };
+
+  const loadMoreSessions = () => {
+    if (sessionsHasMore && !isLoadingMore) {
+      loadSessions(sessionsPage + 1, true);
     }
   };
 
@@ -505,6 +520,18 @@ export function OpenCodePage({
               </button>
             )
           })}
+          {sessionsHasMore && (
+            <button
+              onClick={loadMoreSessions}
+              disabled={isLoadingMore}
+              className="w-full text-center p-2 text-sm text-[var(--muted)] hover:text-[var(--foreground)] disabled:opacity-50"
+            >
+              {isLoadingMore ? (
+                <Loader2 className="h-4 w-4 animate-spin inline mr-1" />
+              ) : null}
+              {isLoadingMore ? "Loading..." : "Load more"}
+            </button>
+          )}
         </div>
       </div>
 
