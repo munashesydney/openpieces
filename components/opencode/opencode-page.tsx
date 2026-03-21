@@ -72,21 +72,22 @@ export function OpenCodePage({
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, events]);
 
-  // Backup polling: if isSending is true for more than 10 seconds, start polling for updates
-  // This handles the case where SSE doesn't work due to serverless process isolation
+  // Backup polling: if selectedSessionStatus is "working" for more than 10 seconds with no SSE activity,
+  // start polling for updates. This handles both UI-sent and AI-sent messages when SSE is broken.
+  // Triggered by selectedSessionStatus rather than isSending so AI-initiated messages also get covered.
   useEffect(() => {
-    if (!isSending || !selectedSessionId) return;
+    if (selectedSessionStatus !== "working" || !selectedSessionId) return;
 
     const pollTimeout = setTimeout(() => {
-      console.log("[Polling] SSE appears stuck, starting backup poll for", selectedSessionId);
+      console.log("[Polling] No activity, starting backup poll for", selectedSessionId);
       const interval = setInterval(async () => {
         if (!selectedSessionId) {
           clearInterval(interval);
           return;
         }
-        // Fetch fresh session list to get current status
+        // Fetch fresh session list to get current DB status
         try {
-          const res = await fetch(`/api/opencode/sessions?workspaceId=${workspaceId}`);
+          const res = await fetch(`/api/opencode/sessions?workspaceId=${workspaceId}&page=1&pageSize=20`);
           if (!res.ok) return;
           const data = await res.json();
           const sessionsList = Array.isArray(data) ? data : (data.sessions || []);
@@ -99,7 +100,6 @@ export function OpenCodePage({
             if (session) {
               setSelectedSessionStatus(session.status);
             }
-            setIsSending(false);
             await loadMessages(selectedSessionId);
           } else {
             // Just refresh messages while waiting
@@ -108,13 +108,13 @@ export function OpenCodePage({
         } catch (e) {
           console.error("[Polling] Error:", e);
         }
-      }, 3000);
+      }, 10000);
 
       return () => clearInterval(interval);
     }, 10000);
 
     return () => clearTimeout(pollTimeout);
-  }, [isSending, selectedSessionId, workspaceId]);
+  }, [selectedSessionStatus, selectedSessionId, workspaceId]);
 
   useEffect(() => {
     return () => {
@@ -159,21 +159,14 @@ export function OpenCodePage({
           stopPolling();
           return;
         }
-        // Check if session is still working
-        const session = sessions.find(
-          (s) => (s.sessionId || s.session_id || s.id) === selectedSessionId
-        );
-        if (!session || session.status !== "working") {
+        // Check if session is still working via selectedSessionStatus (DB-driven)
+        if (selectedSessionStatus !== "working") {
           stopPolling();
-          if (session?.status === "completed" || session?.status === "failed") {
-            setSelectedSessionStatus(session.status);
-            setIsSending(false);
-          }
           await loadMessages(selectedSessionId);
           await loadSessions();
           return;
         }
-        // Poll for new messages
+        // Poll for new messages while waiting
         await loadMessages(selectedSessionId);
       }, 2000);
     };
@@ -213,9 +206,9 @@ export function OpenCodePage({
       es.close();
       sessionSseRef.current = null;
       // Don't poll immediately - SSE might recover
-      // Only start polling if isSending is still true after 5 seconds
+      // Only start polling if the session is still "working" (DB is source of truth)
       setTimeout(() => {
-        if (isSending && selectedSessionId) {
+        if (selectedSessionStatus === "working" && selectedSessionId) {
           startPolling();
         }
       }, 5000);
@@ -226,7 +219,7 @@ export function OpenCodePage({
       sessionSseRef.current = null;
       stopPolling();
     };
-  }, [selectedSessionId, sessions, isSending]);
+  }, [selectedSessionId, selectedSessionStatus]);
 
   const loadSessions = async (page = 1, append = false) => {
     try {

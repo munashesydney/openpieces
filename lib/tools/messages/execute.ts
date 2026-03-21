@@ -1,5 +1,8 @@
 import { sendMessageWithContext } from "@/lib/services/opencode.service";
 import { getSessionInfo } from "@/lib/services/opencode-session.service";
+import { db } from "@/lib/db";
+import { opencodeSessions } from "@/lib/db/schema";
+import { eq } from "drizzle-orm";
 import type { ToolContext } from "@/lib/tools/registry";
 import type { MessagesToolInput } from "./definition";
 
@@ -28,6 +31,12 @@ export async function executeMessages(input: MessagesToolInput, context: ToolCon
   sendMessageWithContext(sessionId, content.trim(), userId).catch((error) => {
     console.error("Failed to send OpenCode message:", error);
   });
+
+  // Update DB status so UI polling fallback picks it up (DB is single source of truth)
+  await db
+    .update(opencodeSessions)
+    .set({ status: "working", updatedAt: new Date() })
+    .where(eq(opencodeSessions.sessionId, sessionId));
 
   return {
     success: true,
