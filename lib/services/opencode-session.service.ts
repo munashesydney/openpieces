@@ -16,9 +16,15 @@ export type SessionWithService = {
 export async function listSessionsForWorkspace(
   workspaceId: string,
   page: number = 1,
-  pageSize: number = 20
+  pageSize: number = 20,
+  serviceId?: string
 ): Promise<{ data: SessionWithService[]; total: number }> {
   const offset = (page - 1) * pageSize;
+  const baseWhere = eq(services.workspaceId, workspaceId);
+  const whereClause = serviceId
+    ? and(baseWhere, eq(opencodeSessions.serviceId, serviceId))
+    : baseWhere;
+
   const rows = await db
     .select({
       sessionId: opencodeSessions.sessionId,
@@ -32,7 +38,7 @@ export async function listSessionsForWorkspace(
     })
     .from(opencodeSessions)
     .innerJoin(services, eq(opencodeSessions.serviceId, services.id))
-    .where(eq(services.workspaceId, workspaceId))
+    .where(whereClause)
     .orderBy(desc(opencodeSessions.createdAt))
     .limit(pageSize)
     .offset(offset);
@@ -41,7 +47,7 @@ export async function listSessionsForWorkspace(
     .select({ count: count() })
     .from(opencodeSessions)
     .innerJoin(services, eq(opencodeSessions.serviceId, services.id))
-    .where(eq(services.workspaceId, workspaceId));
+    .where(whereClause);
 
   return {
     data: rows.map((r) => ({

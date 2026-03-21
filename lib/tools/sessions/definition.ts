@@ -15,7 +15,7 @@ export const sessionsToolDefinition = {
     serviceId: z
       .string()
       .optional()
-      .describe("Service ID. Required for create action. Service must have a directory set."),
+      .describe("Service ID. Required for create action, optional for list action to filter sessions by service."),
     page: z
       .number()
       .optional()

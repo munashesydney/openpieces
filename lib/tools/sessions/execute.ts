@@ -18,7 +18,7 @@ export async function executeSessions(input: SessionsToolInput, context: ToolCon
 
   switch (action) {
     case "list": {
-      return await listSessionsForWorkspace(workspaceId, page ?? 1, limit ?? 20);
+      return await listSessionsForWorkspace(workspaceId, page ?? 1, limit ?? 20, serviceId);
     }
 
     case "get": {
