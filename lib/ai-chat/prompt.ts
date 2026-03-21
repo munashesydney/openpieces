@@ -107,12 +107,12 @@ Once you have confirmation the trigger is functional (or if proceeding optimisti
 - Send implementation messages
 
 ### 8b. Link Actions to Workflow
-After creating or extending action services, you MUST tell the user to link them to the workflow via the UI:
-- Go to the workflow detail page
-- Click "Link Action" under the Actions section
-- Select the action service to link
+After creating or extending action services, use the manage_workflow_action_links tool to link them to the workflow:
+- Use action "link" with the workflowId and actionServiceId to link an action service to a workflow
+- Use action "list_linked" to see which action services are already linked to a workflow
+- Use action "unlink" to remove a link between an action service and a workflow
 
-You cannot link actions to workflows directly — this must be done by the user in the OpenPieces UI. The user is the only one who can perform this linking action.
+Only services with type "action" can be linked to workflows.
 
 ### 9. Wire it up
 Once triggers and services are running and linked:

@@ -6,6 +6,7 @@ import { createMessagesTool } from "@/lib/tools/messages";
 import { createSecretsTool } from "@/lib/tools/secrets";
 import { createEndpointsTool } from "@/lib/tools/service-endpoints";
 import { createCallEndpointTool } from "@/lib/tools/call-endpoint";
+import { createWorkflowActionLinksTool } from "@/lib/tools/workflow-action-links";
 
 export type ToolContext = {
   workspaceId: string;
@@ -23,5 +24,6 @@ export function createTools(context: ToolContext) {
     manage_secrets: createSecretsTool(context),
     manage_service_endpoints: createEndpointsTool(context),
     call_endpoint: createCallEndpointTool(context),
+    manage_workflow_action_links: createWorkflowActionLinksTool(context),
   };
 }
