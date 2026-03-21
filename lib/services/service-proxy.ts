@@ -46,13 +46,19 @@ export async function proxyToService(
 
     clearTimeout(timer);
 
+    // Buffer the full body to avoid Docker/internal proxy truncation issues
+    // with chunked transfer encoding.
+    const body = await upstreamResponse.arrayBuffer();
+
     const responseHeaders = new Headers(upstreamResponse.headers);
     responseHeaders.delete("transfer-encoding");
     // Node's fetch auto-decompresses the body, so strip the encoding header
     // to prevent the browser from trying to decompress an already-decoded body.
     responseHeaders.delete("content-encoding");
+    // Set content-length since we stripped transfer-encoding and are buffering.
+    responseHeaders.set("content-length", String(body.byteLength));
 
-    return new NextResponse(upstreamResponse.body, {
+    return new NextResponse(body, {
       status: upstreamResponse.status,
       headers: responseHeaders,
     });
