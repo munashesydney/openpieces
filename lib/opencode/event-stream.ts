@@ -26,23 +26,37 @@ const encoder = new TextEncoder();
 
 export function broadcastSessionEvent(sessionId: string, event: unknown): void {
   const writers = sessionWriters.get(sessionId);
-  if (!writers || writers.size === 0) return;
+  if (!writers || writers.size === 0) {
+    // In serverless environments, SSE writers may not be available due to
+    // request being handled by different processes. This is expected in dev
+    // with multiple workers. The client will fall back to polling.
+    return;
+  }
 
   const data = encoder.encode(`data: ${JSON.stringify(event)}\n\n`);
 
   for (const writer of writers) {
     writer.write(data).catch(() => {
-      removeWriter(sessionId, writer);
+      removeWriter(sessionId, writer, "write_failed");
     });
   }
 }
 
 /**
  * Subscribe to events for a session. Returns a ReadableStream for SSE response.
+ * Writers are cleaned up via the abort signal passed to the route handler.
  */
-export function subscribe(sessionId: string): ReadableStream<Uint8Array> {
+export function subscribe(sessionId: string, abortSignal?: AbortSignal): ReadableStream<Uint8Array> {
   const { readable, writable } = new TransformStream<Uint8Array, Uint8Array>();
   const writer = writable.getWriter();
   getWriters(sessionId).add(writer);
+
+  // Clean up writer when client disconnects via abort signal
+  if (abortSignal) {
+    abortSignal.addEventListener("abort", () => {
+      removeWriter(sessionId, writer);
+    });
+  }
+
   return readable;
 }

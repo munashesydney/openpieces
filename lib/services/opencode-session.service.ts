@@ -7,6 +7,9 @@ export type SessionWithService = {
   serviceId: string;
   serviceTitle: string;
   directory: string | null;
+  status: string;
+  lastMessage: string | null;
+  lastMessageAt: Date | null;
   createdAt: Date;
 };
 
@@ -22,6 +25,9 @@ export async function listSessionsForWorkspace(
       serviceId: services.id,
       serviceTitle: services.title,
       directory: services.directory,
+      status: opencodeSessions.status,
+      lastMessage: opencodeSessions.lastMessage,
+      lastMessageAt: opencodeSessions.lastMessageAt,
       createdAt: opencodeSessions.createdAt,
     })
     .from(opencodeSessions)
@@ -43,6 +49,9 @@ export async function listSessionsForWorkspace(
       serviceId: r.serviceId,
       serviceTitle: r.serviceTitle,
       directory: r.directory,
+      status: r.status,
+      lastMessage: r.lastMessage,
+      lastMessageAt: r.lastMessageAt,
       createdAt: r.createdAt,
     })),
     total: totalResult?.count ?? rows.length,
@@ -56,6 +65,9 @@ export async function getSessionInfo(sessionId: string, workspaceId: string): Pr
       serviceId: services.id,
       serviceTitle: services.title,
       directory: services.directory,
+      status: opencodeSessions.status,
+      lastMessage: opencodeSessions.lastMessage,
+      lastMessageAt: opencodeSessions.lastMessageAt,
       createdAt: opencodeSessions.createdAt,
     })
     .from(opencodeSessions)
@@ -75,6 +87,9 @@ export async function getSessionInfo(sessionId: string, workspaceId: string): Pr
     serviceId: r.serviceId,
     serviceTitle: r.serviceTitle,
     directory: r.directory,
+    status: r.status,
+    lastMessage: r.lastMessage,
+    lastMessageAt: r.lastMessageAt,
     createdAt: r.createdAt,
   };
 }
@@ -108,11 +123,13 @@ export async function setService(
     .values({
       sessionId,
       serviceId,
+      status: "active",
     })
     .onConflictDoUpdate({
       target: opencodeSessions.sessionId,
       set: {
         serviceId,
+        status: "active",
         updatedAt: new Date(),
       },
     });

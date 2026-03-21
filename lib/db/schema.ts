@@ -172,6 +172,9 @@ export const opencodeSessions = pgTable("opencode_sessions", {
   serviceId: uuid("service_id")
     .notNull()
     .references(() => services.id, { onDelete: "cascade" }),
+  status: text("status").default("active").notNull(),
+  lastMessage: text("last_message"),
+  lastMessageAt: timestamp("last_message_at"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });

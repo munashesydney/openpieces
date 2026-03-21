@@ -1,11 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
-import { listSessions, createSession } from "@/lib/services/opencode.service";
-import { setService } from "@/lib/services/opencode-session.service";
+import { createSession } from "@/lib/services/opencode.service";
+import { setService, listSessionsForWorkspace } from "@/lib/services/opencode-session.service";
 import { getServiceById } from "@/lib/services/service.service";
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
-    const sessions = await listSessions();
+    const workspaceId = request.nextUrl.searchParams.get("workspaceId");
+    if (!workspaceId) {
+      return NextResponse.json(
+        { error: "workspaceId query param is required" },
+        { status: 400 }
+      );
+    }
+    const { data: sessions } = await listSessionsForWorkspace(workspaceId, 1, 100);
     return NextResponse.json(sessions);
   } catch (error: any) {
     console.error("GET /api/opencode/sessions error:", error);

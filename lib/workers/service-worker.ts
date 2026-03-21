@@ -1,4 +1,4 @@
-import { spawn, ChildProcess } from "child_process";
+import { spawn } from "child_process";
 import net from "net";
 import { eq } from "drizzle-orm";
 import {
@@ -242,6 +242,67 @@ async function executeServiceStopJob(job: ServiceStopJob) {
   }
 }
 
+async function recoverAndStartAllServices() {
+  console.log("[service-worker] Recovering services...");
+
+  // 1. Find all services that claim to be running
+  const runningServices = await db
+    .select()
+    .from(services)
+    .where(eq(services.status, "running"));
+
+  // 2. Check if each PID is still alive, reset if not
+  for (const svc of runningServices) {
+    if (!svc.pid) {
+      await updateService(svc.id, svc.workspaceId, { port: null, pid: null, status: "stopped" });
+      console.log(`[service-worker] Reset stale service ${svc.id} (no PID)`);
+      continue;
+    }
+    try {
+      process.kill(svc.pid, 0); // Signal 0 = check if process exists
+    } catch {
+      // PID is dead, reset to stopped
+      await updateService(svc.id, svc.workspaceId, { port: null, pid: null, status: "stopped" });
+      console.log(`[service-worker] Reset stale service ${svc.id} (dead PID ${svc.pid})`);
+    }
+  }
+
+  // 3. Find all stopped services and try to start valid ones
+  const stoppedServices = await db
+    .select()
+    .from(services)
+    .where(eq(services.status, "stopped"));
+
+  for (const svc of stoppedServices) {
+    if (!svc.directory?.trim()) continue; // Skip services without directory
+
+    // Check if required secrets are set
+    const requiredSecrets = await getRequiredSecrets(svc.id);
+    if (requiredSecrets.length === 0) {
+      // No required secrets, enqueue directly
+      await enqueueServiceSpawn({ serviceId: svc.id, workspaceId: svc.workspaceId });
+      console.log(`[service-worker] Enqueued service ${svc.id} (${svc.title}) - no required secrets`);
+      continue;
+    }
+
+    const workspaceOwnerId = (await getWorkspaceOwnerId(svc.workspaceId)) ?? "";
+    const { data: secrets } = await getSecrets(svc.workspaceId, workspaceOwnerId, 1, 500);
+    const secretKeys = new Set(secrets.map((s) => s.key));
+    const missingSecrets = requiredSecrets
+      .filter((req) => !secretKeys.has(req.secretKey))
+      .map((req) => req.secretKey);
+
+    if (missingSecrets.length === 0) {
+      await enqueueServiceSpawn({ serviceId: svc.id, workspaceId: svc.workspaceId });
+      console.log(`[service-worker] Enqueued service ${svc.id} (${svc.title})`);
+    } else {
+      console.log(`[service-worker] Skipping service ${svc.id} (${svc.title}) - missing secrets: ${missingSecrets.join(", ")}`);
+    }
+  }
+
+  console.log("[service-worker] Service recovery complete");
+}
+
 export async function startServiceWorker() {
   const boss = await getPgBoss();
 
@@ -256,6 +317,9 @@ export async function startServiceWorker() {
     if (!job) return;
     await executeServiceStopJob(job.data as ServiceStopJob);
   });
+
+  // Recover stale services and start valid ones
+  await recoverAndStartAllServices();
 
   console.log("[service-worker] listening for service spawn and stop jobs");
   return boss;

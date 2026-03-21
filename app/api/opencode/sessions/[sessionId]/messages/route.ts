@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getMessages, sendMessageWithContext } from "@/lib/services/opencode.service";
 import { requireUser } from "@/lib/services/auth.service";
+import { db } from "@/lib/db";
+import { opencodeSessions } from "@/lib/db/schema";
+import { eq } from "drizzle-orm";
 
 export async function GET(
   request: NextRequest,
@@ -44,6 +47,11 @@ export async function POST(
     // Get user from session - this is the UI path where there's a valid request context
     const user = await requireUser();
     await sendMessageWithContext(sessionId, content, user.id);
+    await db
+      .update(opencodeSessions)
+      .set({ status: "working", updatedAt: new Date() })
+      .where(eq(opencodeSessions.sessionId, sessionId))
+      .catch(() => {});
 
     return NextResponse.json({ accepted: true }, { status: 202 });
   } catch (error: any) {

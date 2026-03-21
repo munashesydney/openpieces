@@ -24,12 +24,15 @@ export function OpenCodePage({
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [selectedServiceId, setSelectedServiceId] = useState("");
   const [selectedSessionDirectory, setSelectedSessionDirectory] = useState<string | null>(null);
+  const [selectedSessionStatus, setSelectedSessionStatus] = useState<string | null>(null);
+  const [selectedSessionLastMessage, setSelectedSessionLastMessage] = useState<string | null>(null);
 
   const servicesWithDirectory = services.filter(
     (s) => s.directory && typeof s.directory === "string" && s.directory.trim() !== ""
   );
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const eventSourceRef = useRef<EventSource | null>(null);
+  const sessionSseRef = useRef<EventSource | null>(null);
 
   useEffect(() => {
     loadSessions();
@@ -42,38 +45,201 @@ export function OpenCodePage({
         .then((res) => (res.ok ? res.json() : null))
         .then((data) => setSelectedSessionDirectory(data?.directory ?? null))
         .catch(() => setSelectedSessionDirectory(null));
+      // Grab status + lastMessage from the sessions list
+      const session = sessions.find(
+        (s) => (s.sessionId || s.session_id || s.id) === selectedSessionId
+      );
+      setSelectedSessionStatus(session?.status ?? null);
+      setSelectedSessionLastMessage(session?.lastMessage ?? null);
       setEvents([]);
     } else {
       setMessages([]);
       setSelectedSessionDirectory(null);
+      setSelectedSessionStatus(null);
+      setSelectedSessionLastMessage(null);
       setEvents([]);
     }
     eventSourceRef.current?.close();
     eventSourceRef.current = null;
+    // Note: intentionally NOT depending on `sessions` — we don't want to
+    // close/recreate SSE whenever sessions list refreshes after a send.
   }, [selectedSessionId]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, events]);
 
+  // Backup polling: if isSending is true for more than 10 seconds, start polling for updates
+  // This handles the case where SSE doesn't work due to serverless process isolation
+  useEffect(() => {
+    if (!isSending || !selectedSessionId) return;
+
+    const pollTimeout = setTimeout(() => {
+      console.log("[Polling] SSE appears stuck, starting backup poll for", selectedSessionId);
+      const interval = setInterval(async () => {
+        if (!selectedSessionId) {
+          clearInterval(interval);
+          return;
+        }
+        // Fetch fresh session list to get current status
+        try {
+          const res = await fetch(`/api/opencode/sessions?workspaceId=${workspaceId}`);
+          if (!res.ok) return;
+          const data = await res.json();
+          const sessionsList = Array.isArray(data) ? data : (data.sessions || []);
+          const session = sessionsList.find(
+            (s: any) => (s.sessionId || s.session_id || s.id) === selectedSessionId
+          );
+          if (!session || (session.status !== "working" && session.status !== "active")) {
+            clearInterval(interval);
+            setSessions(sessionsList);
+            if (session) {
+              setSelectedSessionStatus(session.status);
+            }
+            setIsSending(false);
+            await loadMessages(selectedSessionId);
+          } else {
+            // Just refresh messages while waiting
+            await loadMessages(selectedSessionId);
+          }
+        } catch (e) {
+          console.error("[Polling] Error:", e);
+        }
+      }, 3000);
+
+      return () => clearInterval(interval);
+    }, 10000);
+
+    return () => clearTimeout(pollTimeout);
+  }, [isSending, selectedSessionId, workspaceId]);
+
   useEffect(() => {
     return () => {
       eventSourceRef.current?.close();
       eventSourceRef.current = null;
+      sessionSseRef.current?.close();
+      sessionSseRef.current = null;
     };
   }, []);
+
+  // Persistent SSE for the selected session — keeps status in sync in real-time
+  // Note: In serverless environments, SSE may not work due to request being handled
+  // by different processes. We use polling as a fallback when SSE fails.
+  useEffect(() => {
+    if (!selectedSessionId) {
+      sessionSseRef.current?.close();
+      sessionSseRef.current = null;
+      return;
+    }
+
+    sessionSseRef.current?.close();
+    const es = new EventSource(
+      `${window.location.origin}/api/opencode/sessions/${selectedSessionId}/events`
+    );
+    sessionSseRef.current = es;
+
+    let pollInterval: ReturnType<typeof setInterval> | null = null;
+
+    const stopPolling = () => {
+      if (pollInterval) {
+        clearInterval(pollInterval);
+        pollInterval = null;
+      }
+    };
+
+    const startPolling = () => {
+      if (pollInterval) return; // Already polling
+      console.log("[SSE] SSE failed, starting polling fallback for", selectedSessionId);
+      stopPolling();
+      pollInterval = setInterval(async () => {
+        if (!selectedSessionId) {
+          stopPolling();
+          return;
+        }
+        // Check if session is still working
+        const session = sessions.find(
+          (s) => (s.sessionId || s.session_id || s.id) === selectedSessionId
+        );
+        if (!session || session.status !== "working") {
+          stopPolling();
+          if (session?.status === "completed" || session?.status === "failed") {
+            setSelectedSessionStatus(session.status);
+            setIsSending(false);
+          }
+          await loadMessages(selectedSessionId);
+          await loadSessions();
+          return;
+        }
+        // Poll for new messages
+        await loadMessages(selectedSessionId);
+      }, 2000);
+    };
+
+    es.onmessage = (e) => {
+      try {
+        const ev = JSON.parse(e.data) as SessionEvent;
+        if (ev.type === "session.idle" || ev.type === "session.error") {
+          stopPolling();
+          const newStatus = ev.type === "session.idle" ? "completed" : "failed";
+          const content =
+            (ev as any).content ??
+            (ev as any).message?.content ??
+            (ev as any).message?.text ??
+            null;
+          setSessions((prev) =>
+            prev.map((s) =>
+              (s.sessionId || s.session_id || s.id) === selectedSessionId
+                ? { ...s, status: newStatus, lastMessage: content }
+                : s
+            )
+          );
+          setSelectedSessionStatus(newStatus);
+          setSelectedSessionLastMessage(content);
+          setIsSending(false);
+          // Reload messages and sessions to reflect completion
+          loadMessages(selectedSessionId).finally(() => {
+            loadSessions();
+          });
+        }
+      } catch (err) {
+        // Ignore parse errors
+      }
+    };
+
+    es.onerror = () => {
+      es.close();
+      sessionSseRef.current = null;
+      // Don't poll immediately - SSE might recover
+      // Only start polling if isSending is still true after 5 seconds
+      setTimeout(() => {
+        if (isSending && selectedSessionId) {
+          startPolling();
+        }
+      }, 5000);
+    };
+
+    return () => {
+      es.close();
+      sessionSseRef.current = null;
+      stopPolling();
+    };
+  }, [selectedSessionId, sessions, isSending]);
 
   const loadSessions = async () => {
     try {
       setIsLoading(true);
-      const res = await fetch("/api/opencode/sessions");
-      if (res.ok) {
-        const data = await res.json();
-        const sessionsList = Array.isArray(data) ? data : (data.sessions || []);
-        setSessions(sessionsList);
+      const res = await fetch(`/api/opencode/sessions?workspaceId=${workspaceId}`);
+      const data = await res.json();
+      if (!res.ok) {
+        console.error("Failed to load sessions:", data);
+        setSessions([]);
+        return;
       }
+      const sessionsList = Array.isArray(data) ? data : (data.sessions || []);
+      setSessions(sessionsList);
     } catch (e) {
       console.error(e);
+      setSessions([]);
     } finally {
       setIsLoading(false);
     }
@@ -112,16 +278,20 @@ export function OpenCodePage({
   };
 
   const loadMessages = async (id: string) => {
+    // Discard response if we're no longer on this session
+    if (id !== selectedSessionId) {
+      console.log("[loadMessages] Discarding messages for", id, "(current:", selectedSessionId, ")");
+      return;
+    }
     try {
       setIsLoading(true);
       const res = await fetch(`/api/opencode/sessions/${id}/messages`);
-      if (res.ok) {
-        const data = await res.json();
-        // Handle if data is an array or wrapped
-        const messagesList = Array.isArray(data) ? data : (data.messages || []);
-        // The API might return it top-down, let's reverse if needed, assuming they're sorted
-        setMessages(messagesList);
-      }
+      if (!res.ok) return;
+      // Double-check after fetch
+      if (id !== selectedSessionId) return;
+      const data = await res.json();
+      const messagesList = Array.isArray(data) ? data : (data.messages || []);
+      setMessages(messagesList);
     } catch (e) {
       console.error(e);
     } finally {
@@ -140,12 +310,30 @@ export function OpenCodePage({
       try {
         const ev = JSON.parse(e.data) as SessionEvent;
         setEvents((prev) => [...prev, ev]);
+
+        // Update session status in-memory from SSE event immediately
         if (ev.type === "session.idle" || ev.type === "session.error") {
+          const newStatus = ev.type === "session.idle" ? "completed" : "failed";
+          const content =
+            (ev as any).content ??
+            (ev as any).message?.content ??
+            (ev as any).message?.text ??
+            selectedSessionLastMessage;
+          setSessions((prev) =>
+            prev.map((s) =>
+              (s.sessionId || s.session_id || s.id) === sessionId
+                ? { ...s, status: newStatus, lastMessage: content }
+                : s
+            )
+          );
+          setSelectedSessionStatus(newStatus);
+          setSelectedSessionLastMessage(content);
+          setIsSending(false); // clear immediately
+          setEvents([]);
           es.close();
           eventSourceRef.current = null;
           loadMessages(sessionId).finally(() => {
-            setIsSending(false);
-            setEvents([]);
+            loadSessions();
           });
         }
       } catch (err) {
@@ -159,6 +347,7 @@ export function OpenCodePage({
       loadMessages(sessionId).finally(() => {
         setIsSending(false);
         setEvents([]);
+        loadSessions();
       });
     };
   };
@@ -171,6 +360,16 @@ export function OpenCodePage({
     setInput("");
     setIsSending(true);
 
+    // Update status immediately in UI
+    setSelectedSessionStatus("working");
+    setSessions((prev) =>
+      prev.map((s) =>
+        (s.sessionId || s.session_id || s.id) === selectedSessionId
+          ? { ...s, status: "working" }
+          : s
+      )
+    );
+
     try {
       const res = await fetch(`/api/opencode/sessions/${selectedSessionId}/messages`, {
         method: "POST",
@@ -179,17 +378,34 @@ export function OpenCodePage({
       });
 
       if (res.status === 202) {
-        connectEventStream(selectedSessionId);
+        // SSE is already connected via persistent useEffect - just wait for completion
+        // No need to call connectEventStream here
       } else if (res.ok) {
         await loadMessages(selectedSessionId);
         setIsSending(false);
       } else {
         console.error("Failed to send message", await res.text());
         setIsSending(false);
+        setSelectedSessionStatus("active");
+        setSessions((prev) =>
+          prev.map((s) =>
+            (s.sessionId || s.session_id || s.id) === selectedSessionId
+              ? { ...s, status: "active" }
+              : s
+          )
+        );
       }
     } catch (e) {
       console.error(e);
       setIsSending(false);
+      setSelectedSessionStatus("active");
+      setSessions((prev) =>
+        prev.map((s) =>
+          (s.sessionId || s.session_id || s.id) === selectedSessionId
+            ? { ...s, status: "active" }
+            : s
+        )
+      );
     }
   };
 
@@ -274,7 +490,7 @@ export function OpenCodePage({
           )}
           {sessions.map((session) => {
             // Handle different possible ID formats returned by API
-            const id = session.session_id || session.id;
+            const id = session.sessionId || session.session_id || session.id;
             return (
               <button
                 key={id}
@@ -301,11 +517,30 @@ export function OpenCodePage({
         ) : (
           <>
             {selectedSessionDirectory && (
-              <div className="px-6 py-2 border-b border-[var(--border)] bg-[var(--hover-bg)]/50 flex items-center gap-2 text-xs text-[var(--muted)]">
-                <FolderOpen className="h-3.5 w-3.5 shrink-0" />
-                <span className="truncate" title={selectedSessionDirectory}>
-                  {selectedSessionDirectory}
+              <div className="px-6 py-2 border-b border-[var(--border)] bg-[var(--hover-bg)]/50 flex items-center gap-3 text-xs text-[var(--muted)]">
+                <span className="flex items-center gap-1.5 shrink-0">
+                  <FolderOpen className="h-3.5 w-3.5" />
+                  <span className="truncate" title={selectedSessionDirectory}>
+                    {selectedSessionDirectory}
+                  </span>
                 </span>
+                {selectedSessionStatus && (
+                  <span
+                    className={`shrink-0 px-2 py-0.5 rounded-full text-[10px] font-medium ${
+                      selectedSessionStatus === "active"
+                        ? "bg-green-500/20 text-green-400"
+                        : selectedSessionStatus === "working"
+                        ? "bg-yellow-500/20 text-yellow-400"
+                        : selectedSessionStatus === "completed"
+                        ? "bg-blue-500/20 text-blue-400"
+                        : selectedSessionStatus === "failed"
+                        ? "bg-red-500/20 text-red-400"
+                        : "bg-gray-500/20 text-gray-400"
+                    }`}
+                  >
+                    {selectedSessionStatus}
+                  </span>
+                )}
               </div>
             )}
             <div className="flex-1 overflow-y-auto p-6 space-y-6">
