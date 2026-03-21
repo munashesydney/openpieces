@@ -1,6 +1,8 @@
 "use client";
 
 import { Card } from "../ui/card";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import type { AiToolCall, AiToolResult } from "@/lib/ai-chat/types";
 
 type ChatMessageCardProps = {
@@ -43,7 +45,13 @@ export function ChatMessageCard({
           : "mr-auto max-w-[85%] bg-[var(--hover-bg)]"
       }`}
     >
-      <p className="text-sm text-[var(--foreground)] whitespace-pre-wrap">{content}</p>
+      {role === "assistant" ? (
+        <div className="text-sm text-[var(--foreground)] [&_p]:whitespace-pre-wrap">
+          <ReactMarkdown remarkPlugins={[remarkGfm]}>{content}</ReactMarkdown>
+        </div>
+      ) : (
+        <p className="text-sm text-[var(--foreground)] whitespace-pre-wrap">{content}</p>
+      )}
       {role === "assistant" && toolCalls.length > 0 ? (
         <div className="mt-3 space-y-2 border-t border-[var(--border)] pt-3">
           {toolCalls.map((toolCall) => {

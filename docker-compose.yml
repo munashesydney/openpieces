@@ -19,7 +19,7 @@ services:
     volumes:
       # Mount source so edits hot-reload inside the container
       - .:/app
-      # Keep the container's node_modules isolated from the host
+      # Keep container's node_modules isolated from host (avoids cross-platform binary issues)
       - /app/node_modules
       # Keep Next.js build cache isolated
       - /app/.next
@@ -28,6 +28,7 @@ services:
     # Run DB migrations then start dev server.
     # Turbopack's file watcher doesn't support polling in Docker yet,
     # so we fall back to Webpack mode where WATCHPACK_POLLING works.
+    entrypoint: ["sh", "./scripts/docker-dev-entrypoint.sh"]
     command: sh -c "node_modules/.bin/tsx lib/db/migrate.ts && node_modules/.bin/next dev --webpack"
     ports:
       - "3000:3000"
@@ -56,6 +57,7 @@ services:
       - /app/node_modules
       - /app/.next
       - ./pieces:/app/pieces
+    entrypoint: ["sh", "./scripts/docker-dev-entrypoint.sh"]
     command: sh -c "node_modules/.bin/tsx lib/db/migrate.ts && node_modules/.bin/tsx scripts/ai-worker.ts"
     environment:
       - WATCHPACK_POLLING=true

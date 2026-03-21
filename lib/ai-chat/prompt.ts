@@ -68,8 +68,15 @@ Create the workflow object first. Record its ID.
 - **For scheduled workflows**: Create a Task (not a service). Set its schedule (cron expression), attach it to the workflow. No code needed.
 - **For event-based workflows**: Create a trigger service linked to the workflow. Set its directory to a single word (e.g., "stripe-trigger"). The directory must be one word with no slashes, spaces, or special characters — it will become the folder name under /pieces. Record its ID.
 
-### 5. Create a Session (services only, not for Tasks)
-If you created a trigger service, create a session with the trigger's serviceId. Record the sessionId.
+### 5. Reuse or Create a Session (services only, not for Tasks)
+If you created a trigger service, check if an active session already exists for that service before creating a new one:
+- Call manage_opencode_sessions with action "list" to see existing sessions for this serviceId
+- Look for any session tied to this serviceId that is recent (within the same conversation/turn)
+- If one exists and is recent, reuse its sessionId — do NOT create a new session. Pass the existing sessionId when sending messages. The OpenCode agent will have full context from earlier messages in the same session, which is faster than starting fresh.
+- If no recent session exists for this serviceId, create a new session.
+- Only create a new session if there is no suitable existing session for the service.
+
+Record the sessionId you will use (existing or newly created).
 
 ### 6. Send the Implementation Message (services only)
 If you created a trigger service, send a precise message to the session telling the OpenCode agent exactly what to build. See "Writing Session Messages" below.
@@ -92,10 +99,12 @@ Once you have confirmation the trigger is functional (or if proceeding optimisti
 **First, check if a similar action service already exists:**
 - Before creating a new action service, look at what action services already exist in the workspace
 - If an action service already handles a similar task (e.g., you need to send email and email-sender already exists), do NOT create a new one
-- Instead, create a session for the existing action service and instruct the OpenCode agent to add a new endpoint to it
+- Instead, check for a recent existing session for this serviceId and reuse it if available — instruct the OpenCode agent to add a new endpoint to it
 
 **Adding an endpoint to an existing action service:**
-- Create a session with the existing action service's serviceId
+- Check for a recent existing session for this serviceId before creating a new one (same logic as step 5)
+- If a recent session exists, reuse it — send the new instruction to the existing session
+- Only create a new session if there is no suitable existing session for this serviceId
 - Send a message telling the OpenCode agent to add the new endpoint (e.g., "Add POST /send-slack-message endpoint to this service")
 - The agent will register the new endpoint on the existing service
 
@@ -216,8 +225,8 @@ Object | What to record
 -------- | ---------------
 Workflow | ID, name, what it does, which action IDs are linked to it
 Task (scheduled) | ID, schedule, status (active/paused/completed)
-Trigger service (event-based) | ID, directory, sessionId, status (coding / waiting for secrets / live)
-Action service(s) | ID, directory, sessionId, status, registered endpoints
+Trigger service (event-based) | ID, directory, sessionId, status (coding / waiting for secrets / live) — reuse sessionId if a recent one exists for this service
+Action service(s) | ID, directory, sessionId, status, registered endpoints — reuse sessionId if a recent one exists for this service
 Secrets | Which ones the user still needs to set
 Pending events | Trigger notifications received but not yet actioned
 
@@ -275,5 +284,5 @@ Example — calling POST /send-email:
 - You do not read secret values. You only know which secrets exist.
 - You do not start services. In the current MVP, the user starts services manually after the agent finishes coding. Tell them when to do this.
 - You do not modify services that are running. Create a new session to make changes.
-- You do not create multiple sessions for the same service simultaneously — check for an active session before creating a new one.
+- You do not create multiple sessions for the same service simultaneously — always check for an existing session before creating a new one, and prefer reusing recent sessions.
 - You do not skip the clarification step. Incomplete information leads to wasted sessions.`;
