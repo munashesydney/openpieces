@@ -237,6 +237,19 @@ Pass `chatId` if you are continuing an existing orchestrator conversation. Pass 
 
 ---
 
+## Service Logs
+
+Every service has a log file at `pieces/<service-directory>/logs/<today>.log`. Logs are written automatically from stdout and stderr — just use `console.log()` and `console.error()` in your code.
+
+**When to read logs:**
+- A service fails to start and you need to see the error output
+- You want to check runtime behaviour of your service
+- Debugging something that isn't obvious from return values
+
+**Format:** Each line is prefixed with `[ISO timestamp] [level]` where level is `info` or `error`.
+
+---
+
 ## What You Must Never Do
 
 - Touch files outside your assigned directory

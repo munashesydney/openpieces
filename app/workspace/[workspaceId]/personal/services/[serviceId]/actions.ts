@@ -3,36 +3,17 @@
 import { revalidatePath } from "next/cache";
 import { createEndpoint, updateEndpoint, deleteEndpoint } from "../../../../../../lib/services/service-endpoint.service";
 import { requireWorkspaceOwner } from "../../../../../../lib/services/auth.service";
-import { getServiceById } from "../../../../../../lib/services/service.service";
+import { getServiceById, validateServiceForSpawn } from "../../../../../../lib/services/service.service";
 import { enqueueServiceSpawn, enqueueServiceStop } from "../../../../../../lib/queues/pg-boss";
 import { addRequiredSecret, removeRequiredSecret, getRequiredSecrets } from "../../../../../../lib/services/service-required-secrets.service";
-import { getSecrets } from "../../../../../../lib/services/secret.service";
-import { getWorkspaceOwnerId } from "../../../../../../lib/services/workspace.service";
 
 export type ActionResult = { error: string } | { success: true };
 
 export async function spawnServiceAction(workspaceId: string, serviceId: string): Promise<ActionResult> {
   await requireWorkspaceOwner(workspaceId);
 
-  const service = await getServiceById(serviceId, workspaceId);
-  if (!service) return { error: "Service not found" };
-  if (!service.directory?.trim()) return { error: "Service has no directory set" };
-
-  // Check if all required secrets are set before enqueueing
-  const requiredSecrets = await getRequiredSecrets(serviceId);
-  if (requiredSecrets.length > 0) {
-    const workspaceOwnerId = (await getWorkspaceOwnerId(workspaceId)) ?? "";
-    const { data: secrets } = await getSecrets(workspaceId, workspaceOwnerId, 1, 500);
-    const secretKeys = new Set(secrets.map(s => s.key));
-    
-    const missingSecrets = requiredSecrets
-      .filter(req => !secretKeys.has(req.secretKey))
-      .map(req => req.secretKey);
-    
-    if (missingSecrets.length > 0) {
-      return { error: `Missing required secrets: ${missingSecrets.join(", ")}` };
-    }
-  }
+  const validation = await validateServiceForSpawn(serviceId, workspaceId);
+  if (!validation.valid) return { error: validation.error };
 
   await enqueueServiceSpawn({ serviceId, workspaceId });
   revalidatePath(`/workspace/${workspaceId}/personal/services/${serviceId}`);

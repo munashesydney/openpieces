@@ -94,6 +94,20 @@ export async function getSessionInfo(sessionId: string, workspaceId: string): Pr
   };
 }
 
+export async function getSessionInfoById(sessionId: string): Promise<{ sessionId: string; serviceId: string; workspaceId: string } | null> {
+  const rows = await db
+    .select({
+      sessionId: opencodeSessions.sessionId,
+      serviceId: opencodeSessions.serviceId,
+      workspaceId: services.workspaceId,
+    })
+    .from(opencodeSessions)
+    .innerJoin(services, eq(opencodeSessions.serviceId, services.id))
+    .where(eq(opencodeSessions.sessionId, sessionId))
+    .limit(1);
+  return rows[0] ?? null;
+}
+
 export async function getServiceId(sessionId: string): Promise<string | null> {
   const rows = await db
     .select({ serviceId: opencodeSessions.serviceId })

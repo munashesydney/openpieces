@@ -144,3 +144,30 @@ export async function deleteService(serviceId: string, workspaceId: string): Pro
     .returning({ id: services.id });
   return result.length > 0;
 }
+
+export async function validateServiceForSpawn(serviceId: string, workspaceId: string): Promise<{ valid: true } | { valid: false; error: string }> {
+  const service = await getServiceById(serviceId, workspaceId);
+  if (!service) return { valid: false, error: "Service not found" };
+  if (!service.directory?.trim()) return { valid: false, error: "Service has no directory set" };
+
+  const { getRequiredSecrets } = await import("./service-required-secrets.service");
+  const { getSecrets } = await import("./secret.service");
+  const { getWorkspaceOwnerId } = await import("./workspace.service");
+
+  const requiredSecrets = await getRequiredSecrets(serviceId);
+  if (requiredSecrets.length > 0) {
+    const workspaceOwnerId = (await getWorkspaceOwnerId(workspaceId)) ?? "";
+    const { data: secrets } = await getSecrets(workspaceId, workspaceOwnerId, 1, 500);
+    const secretKeys = new Set(secrets.map((s) => s.key));
+
+    const missingSecrets = requiredSecrets
+      .filter((req) => !secretKeys.has(req.secretKey))
+      .map((req) => req.secretKey);
+
+    if (missingSecrets.length > 0) {
+      return { valid: false, error: `Missing required secrets: ${missingSecrets.join(", ")}` };
+    }
+  }
+
+  return { valid: true };
+}

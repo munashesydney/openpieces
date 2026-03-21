@@ -49,6 +49,23 @@ export async function POST(request: NextRequest) {
       });
 
     broadcastSessionEvent(sessionId, body);
+
+    // After session completes, try to spawn the linked service (fire-and-forget)
+    if (eventType === "session.idle" || eventType === "session.done") {
+      const { getSessionInfoById } = await import("@/lib/services/opencode-session.service");
+      const { validateServiceForSpawn } = await import("@/lib/services/service.service");
+      const { enqueueServiceSpawn } = await import("@/lib/queues/pg-boss");
+
+      getSessionInfoById(sessionId).then(async (sessionInfo) => {
+        if (!sessionInfo?.serviceId) return;
+        const validation = await validateServiceForSpawn(sessionInfo.serviceId, sessionInfo.workspaceId);
+        if (validation.valid) {
+          await enqueueServiceSpawn({ serviceId: sessionInfo.serviceId, workspaceId: sessionInfo.workspaceId });
+        }
+        // invalid (missing secrets, no dir) → skip silently
+      }).catch(() => {});
+    }
+
     return NextResponse.json({ ok: true });
   } catch (error) {
     console.error("POST /api/opencode/webhook error:", error);
