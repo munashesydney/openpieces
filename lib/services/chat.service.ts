@@ -2,7 +2,7 @@ import { createGateway } from "@ai-sdk/gateway";
 import type { ModelMessage } from "ai";
 import { stepCountIs, streamText } from "ai";
 import { and, asc, desc, eq } from "drizzle-orm";
-import { OPENPIECES_CHAT_SYSTEM_PROMPT } from "@/lib/ai-chat/prompt";
+import { OPENPIECES_CHAT_SYSTEM_PROMPT } from "@/lib/ai-chat/promptV2";
 import type {
   AiChatListItem,
   AiChatMessage,

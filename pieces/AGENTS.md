@@ -224,6 +224,85 @@ Pass `chatId` if you are continuing an existing orchestrator conversation. Pass 
 - Returns a clear JSON response: `{ success: true, ... }` or `{ success: false, error: "..." }`
 - No side-channel notifications — the orchestrator calls you, you respond
 
+### Action Service with a Web UI
+Some action services serve a web interface — games, dashboards, data viewers, forms. For anything beyond a single HTML file, split your code across multiple files and serve them with dedicated routes. This keeps the main `index.ts` clean and your UI code maintainable.
+
+**The pattern — serve JS (or CSS) files via a route:**
+
+In `index.ts`, add a route that reads and serves the file:
+
+```ts
+if (pathname === "/game.js") {
+  try {
+    const js = await Deno.readTextFile("game.js");
+    return new Response(js, {
+      headers: {
+        "content-type": "application/javascript",
+        "access-control-allow-origin": "*",
+      },
+    });
+  } catch {
+    return new Response("console.error('File not found');", {
+      headers: {
+        "content-type": "application/javascript",
+        "access-control-allow-origin": "*",
+      },
+    });
+  }
+}
+```
+
+Then in your HTML, reference it normally:
+```html
+<script src="/game.js"></script>
+```
+
+**Do the same for CSS:**
+```ts
+if (pathname === "/style.css") {
+  try {
+    const css = await Deno.readTextFile("style.css");
+    return new Response(css, {
+      headers: {
+        "content-type": "text/css",
+        "access-control-allow-origin": "*",
+      },
+    });
+  } catch {
+    return new Response("", { status: 404 });
+  }
+}
+```
+```html
+<link rel="stylesheet" href="/style.css">
+```
+
+**Rules for file-serving routes:**
+- Always include `access-control-allow-origin: "*"` for browser requests
+- Always handle the missing-file case gracefully — return a minimal valid response rather than a 500
+- Register the serving route as an endpoint if the path is an API route
+- Static asset routes (`/game.js`, `/style.css`, `/assets/...`) do not need to be registered as endpoints — only the HTML entry point needs registering
+
+**Suggested file structure for a UI service:**
+```
+/pieces/my-game/
+  index.ts          # Main server — serves HTML entry point and static assets
+  game.js           # Game logic
+  style.css         # Styles
+  types.ts          # Shared TypeScript types (imported by both index.ts and game.js)
+```
+
+**Registering the HTML entry point:**
+After writing the HTML handler, register it so the orchestrator knows this service has a web UI:
+
+```
+action: "create"
+method: "GET"
+path: "/"
+description: "Serves the game UI"
+inputSchema: { "type": "object", "properties": {} }
+```
+
 ---
 
 ## Code Quality Rules
