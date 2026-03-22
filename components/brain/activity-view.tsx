@@ -1,7 +1,9 @@
 "use client";
 
 import * as React from "react";
-import { Search, Workflow, Puzzle, Calendar, Code, Route, ChevronRight } from "lucide-react";
+import { useTransition } from "react";
+import Link from "next/link";
+import { Search, Workflow, Puzzle, Calendar, Code, Route, ChevronRight, ArrowRight } from "lucide-react";
 import type { ActivityLog } from "../../lib/db/schema";
 
 type SearchMode = "workflows" | "services" | "tasks" | "endpoints" | "opencode";
@@ -14,21 +16,16 @@ interface SearchResult {
 }
 
 const mockResults: SearchResult[] = [
-  // Workflows
   { id: "w1", name: "Email Parser", description: "Parse emails and extract data", type: "workflows" },
   { id: "w2", name: "GitHub Issue Creator", description: "Create issues from sources", type: "workflows" },
   { id: "w3", name: "Slack Notifier", description: "Send Slack notifications", type: "workflows" },
-  // Services
   { id: "s1", name: "GitHub API", description: "Connect to GitHub", type: "services" },
   { id: "s2", name: "Slack API", description: "Connect to Slack", type: "services" },
   { id: "s3", name: "Email Service", description: "SMTP email service", type: "services" },
-  // Tasks
   { id: "t1", name: "Review PR #142", description: "Review and merge PR", type: "tasks" },
   { id: "t2", name: "Update Documentation", description: "Update API docs", type: "tasks" },
-  // Endpoints
   { id: "e1", name: "POST /api/webhooks", description: "Receive webhooks", type: "endpoints" },
   { id: "e2", name: "GET /api/users", description: "List users", type: "endpoints" },
-  // OpenCode
   { id: "o1", name: "Debug auth flow", description: "Fix login issue", type: "opencode" },
   { id: "o2", name: "Add user validation", description: "Validate user input", type: "opencode" },
 ];
@@ -43,16 +40,20 @@ const modeConfig: Record<SearchMode, { label: string; icon: typeof Workflow; rec
 
 interface ActivityViewProps {
   workspaceId: string;
-  initialActivity: ActivityLog[];
+  getActivityAction: (
+    recordType: string,
+    limit?: number,
+    offset?: number
+  ) => Promise<ActivityLog[]>;
 }
 
-export function ActivityView({ workspaceId, initialActivity }: ActivityViewProps) {
+export function ActivityView({ workspaceId, getActivityAction }: ActivityViewProps) {
+  const [isPending, startTransition] = useTransition();
   const [searchQuery, setSearchQuery] = React.useState("");
   const [isDropdownOpen, setIsDropdownOpen] = React.useState(false);
   const [selectedMode, setSelectedMode] = React.useState<SearchMode>("workflows");
   const [selectedResult, setSelectedResult] = React.useState<SearchResult | null>(null);
-  const [activityData, setActivityData] = React.useState<ActivityLog[]>(initialActivity);
-  const [isLoading, setIsLoading] = React.useState(false);
+  const [activityData, setActivityData] = React.useState<ActivityLog[]>([]);
   const inputRef = React.useRef<HTMLInputElement>(null);
   const containerRef = React.useRef<HTMLDivElement>(null);
 
@@ -64,31 +65,22 @@ export function ActivityView({ workspaceId, initialActivity }: ActivityViewProps
         r.description.toLowerCase().includes(searchQuery.toLowerCase())
     );
 
+  const fetchActivity = React.useCallback(
+    (recordType: string) => {
+      startTransition(async () => {
+        const data = await getActivityAction(recordType);
+        setActivityData(data);
+      });
+    },
+    [getActivityAction]
+  );
+
   // Fetch activity when mode changes
   React.useEffect(() => {
-    async function fetchActivity() {
-      setIsLoading(true);
-      try {
-        const recordType = modeConfig[selectedMode].recordType;
-        const res = await fetch(
-          `/api/activity?workspaceId=${workspaceId}&recordType=${recordType}`
-        );
-        if (res.ok) {
-          const data = await res.json();
-          setActivityData(data);
-        }
-      } catch (error) {
-        console.error("Failed to fetch activity:", error);
-      } finally {
-        setIsLoading(false);
-      }
-    }
-
-    // Only fetch if no specific result is selected (we show filtered by result if selected)
     if (!selectedResult) {
-      fetchActivity();
+      fetchActivity(modeConfig[selectedMode].recordType);
     }
-  }, [selectedMode, workspaceId, selectedResult]);
+  }, [selectedMode, selectedResult, fetchActivity]);
 
   React.useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -151,7 +143,6 @@ export function ActivityView({ workspaceId, initialActivity }: ActivityViewProps
     return `${days} day${days > 1 ? "s" : ""} ago`;
   };
 
-  // Filter activity by record_id if a specific result is selected
   const displayedActivity = selectedResult
     ? activityData.filter((a) => a.recordId === selectedResult.id)
     : activityData;
@@ -260,16 +251,17 @@ export function ActivityView({ workspaceId, initialActivity }: ActivityViewProps
       {/* Activity list */}
       <div className="flex-1 overflow-auto px-8 pb-8 pt-6">
         <div className="mx-auto max-w-2xl">
-          {isLoading ? (
+          {isPending ? (
             <div className="flex flex-col items-center justify-center py-16">
               <div className="h-6 w-6 animate-spin rounded-full border-2 border-[var(--accent)] border-t-transparent" />
             </div>
           ) : displayedActivity.length > 0 ? (
             <div className="space-y-2">
               {displayedActivity.map((activity) => (
-                <div
+                <Link
                   key={activity.id}
-                  className="flex items-center justify-between rounded-xl border border-[var(--border)] bg-[var(--sidebar-bg)] px-4 py-3"
+                  href={`/workspace/${workspaceId}/brain/activity/${activity.id}`}
+                  className="flex items-center justify-between rounded-xl border border-[var(--border)] bg-[var(--sidebar-bg)] px-4 py-3 transition-colors hover:bg-[var(--hover-bg)]"
                 >
                   <div className="flex items-center gap-3">
                     <div
@@ -285,10 +277,13 @@ export function ActivityView({ workspaceId, initialActivity }: ActivityViewProps
                       {formatActivityEvent(activity)}
                     </span>
                   </div>
-                  <span className="text-xs text-[var(--muted)]">
-                    {formatTime(activity.createdAt)}
-                  </span>
-                </div>
+                  <div className="flex items-center gap-3">
+                    <span className="text-xs text-[var(--muted)]">
+                      {formatTime(activity.createdAt)}
+                    </span>
+                    <ArrowRight className="h-4 w-4 text-[var(--muted)]" />
+                  </div>
+                </Link>
               ))}
             </div>
           ) : (

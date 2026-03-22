@@ -43,3 +43,23 @@ export async function getActivityLogsByType(
     .limit(limit)
     .offset(offset);
 }
+
+export async function getActivityLogById(
+  activityId: string,
+  workspaceId: string
+): Promise<ActivityLog | null> {
+  if (!isValidUuid(activityId) || !isValidUuid(workspaceId)) return null;
+
+  const result = await db
+    .select()
+    .from(activityLog)
+    .where(
+      and(
+        eq(activityLog.id, activityId),
+        eq(activityLog.workspaceId, workspaceId)
+      )
+    )
+    .limit(1);
+
+  return result[0] ?? null;
+}
