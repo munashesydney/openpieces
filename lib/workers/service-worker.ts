@@ -113,7 +113,7 @@ async function executeServiceSpawnJob(job: ServiceSpawnJob) {
   }
 
   const port = await findFreePort();
-  const entryPoint = `./pieces/${service.directory.trim()}/index.ts`;
+  const entryPoint = "index.ts";
   const directory = service.directory.trim();
 
   await resetServiceLog(directory);
@@ -130,6 +130,7 @@ async function executeServiceSpawnJob(job: ServiceSpawnJob) {
     {
       detached: true,
       stdio: ["ignore", "pipe", "pipe"],
+      cwd: `./pieces/${directory}`,
       env: {
         ...process.env,
         ...secretEnv,
@@ -138,6 +139,7 @@ async function executeServiceSpawnJob(job: ServiceSpawnJob) {
         OPENPIECES_WORKSPACE_ID: service.workspaceId,
         OPENPIECES_SERVICE_ID: serviceId,
         OPENPIECES_WORKFLOW_ID: service.workflowId ?? "",
+        OPENPIECES_SERVICE_PUBLIC_URL: `${process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"}/api/s/${serviceId}`,
       },
     }
   );

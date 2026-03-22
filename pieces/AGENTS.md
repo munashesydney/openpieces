@@ -56,6 +56,7 @@ Context variables injected automatically into every service — read these, do n
 - `OPENPIECES_USER_ID`
 - `OPENPIECES_SERVICE_ID`
 - `OPENPIECES_WORKFLOW_ID`
+- `OPENPIECES_SERVICE_PUBLIC_URL` — the public URL path to this service (e.g. `http://app:3000/api/s/<serviceId>`). Use this to build absolute asset paths in HTML so they resolve correctly behind the OpenPieces proxy.
 - `INTERNAL_API_KEY`
 
 ---
@@ -229,7 +230,7 @@ Some action services serve a web interface — games, dashboards, data viewers, 
 
 **The pattern — serve JS (or CSS) files via a route:**
 
-In `index.ts`, add a route that reads and serves the file:
+In `index.ts`, serve static files via routes, and inject `OPENPIECES_SERVICE_PUBLIC_URL` into HTML so assets resolve correctly behind the proxy:
 
 ```ts
 if (pathname === "/game.js") {
@@ -250,15 +251,7 @@ if (pathname === "/game.js") {
     });
   }
 }
-```
 
-Then in your HTML, reference it normally:
-```html
-<script src="/game.js"></script>
-```
-
-**Do the same for CSS:**
-```ts
 if (pathname === "/style.css") {
   try {
     const css = await Deno.readTextFile("style.css");
@@ -272,9 +265,27 @@ if (pathname === "/style.css") {
     return new Response("", { status: 404 });
   }
 }
+
+if (pathname === "/") {
+  const publicUrl = Deno.env.get("OPENPIECES_SERVICE_PUBLIC_URL") ?? "";
+  let html = await Deno.readTextFile("index.html");
+  if (publicUrl) {
+    html = html.replace('./style.css', `${publicUrl}/style.css`)
+               .replace('./game.js', `${publicUrl}/game.js`);
+  }
+  return new Response(html, {
+    headers: {
+      "content-type": "text/html; charset=utf-8",
+      "access-control-allow-origin": "*",
+    },
+  });
+}
 ```
+
+Your HTML uses relative paths as normal — the substitution happens at serve time:
 ```html
-<link rel="stylesheet" href="/style.css">
+<link rel="stylesheet" href="./style.css">
+<script src="./game.js"></script>
 ```
 
 **Rules for file-serving routes:**
@@ -282,6 +293,24 @@ if (pathname === "/style.css") {
 - Always handle the missing-file case gracefully — return a minimal valid response rather than a 500
 - Register the serving route as an endpoint if the path is an API route
 - Static asset routes (`/game.js`, `/style.css`, `/assets/...`) do not need to be registered as endpoints — only the HTML entry point needs registering
+
+**Asset paths and `OPENPIECES_SERVICE_PUBLIC_URL`:**
+
+Use the `OPENPIECES_SERVICE_PUBLIC_URL` environment variable to build **absolute asset paths** in your HTML. This ensures assets resolve correctly regardless of what path the browser uses to reach your service.
+
+In `index.ts`, read the env var and inject it into your HTML response:
+
+```ts
+const publicUrl = Deno.env.get("OPENPIECES_SERVICE_PUBLIC_URL") ?? "";
+const html = await Deno.readTextFile("index.html");
+const servedHtml = html.replace("./game.js", `${publicUrl}/game.js`)
+                       .replace("./style.css", `${publicUrl}/style.css`);
+return new Response(servedHtml, {
+  headers: { "content-type": "text/html", "access-control-allow-origin": "*" },
+});
+```
+
+Your `index.html` still uses relative paths (`./game.js`, `./style.css`) — the substitution happens at serve time. This way the HTML works both locally (direct Deno) and behind the OpenPieces proxy.
 
 **Suggested file structure for a UI service:**
 ```
