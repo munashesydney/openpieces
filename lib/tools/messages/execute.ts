@@ -1,5 +1,5 @@
 import { sendMessageWithContext } from "@/lib/services/opencode.service";
-import { getSessionInfo } from "@/lib/services/opencode-session.service";
+import { getSessionInfo, serviceHasWorkingSession } from "@/lib/services/opencode-session.service";
 import { db } from "@/lib/db";
 import { opencodeSessions } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
@@ -25,6 +25,12 @@ export async function executeMessages(input: MessagesToolInput, context: ToolCon
 
   if (!content?.trim()) {
     throw new Error("content is required");
+  }
+
+  // Check if service already has a working session before sending
+  const hasWorking = await serviceHasWorkingSession(session.serviceId, sessionId);
+  if (hasWorking) {
+    throw new Error("Cannot send message: service is already processing another request");
   }
 
   // Fire-and-forget: do not block the AI/tool call on long-running OpenCode processing

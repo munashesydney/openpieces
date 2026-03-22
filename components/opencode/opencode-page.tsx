@@ -29,6 +29,7 @@ export function OpenCodePage({
   const [sessionsPage, setSessionsPage] = useState(1);
   const [sessionsHasMore, setSessionsHasMore] = useState(false);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [sendError, setSendError] = useState<string | null>(null);
 
   const servicesWithDirectory = services.filter(
     (s) => s.directory && typeof s.directory === "string" && s.directory.trim() !== ""
@@ -388,11 +389,14 @@ export function OpenCodePage({
       if (res.status === 202) {
         // SSE is already connected via persistent useEffect - just wait for completion
         // No need to call connectEventStream here
+        setSendError(null);
       } else if (res.ok) {
         await loadMessages(selectedSessionId);
         setIsSending(false);
       } else {
-        console.error("Failed to send message", await res.text());
+        const errData = await res.json().catch(() => ({}));
+        console.error("Failed to send message", errData);
+        setSendError(errData.error || "Failed to send message");
         setIsSending(false);
         setSelectedSessionStatus("active");
         setSessions((prev) =>
@@ -405,6 +409,7 @@ export function OpenCodePage({
       }
     } catch (e) {
       console.error(e);
+      setSendError("Failed to send message. Please try again.");
       setIsSending(false);
       setSelectedSessionStatus("active");
       setSessions((prev) =>
@@ -618,11 +623,17 @@ export function OpenCodePage({
               <div ref={messagesEndRef} />
             </div>
 
+            {sendError && (
+              <div className="px-4 py-2 bg-red-500/10 border border-red-500/20 rounded-lg mx-4 mb-2">
+                <p className="text-sm text-red-600 dark:text-red-400">{sendError}</p>
+              </div>
+            )}
+
             <div className="p-4 border-t border-[var(--border)] bg-[var(--background)]">
               <div className="flex items-end gap-2 max-w-4xl mx-auto relative">
                 <textarea
                   value={input}
-                  onChange={(e) => setInput(e.target.value)}
+                  onChange={(e) => { setInput(e.target.value); setSendError(null); }}
                   onKeyDown={(e) => {
                     if (e.key === "Enter" && !e.shiftKey) {
                       e.preventDefault();

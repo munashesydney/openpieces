@@ -1,4 +1,4 @@
-import { and, desc, eq, count } from "drizzle-orm";
+import { and, desc, eq, count, ne } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { opencodeSessions, services } from "@/lib/db/schema";
 
@@ -153,4 +153,22 @@ export async function setService(
         updatedAt: new Date(),
       },
     });
+}
+
+export async function serviceHasWorkingSession(
+  serviceId: string,
+  excludeSessionId?: string
+): Promise<boolean> {
+  const rows = await db
+    .select({ sessionId: opencodeSessions.sessionId })
+    .from(opencodeSessions)
+    .where(
+      and(
+        eq(opencodeSessions.serviceId, serviceId),
+        eq(opencodeSessions.status, "working"),
+        excludeSessionId ? ne(opencodeSessions.sessionId, excludeSessionId) : undefined
+      )
+    )
+    .limit(1);
+  return rows.length > 0;
 }

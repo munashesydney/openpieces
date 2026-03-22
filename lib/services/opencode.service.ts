@@ -137,9 +137,18 @@ export async function sendMessage(sessionId: string, content: string): Promise<O
 
 // Business logic for sending a message with context - used by the API route
 export async function sendMessageWithContext(sessionId: string, content: string, userId?: string): Promise<void> {
+  // IMPORTANT: Check if the session's service has another working session before anything else
+  const { getServiceId, serviceHasWorkingSession } = await import("@/lib/services/opencode-session.service");
+  const serviceId = await getServiceId(sessionId);
+  if (serviceId) {
+    const hasWorking = await serviceHasWorkingSession(serviceId, sessionId);
+    if (hasWorking) {
+      throw new Error("Cannot send message: service is already processing another request");
+    }
+  }
+
   const { getDirectory } = await import("@/lib/services/opencode-session.service");
   const { getDefaultWorkspace } = await import("@/lib/services/workspace.service");
-  const { getServiceId } = await import("@/lib/services/opencode-session.service");
 
   const directory = await getDirectory(sessionId);
   if (!directory) {
