@@ -9,12 +9,21 @@ declare global {
   var __openpiecesPgBossStart: Promise<PgBoss> | undefined;
 }
 
+// pg-boss manages its own connection pool — cap it to avoid exhausting PostgreSQL connections.
+const PG_BOSS_POOL_SIZE = parseInt(process.env.PG_BOSS_POOL_SIZE ?? "5", 10);
+if (isNaN(PG_BOSS_POOL_SIZE) || PG_BOSS_POOL_SIZE < 1) {
+  throw new Error(`Invalid PG_BOSS_POOL_SIZE value: ${process.env.PG_BOSS_POOL_SIZE}. Must be a positive integer.`);
+}
+
 function createBoss() {
   if (!process.env.DATABASE_URL) {
     throw new Error("DATABASE_URL environment variable is not set");
   }
 
-  return new PgBoss(process.env.DATABASE_URL);
+  return new PgBoss({
+    connectionString: process.env.DATABASE_URL,
+    max: PG_BOSS_POOL_SIZE,
+  });
 }
 
 export async function getPgBoss(): Promise<PgBoss> {
