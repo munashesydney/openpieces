@@ -127,6 +127,13 @@
       "when": 1774405600000,
       "tag": "0017_more_activity_triggers",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1774492000000,
+      "tag": "0018_fix_activity_triggers_delete",
+      "breakpoints": true
     }
   ]
 }

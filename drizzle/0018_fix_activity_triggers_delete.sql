@@ -1,4 +1,4 @@
--- Trigger function to log changes for any table with workspace_id
+-- Fix: Use OLD.service_id for DELETE operations on tables that look up workspace_id via JOIN
 CREATE OR REPLACE FUNCTION log_changes()
 RETURNS TRIGGER AS $$
 DECLARE
@@ -60,23 +60,3 @@ BEGIN
   RETURN NULL;
 END;
 $$ LANGUAGE plpgsql;
-
--- Attach trigger to services table
-CREATE TRIGGER services_activity_trigger
-AFTER INSERT OR UPDATE OR DELETE ON services
-FOR EACH ROW EXECUTE FUNCTION log_changes();
-
--- Attach trigger to tasks table
-CREATE TRIGGER tasks_activity_trigger
-AFTER INSERT OR UPDATE OR DELETE ON tasks
-FOR EACH ROW EXECUTE FUNCTION log_changes();
-
--- Attach trigger to service_endpoints table
-CREATE TRIGGER service_endpoints_activity_trigger
-AFTER INSERT OR UPDATE OR DELETE ON service_endpoints
-FOR EACH ROW EXECUTE FUNCTION log_changes();
-
--- Attach trigger to opencode_sessions table
-CREATE TRIGGER opencode_sessions_activity_trigger
-AFTER INSERT OR UPDATE OR DELETE ON opencode_sessions
-FOR EACH ROW EXECUTE FUNCTION log_changes();
