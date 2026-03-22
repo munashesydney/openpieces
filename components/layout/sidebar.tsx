@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { User, PanelLeftOpen, PanelLeftClose, Settings } from "lucide-react";
+import { User, PanelLeftOpen, PanelLeftClose, Settings, Brain } from "lucide-react";
 import { WorkspaceSwitcher } from "./workspace-switcher";
 
 type SidebarProps = {
@@ -16,7 +16,10 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
   const workspaceId = segments[1]; // ['', 'workspace', '{id}', 'personal'] -> ['workspace','{id}','personal']
   const personalHref = workspaceId ? `/workspace/${workspaceId}/personal` : "/";
   const personalActive = pathname.startsWith(personalHref);
-  
+
+  const brainHref = workspaceId ? `/workspace/${workspaceId}/brain` : "/brain";
+  const brainActive = pathname.startsWith(`/workspace/${workspaceId}/brain`);
+
   const settingsHref = workspaceId ? `/workspace/${workspaceId}/settings/general` : "/settings";
   const settingsActive = workspaceId ? pathname.includes(`/workspace/${workspaceId}/settings`) : pathname.startsWith(settingsHref);
 
@@ -51,6 +54,20 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
             <User
               className="h-4 w-4"
               strokeWidth={personalActive ? 2.5 : 1.5}
+              fill="none"
+            />
+          </Link>
+          <Link
+            href={brainHref}
+            className={`flex h-10 w-10 items-center justify-center rounded-lg text-[var(--muted)] transition-colors ${brainActive
+              ? "bg-[var(--hover-bg-strong)] text-[var(--foreground)]"
+              : "hover:bg-[var(--hover-bg-strong)] hover:text-[var(--foreground)]"
+              }`}
+            aria-label="Brain"
+          >
+            <Brain
+              className="h-4 w-4"
+              strokeWidth={brainActive ? 2.5 : 1.5}
               fill="none"
             />
           </Link>
@@ -118,6 +135,24 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
               />
               <div className="min-w-0 flex-1">
                 <p className="truncate text-sm font-medium">Personal</p>
+              </div>
+            </Link>
+          </li>
+          <li>
+            <Link
+              href={brainHref}
+              className={`flex items-start gap-2 rounded-lg p-3 transition-colors ${brainActive
+                ? "bg-[var(--hover-bg-strong)] text-[var(--foreground)]"
+                : "bg-[var(--hover-bg)] text-[var(--muted)] hover:bg-[var(--hover-bg-strong)] hover:text-[var(--foreground)]"
+                }`}
+            >
+              <Brain
+                className="mt-0.5 h-4 w-4 shrink-0"
+                strokeWidth={brainActive ? 2.5 : 1.5}
+                fill="none"
+              />
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm font-medium">Brain</p>
               </div>
             </Link>
           </li>

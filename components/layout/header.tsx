@@ -13,6 +13,8 @@
    Puzzle,
    Terminal,
    KeyRound,
+   Brain,
+   Activity,
  } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -24,6 +26,22 @@ export function Header() {
   const workspaceId = segments[1]; // ['', 'workspace', '{id}', ...] -> ['workspace','{id}',...]
 
   const isSettingsPage = pathname.includes("/settings");
+  const isBrainPage = pathname.startsWith(`/workspace/${workspaceId}/brain`);
+
+  const brainNavItems = [
+    {
+      label: "Brain",
+      href: workspaceId ? `/workspace/${workspaceId}/brain` : "/brain",
+      icon: Brain,
+      activePattern: workspaceId ? `/workspace/${workspaceId}/brain` : "/brain",
+    },
+    {
+      label: "Activity",
+      href: workspaceId ? `/workspace/${workspaceId}/brain/activity` : "/brain/activity",
+      icon: Activity,
+      activePattern: workspaceId ? `/workspace/${workspaceId}/brain/activity` : "/brain/activity",
+    },
+  ];
 
   const personalNavItems = [
     {
@@ -97,7 +115,7 @@ export function Header() {
     },
   ];
 
-  const navItems = isSettingsPage ? settingsNavItems : personalNavItems;
+  const navItems = isSettingsPage ? settingsNavItems : isBrainPage ? brainNavItems : personalNavItems;
 
   return (
     <header className="flex h-14 shrink-0 items-center border-b border-[var(--border)] bg-[var(--background)]">
