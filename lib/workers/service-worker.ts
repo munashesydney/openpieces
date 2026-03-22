@@ -1,4 +1,5 @@
 import { spawn } from "child_process";
+import fs from "fs";
 import net from "net";
 import { eq } from "drizzle-orm";
 import {
@@ -74,6 +75,14 @@ async function executeServiceSpawnJob(job: ServiceSpawnJob) {
   }
   if (!service.directory?.trim()) {
     throw new Error(`Service ${serviceId} has no directory set`);
+  }
+
+  const indexPath = `./pieces/${service.directory.trim()}/index.ts`;
+  if (!fs.existsSync(indexPath)) {
+    const msg = `Service ${serviceId} has no index.ts at ${indexPath} - skipping spawn`;
+    console.error(`[service-worker] ${msg}`);
+    await appendServiceLog(service.directory.trim(), "error", msg);
+    return;
   }
 
   // Check if all required secrets are set
