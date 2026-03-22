@@ -226,3 +226,17 @@ export const workflowActionServices = pgTable(
 
 export type WorkflowActionService = typeof workflowActionServices.$inferSelect;
 export type NewWorkflowActionService = typeof workflowActionServices.$inferInsert;
+
+export const activityLog = pgTable("activity_log", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  recordType: text("record_type").notNull(),
+  operation: text("operation", { enum: ["INSERT", "UPDATE", "DELETE"] }).notNull(),
+  recordId: uuid("record_id"),
+  workspaceId: uuid("workspace_id").notNull(),
+  oldData: jsonb("old_data"),
+  newData: jsonb("new_data"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export type ActivityLog = typeof activityLog.$inferSelect;
+export type NewActivityLog = typeof activityLog.$inferInsert;

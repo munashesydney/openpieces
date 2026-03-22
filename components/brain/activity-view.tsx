@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { Search, Workflow, Puzzle, Calendar, Code, Route, ChevronRight } from "lucide-react";
+import type { ActivityLog } from "../../lib/db/schema";
 
 type SearchMode = "workflows" | "services" | "tasks" | "endpoints" | "opencode";
 
@@ -32,27 +33,26 @@ const mockResults: SearchResult[] = [
   { id: "o2", name: "Add user validation", description: "Validate user input", type: "opencode" },
 ];
 
-const modeConfig: Record<SearchMode, { label: string; icon: typeof Workflow }> = {
-  workflows: { label: "Workflows", icon: Workflow },
-  services: { label: "Services", icon: Puzzle },
-  tasks: { label: "Tasks", icon: Calendar },
-  endpoints: { label: "Endpoints", icon: Route },
-  opencode: { label: "OpenCode", icon: Code },
+const modeConfig: Record<SearchMode, { label: string; icon: typeof Workflow; recordType: string }> = {
+  workflows: { label: "Workflows", icon: Workflow, recordType: "workflow" },
+  services: { label: "Services", icon: Puzzle, recordType: "service" },
+  tasks: { label: "Tasks", icon: Calendar, recordType: "task" },
+  endpoints: { label: "Endpoints", icon: Route, recordType: "endpoint" },
+  opencode: { label: "OpenCode", icon: Code, recordType: "opencode" },
 };
 
-const mockActivityData = [
-  { id: "1", time: "2 min ago", event: "Workflow executed", status: "success" },
-  { id: "2", time: "15 min ago", event: "Workflow triggered", status: "success" },
-  { id: "3", time: "1 hour ago", event: "Execution failed", status: "error" },
-  { id: "4", time: "2 hours ago", event: "Workflow completed", status: "success" },
-  { id: "5", time: "3 hours ago", event: "Scheduled run", status: "success" },
-];
+interface ActivityViewProps {
+  workspaceId: string;
+  initialActivity: ActivityLog[];
+}
 
-export function ActivityView() {
+export function ActivityView({ workspaceId, initialActivity }: ActivityViewProps) {
   const [searchQuery, setSearchQuery] = React.useState("");
   const [isDropdownOpen, setIsDropdownOpen] = React.useState(false);
   const [selectedMode, setSelectedMode] = React.useState<SearchMode>("workflows");
   const [selectedResult, setSelectedResult] = React.useState<SearchResult | null>(null);
+  const [activityData, setActivityData] = React.useState<ActivityLog[]>(initialActivity);
+  const [isLoading, setIsLoading] = React.useState(false);
   const inputRef = React.useRef<HTMLInputElement>(null);
   const containerRef = React.useRef<HTMLDivElement>(null);
 
@@ -63,6 +63,32 @@ export function ActivityView() {
         r.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         r.description.toLowerCase().includes(searchQuery.toLowerCase())
     );
+
+  // Fetch activity when mode changes
+  React.useEffect(() => {
+    async function fetchActivity() {
+      setIsLoading(true);
+      try {
+        const recordType = modeConfig[selectedMode].recordType;
+        const res = await fetch(
+          `/api/activity?workspaceId=${workspaceId}&recordType=${recordType}`
+        );
+        if (res.ok) {
+          const data = await res.json();
+          setActivityData(data);
+        }
+      } catch (error) {
+        console.error("Failed to fetch activity:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+
+    // Only fetch if no specific result is selected (we show filtered by result if selected)
+    if (!selectedResult) {
+      fetchActivity();
+    }
+  }, [selectedMode, workspaceId, selectedResult]);
 
   React.useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -98,6 +124,37 @@ export function ActivityView() {
     setSearchQuery("");
     inputRef.current?.focus();
   };
+
+  const formatActivityEvent = (activity: ActivityLog): string => {
+    const recordType = activity.recordType;
+    const operation = activity.operation;
+
+    if (operation === "INSERT") {
+      return `${recordType} created`;
+    } else if (operation === "UPDATE") {
+      return `${recordType} updated`;
+    } else {
+      return `${recordType} deleted`;
+    }
+  };
+
+  const formatTime = (date: Date): string => {
+    const now = new Date();
+    const diff = now.getTime() - new Date(date).getTime();
+    const minutes = Math.floor(diff / 60000);
+    const hours = Math.floor(diff / 3600000);
+    const days = Math.floor(diff / 86400000);
+
+    if (minutes < 1) return "just now";
+    if (minutes < 60) return `${minutes} min ago`;
+    if (hours < 24) return `${hours} hour${hours > 1 ? "s" : ""} ago`;
+    return `${days} day${days > 1 ? "s" : ""} ago`;
+  };
+
+  // Filter activity by record_id if a specific result is selected
+  const displayedActivity = selectedResult
+    ? activityData.filter((a) => a.recordId === selectedResult.id)
+    : activityData;
 
   return (
     <div className="flex h-full flex-col">
@@ -203,9 +260,13 @@ export function ActivityView() {
       {/* Activity list */}
       <div className="flex-1 overflow-auto px-8 pb-8 pt-6">
         <div className="mx-auto max-w-2xl">
-          {selectedResult ? (
+          {isLoading ? (
+            <div className="flex flex-col items-center justify-center py-16">
+              <div className="h-6 w-6 animate-spin rounded-full border-2 border-[var(--accent)] border-t-transparent" />
+            </div>
+          ) : displayedActivity.length > 0 ? (
             <div className="space-y-2">
-              {mockActivityData.map((activity) => (
+              {displayedActivity.map((activity) => (
                 <div
                   key={activity.id}
                   className="flex items-center justify-between rounded-xl border border-[var(--border)] bg-[var(--sidebar-bg)] px-4 py-3"
@@ -213,16 +274,20 @@ export function ActivityView() {
                   <div className="flex items-center gap-3">
                     <div
                       className={`h-2 w-2 rounded-full ${
-                        activity.status === "success"
+                        activity.operation === "INSERT"
                           ? "bg-green-500"
-                          : activity.status === "error"
-                          ? "bg-red-500"
-                          : "bg-yellow-500"
+                          : activity.operation === "UPDATE"
+                          ? "bg-yellow-500"
+                          : "bg-red-500"
                       }`}
                     />
-                    <span className="text-sm text-[var(--foreground)]">{activity.event}</span>
+                    <span className="text-sm text-[var(--foreground)]">
+                      {formatActivityEvent(activity)}
+                    </span>
                   </div>
-                  <span className="text-xs text-[var(--muted)]">{activity.time}</span>
+                  <span className="text-xs text-[var(--muted)]">
+                    {formatTime(activity.createdAt)}
+                  </span>
                 </div>
               ))}
             </div>
@@ -232,10 +297,14 @@ export function ActivityView() {
                 <Search className="h-6 w-6 text-[var(--muted)]" />
               </div>
               <h3 className="mt-4 text-base font-medium text-[var(--foreground)]">
-                Select a {modeConfig[selectedMode].label.toLowerCase().slice(0, -1)}
+                {selectedResult
+                  ? `No activity for ${selectedResult.name}`
+                  : `No ${modeConfig[selectedMode].label.toLowerCase()} activity yet`}
               </h3>
               <p className="mt-1 max-w-xs text-sm text-[var(--muted)]">
-                Search and select a {modeConfig[selectedMode].label.toLowerCase().slice(0, -1)} above to view its activity
+                {selectedResult
+                  ? "This record has no recorded activity"
+                  : "Activity will appear here when changes are made"}
               </p>
             </div>
           )}
