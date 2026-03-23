@@ -13,6 +13,58 @@ import { Textarea } from "@/components/basic/input/textarea";
 import { createTaskAction, pauseTaskAction, resumeTaskAction, completeTaskAction, deleteTaskAction } from "@/app/workspace/[workspaceId]/personal/tasks/actions";
 import { type Task, type Workflow } from "@/lib/db/schema";
 
+const WEEKDAYS = [
+  { label: "Sunday", value: 0 },
+  { label: "Monday", value: 1 },
+  { label: "Tuesday", value: 2 },
+  { label: "Wednesday", value: 3 },
+  { label: "Thursday", value: 4 },
+  { label: "Friday", value: 5 },
+  { label: "Saturday", value: 6 },
+];
+
+const INTERVAL_OPTIONS = [
+  { label: "Every N minutes", value: "minutes" },
+  { label: "Every N hours", value: "hours" },
+  { label: "Daily at specific time", value: "daily" },
+  { label: "Weekly on specific day", value: "weekly" },
+  { label: "Monthly on specific date", value: "monthly" },
+];
+
+function formatSchedule(task: Task): string {
+  if (task.type === "one-time" && task.scheduledAt) {
+    const date = new Date(task.scheduledAt);
+    return date.toLocaleString();
+  }
+  if (task.type === "recurring") {
+    const { intervalType, intervalValue, dayOfWeek, dayOfMonth, timeOfDay } = task;
+    if (intervalType === "minutes" && intervalValue) {
+      return `Every ${intervalValue} minute${intervalValue > 1 ? "s" : ""}`;
+    }
+    if (intervalType === "hours" && intervalValue) {
+      return `Every ${intervalValue} hour${intervalValue > 1 ? "s" : ""}`;
+    }
+    if (intervalType === "daily" && timeOfDay) {
+      return `Daily at ${timeOfDay}`;
+    }
+    if (intervalType === "weekly" && dayOfWeek !== null && timeOfDay) {
+      const day = WEEKDAYS.find(d => d.value === dayOfWeek)?.label || "";
+      return `Every ${day} at ${timeOfDay}`;
+    }
+    if (intervalType === "monthly" && dayOfMonth && timeOfDay) {
+      return `Monthly on the ${dayOfMonth}${getOrdinalSuffix(dayOfMonth)} at ${timeOfDay}`;
+    }
+    return "Recurring";
+  }
+  return "Unknown";
+}
+
+function getOrdinalSuffix(n: number): string {
+  const s = ["th", "st", "nd", "rd"];
+  const v = n % 100;
+  return s[(v - 20) % 10] || s[v] || s[0];
+}
+
 export function TasksList({
   initialTasks,
   workspaceId,
@@ -31,11 +83,24 @@ export function TasksList({
   const totalPages = Math.ceil(total / pageSize);
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
-  const [frequency, setFrequency] = useState("one-time");
+
+  // Form state
+  const [taskType, setTaskType] = useState<"one-time" | "recurring">("one-time");
   const [selectedWorkflow, setSelectedWorkflow] = useState("");
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [formError, setFormError] = useState<string | null>(null);
+
+  // One-time scheduling
+  const [scheduledDate, setScheduledDate] = useState("");
+  const [scheduledTime, setScheduledTime] = useState("");
+
+  // Recurring scheduling
+  const [intervalType, setIntervalType] = useState<string>("daily");
+  const [intervalValue, setIntervalValue] = useState(1);
+  const [dayOfWeek, setDayOfWeek] = useState(0);
+  const [dayOfMonth, setDayOfMonth] = useState(1);
+  const [timeOfDay, setTimeOfDay] = useState("09:00");
 
   const recurringTasks = initialTasks.filter((t) => t.type === "recurring");
   const upcomingTasks = initialTasks.filter((t) => t.type === "one-time" && t.status !== "completed");
@@ -47,10 +112,29 @@ export function TasksList({
 
     setFormError(null);
     const formData = new FormData(e.currentTarget);
-    formData.append("type", frequency === "one-time" ? "one-time" : "recurring");
-    if (frequency !== "one-time") {
-      formData.append("frequency", frequency);
+    formData.append("type", taskType);
+
+    if (taskType === "one-time") {
+      // Combine date and time into ISO string
+      if (scheduledDate && scheduledTime) {
+        const scheduledAt = new Date(`${scheduledDate}T${scheduledTime}:00`).toISOString();
+        formData.append("scheduledAt", scheduledAt);
+      }
+    } else {
+      // Recurring task
+      formData.append("intervalType", intervalType);
+      formData.append("timeOfDay", timeOfDay);
+      if (intervalType === "minutes" || intervalType === "hours") {
+        formData.append("intervalValue", intervalValue.toString());
+      }
+      if (intervalType === "weekly") {
+        formData.append("dayOfWeek", dayOfWeek.toString());
+      }
+      if (intervalType === "monthly") {
+        formData.append("dayOfMonth", dayOfMonth.toString());
+      }
     }
+
     formData.append("status", "active");
 
     startTransition(async () => {
@@ -62,8 +146,15 @@ export function TasksList({
       setIsSheetOpen(false);
       setTitle("");
       setDescription("");
-      setFrequency("one-time");
+      setTaskType("one-time");
       setSelectedWorkflow("");
+      setScheduledDate("");
+      setScheduledTime("");
+      setIntervalType("daily");
+      setIntervalValue(1);
+      setDayOfWeek(0);
+      setDayOfMonth(1);
+      setTimeOfDay("09:00");
       setFormError(null);
     });
   };
@@ -142,17 +233,150 @@ export function TasksList({
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
               />
-              <Dropdown
-                label="Frequency"
-                value={frequency}
-                onChange={setFrequency}
-                options={[
-                  { label: "One-time", value: "one-time" },
-                  { label: "Daily", value: "daily" },
-                  { label: "Weekly", value: "weekly" },
-                  { label: "Monthly", value: "monthly" },
-                ]}
-              />
+
+              {/* Task Type Selector */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-[var(--foreground)]">Task Type</label>
+                <div className="flex gap-4">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="taskType"
+                      value="one-time"
+                      checked={taskType === "one-time"}
+                      onChange={() => setTaskType("one-time")}
+                      className="accent-[var(--accent)]"
+                    />
+                    <span className="text-sm text-[var(--foreground)]">One-time</span>
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="taskType"
+                      value="recurring"
+                      checked={taskType === "recurring"}
+                      onChange={() => setTaskType("recurring")}
+                      className="accent-[var(--accent)]"
+                    />
+                    <span className="text-sm text-[var(--foreground)]">Recurring</span>
+                  </label>
+                </div>
+              </div>
+
+              {/* One-time Scheduling */}
+              {taskType === "one-time" && (
+                <div className="grid grid-cols-2 gap-4">
+                  <Input
+                    type="date"
+                    label="Date"
+                    value={scheduledDate}
+                    onChange={(e) => setScheduledDate(e.target.value)}
+                    required={taskType === "one-time"}
+                  />
+                  <Input
+                    type="time"
+                    label="Time"
+                    value={scheduledTime}
+                    onChange={(e) => setScheduledTime(e.target.value)}
+                    required={taskType === "one-time"}
+                  />
+                </div>
+              )}
+
+              {/* Recurring Scheduling */}
+              {taskType === "recurring" && (
+                <div className="space-y-4">
+                  <Dropdown
+                    label="Repeat"
+                    value={intervalType}
+                    onChange={setIntervalType}
+                    options={INTERVAL_OPTIONS}
+                  />
+
+                  {/* Every N minutes/hours */}
+                  {intervalType === "minutes" && (
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm text-[var(--muted)]">Every</span>
+                      <input
+                        type="number"
+                        min="1"
+                        max="59"
+                        value={intervalValue}
+                        onChange={(e) => setIntervalValue(parseInt(e.target.value) || 1)}
+                        className="w-20 rounded-lg border border-[var(--border)] bg-[var(--card-bg)] px-3 py-2 text-sm text-[var(--foreground)]"
+                      />
+                      <span className="text-sm text-[var(--muted)]">minute(s)</span>
+                    </div>
+                  )}
+
+                  {intervalType === "hours" && (
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm text-[var(--muted)]">Every</span>
+                      <input
+                        type="number"
+                        min="1"
+                        max="23"
+                        value={intervalValue}
+                        onChange={(e) => setIntervalValue(parseInt(e.target.value) || 1)}
+                        className="w-20 rounded-lg border border-[var(--border)] bg-[var(--card-bg)] px-3 py-2 text-sm text-[var(--foreground)]"
+                      />
+                      <span className="text-sm text-[var(--muted)]">hour(s)</span>
+                    </div>
+                  )}
+
+                  {/* Daily - just time */}
+                  {intervalType === "daily" && (
+                    <Input
+                      type="time"
+                      label="Time of day"
+                      value={timeOfDay}
+                      onChange={(e) => setTimeOfDay(e.target.value)}
+                    />
+                  )}
+
+                  {/* Weekly - day of week + time */}
+                  {intervalType === "weekly" && (
+                    <div className="space-y-4">
+                      <Dropdown
+                        label="Day of week"
+                        value={dayOfWeek.toString()}
+                        onChange={(v) => setDayOfWeek(parseInt(v))}
+                        options={WEEKDAYS.map(d => ({ label: d.label, value: d.value.toString() }))}
+                      />
+                      <Input
+                        type="time"
+                        label="Time of day"
+                        value={timeOfDay}
+                        onChange={(e) => setTimeOfDay(e.target.value)}
+                      />
+                    </div>
+                  )}
+
+                  {/* Monthly - day of month + time */}
+                  {intervalType === "monthly" && (
+                    <div className="space-y-4">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm text-[var(--muted)]">On day</span>
+                        <input
+                          type="number"
+                          min="1"
+                          max="31"
+                          value={dayOfMonth}
+                          onChange={(e) => setDayOfMonth(parseInt(e.target.value) || 1)}
+                          className="w-20 rounded-lg border border-[var(--border)] bg-[var(--card-bg)] px-3 py-2 text-sm text-[var(--foreground)]"
+                        />
+                        <span className="text-sm text-[var(--muted)]">of each month</span>
+                      </div>
+                      <Input
+                        type="time"
+                        label="Time of day"
+                        value={timeOfDay}
+                        onChange={(e) => setTimeOfDay(e.target.value)}
+                      />
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
             {formError && (
               <div className="rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-500">
@@ -188,7 +412,7 @@ export function TasksList({
                       <div className="mt-3 flex items-center gap-3">
                         <div className="flex items-center gap-1.5 text-[10px] font-bold uppercase text-[var(--accent)]">
                           <Timer className="h-3 w-3" />
-                          {task.frequency || "Recurring"}
+                          {formatSchedule(task)}
                         </div>
                         <div className="h-1 w-1 rounded-full bg-[var(--border)]" />
                         <span className={`text-[10px] font-bold uppercase ${task.status === "active" ? "text-emerald-500" : "text-amber-500"}`}>
@@ -230,10 +454,10 @@ export function TasksList({
                       <p className="mt-1 text-sm text-[var(--muted)]">{task.description}</p>
                       <div className="mt-3 flex items-center gap-3 text-[10px] font-bold uppercase text-[var(--muted)]">
                          <span>One-time</span>
-                         {task.scheduledFor && (
+                         {task.scheduledAt && (
                            <>
                              <div className="h-1 w-1 rounded-full bg-[var(--border)]" />
-                             <span>{task.scheduledFor}</span>
+                             <span>{formatSchedule(task)}</span>
                            </>
                          )}
                          <div className="h-1 w-1 rounded-full bg-[var(--border)]" />
@@ -269,7 +493,7 @@ export function TasksList({
                     <span className="text-sm font-medium text-[var(--foreground)]">{task.title}</span>
                   </div>
                   <div className="flex items-center gap-3">
-                    {task.scheduledFor && <span className="text-[10px] font-bold uppercase text-[var(--muted)]">{task.scheduledFor}</span>}
+                    {task.scheduledAt && <span className="text-[10px] font-bold uppercase text-[var(--muted)]">{formatSchedule(task)}</span>}
                     <div className="shrink-0">
                       <StatusAction task={task} />
                     </div>

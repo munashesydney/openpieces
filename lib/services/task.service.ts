@@ -5,6 +5,7 @@ import { isValidUuid } from "../utils/uuid";
 import { ValidationError } from "../errors/validation-error";
 
 const VALID_TASK_TYPES = ["one-time", "recurring"] as const;
+const VALID_INTERVAL_TYPES = ["minutes", "hours", "daily", "weekly", "monthly"] as const;
 
 export async function getTasks(
   workspaceId: string,
@@ -66,9 +67,43 @@ export async function createTask(data: NewTask): Promise<Task> {
     );
   }
 
-  // ── Validate frequency for recurring tasks ────────────────────────────────
-  if (data.type === "recurring" && (!data.frequency || data.frequency.trim() === "")) {
-    throw new ValidationError("Frequency is required for recurring tasks.");
+  // ── Validate scheduling based on type ─────────────────────────────────────
+  if (data.type === "one-time") {
+    // One-time tasks should have scheduledAt
+    if (!data.scheduledAt) {
+      throw new ValidationError("scheduledAt is required for one-time tasks.");
+    }
+  } else if (data.type === "recurring") {
+    // Recurring tasks require intervalType
+    if (!data.intervalType) {
+      throw new ValidationError("intervalType is required for recurring tasks.");
+    }
+    if (!VALID_INTERVAL_TYPES.includes(data.intervalType as typeof VALID_INTERVAL_TYPES[number])) {
+      throw new ValidationError(
+        `Invalid interval type "${data.intervalType}". Must be one of: ${VALID_INTERVAL_TYPES.join(", ")}.`
+      );
+    }
+    // Validate based on interval type
+    if (data.intervalType === "minutes" || data.intervalType === "hours") {
+      if (!data.intervalValue || data.intervalValue < 1) {
+        throw new ValidationError(`intervalValue (minimum 1) is required for ${data.intervalType} tasks.`);
+      }
+    }
+    if (data.intervalType === "daily" || data.intervalType === "weekly" || data.intervalType === "monthly") {
+      if (!data.timeOfDay) {
+        throw new ValidationError(`timeOfDay is required for ${data.intervalType} tasks.`);
+      }
+    }
+    if (data.intervalType === "weekly") {
+      if (data.dayOfWeek === null || data.dayOfWeek === undefined) {
+        throw new ValidationError("dayOfWeek is required for weekly tasks.");
+      }
+    }
+    if (data.intervalType === "monthly") {
+      if (!data.dayOfMonth) {
+        throw new ValidationError("dayOfMonth is required for monthly tasks.");
+      }
+    }
   }
 
   // ── Validate workflowId — always required for tasks ───────────────────────
@@ -106,6 +141,35 @@ export async function createTask(data: NewTask): Promise<Task> {
 
 
 export async function updateTask(taskId: string, workspaceId: string, data: Partial<NewTask>): Promise<Task> {
+  // If intervalType is being updated, validate the scheduling fields
+  if (data.intervalType) {
+    if (!VALID_INTERVAL_TYPES.includes(data.intervalType as typeof VALID_INTERVAL_TYPES[number])) {
+      throw new ValidationError(
+        `Invalid interval type "${data.intervalType}". Must be one of: ${VALID_INTERVAL_TYPES.join(", ")}.`
+      );
+    }
+    if (data.intervalType === "minutes" || data.intervalType === "hours") {
+      if (!data.intervalValue || data.intervalValue < 1) {
+        throw new ValidationError(`intervalValue (minimum 1) is required for ${data.intervalType} tasks.`);
+      }
+    }
+    if (data.intervalType === "daily" || data.intervalType === "weekly" || data.intervalType === "monthly") {
+      if (!data.timeOfDay) {
+        throw new ValidationError(`timeOfDay is required for ${data.intervalType} tasks.`);
+      }
+    }
+    if (data.intervalType === "weekly") {
+      if (data.dayOfWeek === null || data.dayOfWeek === undefined) {
+        throw new ValidationError("dayOfWeek is required for weekly tasks.");
+      }
+    }
+    if (data.intervalType === "monthly") {
+      if (!data.dayOfMonth) {
+        throw new ValidationError("dayOfMonth is required for monthly tasks.");
+      }
+    }
+  }
+
   const result = await db
     .update(tasks)
     .set(data)

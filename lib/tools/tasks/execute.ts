@@ -47,8 +47,8 @@ export async function executeTask(input: TaskToolInput, context: ToolContext) {
       if (!createDetails.workflowId) {
         throw new Error("createDetails.workflowId is required for all tasks");
       }
-      if (createDetails.type === "recurring" && !createDetails.frequency?.trim()) {
-        throw new Error("createDetails.frequency is required when type is 'recurring'");
+      if (createDetails.type === "recurring" && !createDetails.intervalType) {
+        throw new Error("createDetails.intervalType is required when type is 'recurring'");
       }
       return await createTask({
         workspaceId,
@@ -57,8 +57,13 @@ export async function executeTask(input: TaskToolInput, context: ToolContext) {
         type: createDetails.type,
         workflowId: createDetails.workflowId,
         status: createDetails.status ?? "active",
-        scheduledFor: createDetails.scheduledFor ?? null,
-        frequency: createDetails.frequency ?? null,
+        scheduledAt: createDetails.scheduledAt ? new Date(createDetails.scheduledAt) : null,
+        intervalType: createDetails.intervalType ?? null,
+        intervalValue: createDetails.intervalValue ?? null,
+        dayOfWeek: createDetails.dayOfWeek ?? null,
+        dayOfMonth: createDetails.dayOfMonth ?? null,
+        timeOfDay: createDetails.timeOfDay ?? null,
+        timezone: createDetails.timezone ?? "UTC",
       });
     }
 
@@ -74,9 +79,14 @@ export async function executeTask(input: TaskToolInput, context: ToolContext) {
         ...(updateDetails.description !== undefined && { description: updateDetails.description }),
         ...(updateDetails.type !== undefined && { type: updateDetails.type }),
         ...(updateDetails.status !== undefined && { status: updateDetails.status }),
-        ...(updateDetails.scheduledFor !== undefined && { scheduledFor: updateDetails.scheduledFor || null }),
-        ...(updateDetails.frequency !== undefined && { frequency: updateDetails.frequency || null }),
         ...(updateDetails.workflowId !== undefined && { workflowId: updateDetails.workflowId || null }),
+        ...(updateDetails.scheduledAt !== undefined && { scheduledAt: updateDetails.scheduledAt ? new Date(updateDetails.scheduledAt) : null }),
+        ...(updateDetails.intervalType !== undefined && { intervalType: updateDetails.intervalType || null }),
+        ...(updateDetails.intervalValue !== undefined && { intervalValue: updateDetails.intervalValue || null }),
+        ...(updateDetails.dayOfWeek !== undefined && { dayOfWeek: updateDetails.dayOfWeek ?? null }),
+        ...(updateDetails.dayOfMonth !== undefined && { dayOfMonth: updateDetails.dayOfMonth ?? null }),
+        ...(updateDetails.timeOfDay !== undefined && { timeOfDay: updateDetails.timeOfDay || null }),
+        ...(updateDetails.timezone !== undefined && { timezone: updateDetails.timezone || "UTC" }),
       });
       if (!updated) {
         throw new Error(`Task not found or update failed: ${taskId}`);

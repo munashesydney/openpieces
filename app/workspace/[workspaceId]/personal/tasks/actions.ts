@@ -18,7 +18,20 @@ export async function createTaskAction(
   const workflowIdStr = formData.get("workflowId") as string | null;
   const workflowId = workflowIdStr || null;
   const type = formData.get("type") as "one-time" | "recurring";
-  const frequency = formData.get("frequency") as string | null;
+
+  // One-time scheduling
+  const scheduledAtStr = formData.get("scheduledAt") as string | null;
+  const scheduledAt = scheduledAtStr ? new Date(scheduledAtStr) : null;
+
+  // Recurring scheduling
+  const intervalType = formData.get("intervalType") as string | null;
+  const intervalValueStr = formData.get("intervalValue") as string | null;
+  const intervalValue = intervalValueStr ? parseInt(intervalValueStr) : null;
+  const dayOfWeekStr = formData.get("dayOfWeek") as string | null;
+  const dayOfWeek = dayOfWeekStr ? parseInt(dayOfWeekStr) : null;
+  const dayOfMonthStr = formData.get("dayOfMonth") as string | null;
+  const dayOfMonth = dayOfMonthStr ? parseInt(dayOfMonthStr) : null;
+  const timeOfDay = formData.get("timeOfDay") as string | null;
 
   try {
     await createTask({
@@ -28,7 +41,13 @@ export async function createTaskAction(
       description,
       type,
       status: "active",
-      frequency: type === "recurring" ? (frequency ?? null) : null,
+      scheduledAt,
+      intervalType: type === "recurring" ? (intervalType as "minutes" | "hours" | "daily" | "weekly" | "monthly" | null) : null,
+      intervalValue: type === "recurring" ? intervalValue : null,
+      dayOfWeek: type === "recurring" && intervalType === "weekly" ? dayOfWeek : null,
+      dayOfMonth: type === "recurring" && intervalType === "monthly" ? dayOfMonth : null,
+      timeOfDay: type === "recurring" ? timeOfDay : null,
+      timezone: "UTC",
     });
   } catch (err) {
     if (err instanceof ValidationError) return { error: err.message };

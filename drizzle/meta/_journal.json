@@ -134,6 +134,20 @@
       "when": 1774492000000,
       "tag": "0018_fix_activity_triggers_delete",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1774578400000,
+      "tag": "0019_tasks_scheduling",
+      "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1774664800000,
+      "tag": "0020_task_execution_tracking",
+      "breakpoints": true
     }
   ]
 }

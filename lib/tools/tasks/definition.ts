@@ -2,11 +2,12 @@ import { z } from "zod";
 
 const taskTypeEnum = z.enum(["one-time", "recurring"]);
 const taskStatusEnum = z.enum(["active", "paused", "completed"]);
+const intervalTypeEnum = z.enum(["minutes", "hours", "daily", "weekly", "monthly"]);
 
 export const taskToolDefinition = {
   name: "manage_tasks",
   description:
-    "Manage tasks in the workspace. Use to list tasks, get one by id, list by workflow, create, update, or delete a task. Tasks can be one-time or recurring (recurring requires frequency e.g. daily, weekly).",
+    "Manage tasks in the workspace. Use to list tasks, get one by id, list by workflow, create, update, or delete a task. Tasks can be one-time (with specific date/time) or recurring (with customizable schedules like every N minutes, daily at time, weekly on specific day, monthly on date).",
   inputSchema: z.object({
     action: z
       .enum(["list", "get", "create", "update", "delete"])
@@ -33,16 +34,20 @@ export const taskToolDefinition = {
       .object({
         title: z.string().describe("Title of the task"),
         description: z.string().optional().describe("Description of the task"),
-        type: taskTypeEnum.describe("Task type: one-time or recurring. Recurring requires frequency."),
+        type: taskTypeEnum.describe("Task type: one-time or recurring"),
         workflowId: z.string().describe("Workflow ID. Required for all tasks."),
         status: taskStatusEnum
           .optional()
           .describe("Status: active, paused, or completed. Defaults to active."),
-        scheduledFor: z.string().optional().describe("When to run (for one-time tasks)."),
-        frequency: z
-          .string()
-          .optional()
-          .describe("Frequency for recurring tasks, e.g. daily, weekly, monthly. Required when type is recurring."),
+        // One-time scheduling
+        scheduledAt: z.string().optional().describe("ISO datetime for one-time tasks (e.g. '2024-12-25T14:30:00Z')"),
+        // Recurring scheduling
+        intervalType: intervalTypeEnum.optional().describe("Interval type: minutes, hours, daily, weekly, monthly"),
+        intervalValue: z.number().optional().describe("N in 'every N intervalType' (e.g., 2 for 'every 2 hours'). Required for minutes/hours."),
+        dayOfWeek: z.number().min(0).max(6).optional().describe("Day of week (0=Sunday, 1=Monday, etc.). Required for weekly."),
+        dayOfMonth: z.number().min(1).max(31).optional().describe("Day of month (1-31). Required for monthly."),
+        timeOfDay: z.string().optional().describe("Time of day in HH:MM format (e.g., '14:30'). Required for daily/weekly/monthly."),
+        timezone: z.string().optional().describe("Timezone (e.g., 'UTC', 'America/New_York'). Defaults to UTC."),
       })
       .optional()
       .describe("Details for create action"),
@@ -52,9 +57,16 @@ export const taskToolDefinition = {
         description: z.string().optional().describe("New description"),
         type: taskTypeEnum.optional().describe("New type: one-time or recurring"),
         status: taskStatusEnum.optional().describe("New status: active, paused, or completed"),
-        scheduledFor: z.string().optional().describe("New scheduled time"),
-        frequency: z.string().optional().describe("New frequency for recurring"),
         workflowId: z.string().optional().describe("New workflow ID"),
+        // One-time scheduling
+        scheduledAt: z.string().optional().describe("ISO datetime for one-time tasks"),
+        // Recurring scheduling
+        intervalType: intervalTypeEnum.optional().describe("New interval type"),
+        intervalValue: z.number().optional().describe("New interval value"),
+        dayOfWeek: z.number().min(0).max(6).optional().describe("New day of week"),
+        dayOfMonth: z.number().min(1).max(31).optional().describe("New day of month"),
+        timeOfDay: z.string().optional().describe("New time of day"),
+        timezone: z.string().optional().describe("New timezone"),
       })
       .optional()
       .describe("Details for update action. At least one field required."),

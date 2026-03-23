@@ -51,8 +51,18 @@ export const tasks = pgTable("tasks", {
   description: text("description").notNull().default(""),
   type: text("type", { enum: ["one-time", "recurring"] }).notNull().default("one-time"),
   status: text("status", { enum: ["active", "paused", "completed"] }).notNull().default("active"),
-  scheduledFor: text("scheduled_for"),
-  frequency: text("frequency"),
+  // One-time scheduling
+  scheduledAt: timestamp("scheduled_at"),
+  // Recurring scheduling
+  intervalType: text("interval_type", { enum: ["minutes", "hours", "daily", "weekly", "monthly"] }),
+  intervalValue: integer("interval_value"),
+  dayOfWeek: integer("day_of_week"),
+  dayOfMonth: integer("day_of_month"),
+  timeOfDay: text("time_of_day"),
+  timezone: text("timezone").default("UTC"),
+  // Execution tracking
+  lastRunAt: timestamp("last_run_at"),
+  nextRunAt: timestamp("next_run_at"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });

@@ -1,6 +1,7 @@
 import type { PgBoss } from "pg-boss";
 import { startChatWorker } from "../lib/workers/chat-worker";
 import { startServiceWorker } from "../lib/workers/service-worker";
+import { startTaskWorker } from "../lib/workers/task-worker";
 
 let boss: PgBoss | undefined;
 
@@ -18,9 +19,10 @@ async function main() {
   const [chatBoss] = await Promise.all([
     startChatWorker(),
     startServiceWorker(),
+    startTaskWorker(),
   ]);
   boss = chatBoss;
-  console.log("[ai-worker] listening for AI chat jobs and service spawn jobs");
+  console.log("[ai-worker] listening for AI chat jobs, service spawn jobs, and task execution");
 }
 
 process.on("SIGINT", () => {
