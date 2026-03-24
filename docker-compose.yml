@@ -75,7 +75,7 @@ services:
     # COMPOSE_PROFILES in .env and point DATABASE_URL at your instance.
     profiles:
       - with-db
-    image: postgres:16-alpine
+    image: pgvector/pgvector:pg16
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-openpieces}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-openpieces}

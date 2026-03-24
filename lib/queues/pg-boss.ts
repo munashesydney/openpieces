@@ -4,6 +4,7 @@ export const CHAT_EXECUTION_QUEUE = "ai-chat-execution";
 export const SERVICE_SPAWN_QUEUE = "service-spawn";
 export const SERVICE_STOP_QUEUE = "service-stop";
 export const TASK_EXECUTION_QUEUE = "task-execution";
+export const BRAIN_QUEUE = "brain-processing";
 
 declare global {
   var __openpiecesPgBoss: PgBoss | undefined;
@@ -57,6 +58,11 @@ export async function getPgBoss(): Promise<PgBoss> {
         await boss.createQueue(TASK_EXECUTION_QUEUE);
       }
 
+      const existingBrainQueue = await boss.getQueue(BRAIN_QUEUE);
+      if (!existingBrainQueue) {
+        await boss.createQueue(BRAIN_QUEUE);
+      }
+
       globalThis.__openpiecesPgBoss = boss;
       return boss;
     })();
@@ -106,4 +112,14 @@ export type TaskExecutionJob = {
 export async function enqueueTaskExecution(job: TaskExecutionJob) {
   const boss = await getPgBoss();
   return boss.send(TASK_EXECUTION_QUEUE, job);
+}
+
+export type BrainJob = {
+  workspaceId: string;
+  action: "ingest" | "reinforce";
+};
+
+export async function enqueueBrainJob(job: BrainJob) {
+  const boss = await getPgBoss();
+  return boss.send(BRAIN_QUEUE, job);
 }

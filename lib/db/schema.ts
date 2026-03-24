@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { index, integer, jsonb, pgTable, text, timestamp, uuid, uniqueIndex } from "drizzle-orm/pg-core";
+import { boolean, index, integer, jsonb, pgTable, real, text, timestamp, uuid, uniqueIndex, vector } from "drizzle-orm/pg-core";
 
 export const users = pgTable("users", {
   id: uuid("id").defaultRandom().primaryKey(),
@@ -237,16 +237,88 @@ export const workflowActionServices = pgTable(
 export type WorkflowActionService = typeof workflowActionServices.$inferSelect;
 export type NewWorkflowActionService = typeof workflowActionServices.$inferInsert;
 
-export const activityLog = pgTable("activity_log", {
-  id: uuid("id").defaultRandom().primaryKey(),
-  recordType: text("record_type").notNull(),
-  operation: text("operation", { enum: ["INSERT", "UPDATE", "DELETE"] }).notNull(),
-  recordId: uuid("record_id"),
-  workspaceId: uuid("workspace_id").notNull(),
-  oldData: jsonb("old_data"),
-  newData: jsonb("new_data"),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-});
+export const activityLog = pgTable(
+  "activity_log",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    recordType: text("record_type").notNull(),
+    operation: text("operation", { enum: ["INSERT", "UPDATE", "DELETE"] }).notNull(),
+    recordId: uuid("record_id"),
+    workspaceId: uuid("workspace_id").notNull(),
+    oldData: jsonb("old_data"),
+    newData: jsonb("new_data"),
+    processedByBrain: boolean("processed_by_brain").notNull().default(false),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => [
+    index("activity_log_processed_by_brain_idx").on(table.processedByBrain),
+  ]
+);
 
 export type ActivityLog = typeof activityLog.$inferSelect;
 export type NewActivityLog = typeof activityLog.$inferInsert;
+
+// Brain table - stores summarized facts/episodes with vector embeddings
+export const brain = pgTable(
+  "brain",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    workspaceId: uuid("workspace_id")
+      .notNull()
+      .references(() => workspaces.id, { onDelete: "cascade" }),
+    type: text("type", { enum: ["fact", "episode"] }).notNull().default("fact"),
+    category: text("category", {
+      enum: ["pieces", "workflows", "runs", "credentials", "general"],
+    })
+      .notNull()
+      .default("general"),
+    summary: text("summary").notNull(),
+    // Soft link back to source
+    recordType: text("record_type"),
+    recordId: uuid("record_id"),
+    // Vector embedding for semantic search
+    embedding: vector("embedding", { dimensions: 1536 }),
+    tags: text("tags").array(),
+    // Confidence strengthens with reinforcement
+    confidence: real("confidence").notNull().default(1.0),
+    reinforcementCount: integer("reinforcement_count").notNull().default(0),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (table) => [
+    index("brain_workspace_id_idx").on(table.workspaceId),
+    index("brain_category_idx").on(table.category),
+    index("brain_confidence_idx").on(table.confidence),
+  ]
+);
+
+export type Brain = typeof brain.$inferSelect;
+export type NewBrain = typeof brain.$inferInsert;
+
+// Brain settings - user-configurable frequencies for brain runs
+export const brainSettings = pgTable(
+  "brain_settings",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    workspaceId: uuid("workspace_id")
+      .notNull()
+      .references(() => workspaces.id, { onDelete: "cascade" }),
+    // Ingestion settings
+    ingestionEnabled: boolean("ingestion_enabled").notNull().default(true),
+    ingestionIntervalMinutes: integer("ingestion_interval_minutes").notNull().default(60),
+    // Reinforcement settings
+    reinforcementEnabled: boolean("reinforcement_enabled").notNull().default(true),
+    reinforcementIntervalHours: integer("reinforcement_interval_hours").notNull().default(24),
+    reinforcementBatchSize: integer("reinforcement_batch_size").notNull().default(10),
+    lastIngestionRun: timestamp("last_ingestion_run"),
+    lastReinforcementRun: timestamp("last_reinforcement_run"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (table) => [
+    uniqueIndex("brain_settings_workspace_id_idx").on(table.workspaceId),
+  ]
+);
+
+export type BrainSettings = typeof brainSettings.$inferSelect;
+export type NewBrainSettings = typeof brainSettings.$inferInsert;

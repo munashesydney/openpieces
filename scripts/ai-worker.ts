@@ -2,6 +2,7 @@ import type { PgBoss } from "pg-boss";
 import { startChatWorker } from "../lib/workers/chat-worker";
 import { startServiceWorker } from "../lib/workers/service-worker";
 import { startTaskWorker } from "../lib/workers/task-worker";
+import { startBrainWorker } from "../lib/workers/brain-worker";
 
 let boss: PgBoss | undefined;
 
@@ -20,9 +21,10 @@ async function main() {
     startChatWorker(),
     startServiceWorker(),
     startTaskWorker(),
+    startBrainWorker(),
   ]);
   boss = chatBoss;
-  console.log("[ai-worker] listening for AI chat jobs, service spawn jobs, and task execution");
+  console.log("[ai-worker] listening for AI chat jobs, service spawn jobs, task execution, and brain processing");
 }
 
 process.on("SIGINT", () => {

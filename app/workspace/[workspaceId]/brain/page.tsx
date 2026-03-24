@@ -1,11 +1,23 @@
-import { Brain } from "lucide-react";
+import { BrainView } from "../../../../components/brain/brain-view";
+import { getBrainStats, getOrCreateBrainSettings, getBrainEntries } from "@/lib/services/brain.service";
 
-export default function BrainPage() {
+export default async function BrainPage(props: {
+  params: Promise<{ workspaceId: string }>;
+}) {
+  const { workspaceId } = await props.params;
+
+  const [stats, settings, entriesData] = await Promise.all([
+    getBrainStats(workspaceId),
+    getOrCreateBrainSettings(workspaceId),
+    getBrainEntries(workspaceId, 1, 20),
+  ]);
+
   return (
-    <div className="flex h-full flex-col items-center justify-center gap-4">
-      <Brain className="h-16 w-16 text-[var(--muted)]" />
-      <h1 className="text-2xl font-semibold text-[var(--foreground)]">Brain</h1>
-      <p className="text-[var(--muted)]">To be designed...</p>
-    </div>
+    <BrainView
+      workspaceId={workspaceId}
+      initialStats={stats}
+      initialSettings={settings}
+      initialEntries={entriesData.data}
+    />
   );
 }
