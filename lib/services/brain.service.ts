@@ -1,8 +1,8 @@
-import { eq, and, desc, asc, sql, lt, gte, inArray } from "drizzle-orm";
+import { eq, and, desc, asc, sql, inArray } from "drizzle-orm";
 import { cosineDistance } from "drizzle-orm";
 import { embed } from "ai";
 import { db } from "@/lib/db";
-import { activityLog, brain, brainSettings, workspaces, type Brain, type NewBrain, type BrainSettings } from "@/lib/db/schema";
+import { activityLog, brain, brainSettings, type Brain, type BrainSettings } from "@/lib/db/schema";
 import { isValidUuid } from "@/lib/utils/uuid";
 import { createAiChat, appendUserMessageAndMarkPending } from "@/lib/services/chat.service";
 import { enqueueChatExecution } from "@/lib/queues/pg-boss";
@@ -40,7 +40,7 @@ export async function getOrCreateBrainSettings(workspaceId: string): Promise<Bra
 
 export async function updateBrainSettings(
   workspaceId: string,
-  updates: Partial<Pick<BrainSettings, "ingestionEnabled" | "ingestionIntervalMinutes" | "reinforcementEnabled" | "reinforcementIntervalHours" | "reinforcementBatchSize">>
+  updates: Partial<Pick<BrainSettings, "ingestionEnabled" | "ingestionIntervalMinutes" | "reinforcementEnabled" | "reinforcementIntervalHours">>
 ): Promise<BrainSettings | null> {
   if (!isValidUuid(workspaceId)) return null;
 
@@ -214,28 +214,8 @@ export async function searchBrain(
 }
 
 // ──────────────────────────────────────────────────────────────
-// Reinforcement
+// Brain Entry Updates
 // ──────────────────────────────────────────────────────────────
-
-export async function getBrainEntriesForReinforcement(
-  workspaceId: string,
-  limit: number = 10
-): Promise<Brain[]> {
-  if (!isValidUuid(workspaceId)) return [];
-
-  // Get entries with confidence < 1.0 that haven't been reinforced recently
-  return db
-    .select()
-    .from(brain)
-    .where(
-      and(
-        eq(brain.workspaceId, workspaceId),
-        lt(brain.confidence, 1.0)
-      )
-    )
-    .orderBy(asc(brain.confidence))
-    .limit(limit);
-}
 
 export async function reinforceBrainEntry(brainId: string, newSummary: string): Promise<Brain | null> {
   if (!isValidUuid(brainId)) return null;
@@ -256,6 +236,17 @@ export async function reinforceBrainEntry(brainId: string, newSummary: string): 
     .returning();
 
   return updated ?? null;
+}
+
+export async function deleteBrainEntry(brainId: string): Promise<boolean> {
+  if (!isValidUuid(brainId)) return false;
+
+  const [deleted] = await db
+    .delete(brain)
+    .where(eq(brain.id, brainId))
+    .returning({ id: brain.id });
+
+  return !!deleted;
 }
 
 // ──────────────────────────────────────────────────────────────
@@ -377,6 +368,105 @@ Respond with a JSON object:
 
   return {
     newSummary: brainEntry.summary, // Placeholder - actual update happens when chat completes
+  };
+}
+
+// ──────────────────────────────────────────────────────────────
+// Trigger Functions (used by server actions)
+// ──────────────────────────────────────────────────────────────
+
+export async function triggerBrainIngestion(workspaceId: string): Promise<{
+  processed: number;
+  chatId: string;
+  message: string;
+}> {
+  const unprocessedLogs = await getUnprocessedActivityLogs(workspaceId, 50);
+
+  if (unprocessedLogs.length === 0) {
+    return { processed: 0, chatId: "", message: "No unprocessed activity logs found" };
+  }
+
+  const userId = await getWorkspaceOwnerId(workspaceId);
+  if (!userId) {
+    throw new Error("Could not find workspace owner");
+  }
+
+  const chat = await createAiChat({ workspaceId, userId });
+
+  const logsDescription = unprocessedLogs
+    .map((log, i) => `--- Activity ${i + 1} ---
+Type: ${log.recordType}
+Operation: ${log.operation}
+Record ID: ${log.recordId ?? "N/A"}
+Timestamp: ${log.createdAt.toISOString()}
+Old Data: ${JSON.stringify(log.oldData ?? {}, null, 2)}
+New Data: ${JSON.stringify(log.newData ?? {}, null, 2)}`)
+    .join("\n\n");
+
+  const prompt = `You are a workspace memory manager. Analyze the following activity logs and create memory entries for important facts/events using the manage_brain tool with action=create.
+
+Focus on:
+- Actionable insights (what happened that matters for future decisions)
+- Key changes and their implications
+- Important facts about workflows, pieces, runs, and credentials
+- Avoid trivial operations or redundant entries
+
+Activity Logs:
+${logsDescription}
+
+For each significant fact or event you identify, call manage_brain with action=create and appropriate summary, type, category, recordType, recordId, and tags.
+
+After creating all relevant entries, respond with a brief summary of what you created.`;
+
+  await appendUserMessageAndMarkPending({ chatId: chat.id, content: prompt });
+
+  await enqueueChatExecution({ chatId: chat.id, workspaceId, userId });
+
+  const processedIds = unprocessedLogs.map((log) => log.id);
+  await markActivityLogsProcessed(processedIds);
+
+  return {
+    processed: unprocessedLogs.length,
+    chatId: chat.id,
+    message: `Created AI chat ${chat.id} to process ${unprocessedLogs.length} activity logs`,
+  };
+}
+
+export async function triggerBrainReinforcement(workspaceId: string): Promise<{
+  chatId: string;
+  message: string;
+}> {
+  const userId = await getWorkspaceOwnerId(workspaceId);
+  if (!userId) {
+    throw new Error("Could not find workspace owner");
+  }
+
+  const chat = await createAiChat({ workspaceId, userId });
+
+  const prompt = `You are a workspace memory manager. Your job is to review and maintain the brain's memory entries.
+
+Use the manage_brain tool to:
+1. List entries (action=list) to see all memories
+2. Search for similar entries (action=search) to find duplicates or contradictions
+3. Get specific entries (action=get) for details
+4. Update stale/wrong entries (action=update) with corrected summaries
+5. Delete redundant or inaccurate entries (action=delete)
+
+Look for:
+- Stale entries: outdated or no longer relevant memories
+- Contradictory entries: memories that conflict with each other
+- Redundant entries: duplicates of the same fact
+- Inaccurate entries: memories that appear wrong
+
+Use the tools freely to investigate and clean up the brain. Respond with a summary of what you found and fixed.`;
+
+  await appendUserMessageAndMarkPending({ chatId: chat.id, content: prompt });
+
+  await enqueueChatExecution({ chatId: chat.id, workspaceId, userId });
+
+  return {
+    chatId: chat.id,
+    message: `Created AI chat ${chat.id} for brain maintenance`,
   };
 }
 

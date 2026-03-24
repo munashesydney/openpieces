@@ -4,6 +4,7 @@ import {
   searchBrain,
   createBrainEntry,
   reinforceBrainEntry,
+  deleteBrainEntry,
 } from "@/lib/services/brain.service";
 import type { ToolContext } from "@/lib/tools/registry";
 import type { BrainToolInput } from "./definition";
@@ -51,7 +52,7 @@ export async function executeBrainTool(input: BrainToolInput, context: ToolConte
         summary,
         recordType: recordType ?? null,
         recordId: recordId ?? null,
-        tags: tags ?? null,
+        tags: tags,
       });
       return { success: true, brainEntryId: entry.id, message: "Brain entry created successfully" };
     }
@@ -70,9 +71,20 @@ export async function executeBrainTool(input: BrainToolInput, context: ToolConte
       return { success: true, brainEntryId: entry.id, confidence: entry.confidence, message: "Brain entry reinforced successfully" };
     }
 
+    case "delete": {
+      if (!brainEntryId) {
+        throw new Error("brainEntryId is required for action 'delete'");
+      }
+      const deleted = await deleteBrainEntry(brainEntryId);
+      if (!deleted) {
+        throw new Error(`Brain entry not found: ${brainEntryId}`);
+      }
+      return { success: true, brainEntryId, message: "Brain entry deleted successfully" };
+    }
+
     default: {
       throw new Error(
-        `Unknown action: ${action}. Valid actions are: list, search, get, create, update.`
+        `Unknown action: ${action}. Valid actions are: list, search, get, create, update, delete.`
       );
     }
   }

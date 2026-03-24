@@ -6,8 +6,8 @@ export const brainToolDefinition = {
     "Query, search, and manage the workspace brain for accumulated knowledge and facts. Use this to find information about past events, workflows, pieces, runs, and other workspace knowledge that has been summarized by the AI.",
   inputSchema: z.object({
     action: z
-      .enum(["list", "search", "get", "create", "update"])
-      .describe("The action to perform: list recent entries, search by query, get a specific entry, create a new entry, or update an existing entry"),
+      .enum(["list", "search", "get", "create", "update", "delete"])
+      .describe("The action to perform: list recent entries, search by query, get a specific entry, create a new entry, update an existing entry, or delete an entry"),
     // For list/search/get (existing):
     query: z
       .string()

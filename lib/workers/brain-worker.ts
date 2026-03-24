@@ -3,7 +3,6 @@ import {
   getOrCreateBrainSettings,
   getUnprocessedActivityLogs,
   markActivityLogsProcessed,
-  getBrainEntriesForReinforcement,
   updateLastIngestionRun,
   updateLastReinforcementRun,
 } from "@/lib/services/brain.service";
@@ -91,7 +90,7 @@ After creating all relevant entries, respond with a brief summary of what you cr
   }
 }
 
-async function pollForReinforcement(workspaceId: string) {
+async function pollForMaintenance(workspaceId: string) {
   try {
     const settings = await getOrCreateBrainSettings(workspaceId);
 
@@ -107,59 +106,42 @@ async function pollForReinforcement(workspaceId: string) {
       return; // Not time yet
     }
 
-    // Get low-confidence entries for reinforcement
-    const entriesToReinforce = await getBrainEntriesForReinforcement(workspaceId, settings.reinforcementBatchSize);
-
-    if (entriesToReinforce.length === 0) {
-      return;
-    }
-
-    console.log(`[brain-worker] Reinforcing ${entriesToReinforce.length} brain entries for workspace ${workspaceId}`);
-
     const userId = await getWorkspaceOwnerId(workspaceId);
     if (!userId) {
       console.error(`[brain-worker] Could not find owner for workspace ${workspaceId}`);
       return;
     }
 
-    for (const entry of entriesToReinforce) {
-      try {
-        // Create AI chat per entry to reaffirm or update the memory
-        const chat = await createAiChat({ workspaceId, userId });
+    // ONE chat - AI fetches and cleans up using manage_brain tools
+    const chat = await createAiChat({ workspaceId, userId });
 
-        const prompt = `Review the following memory and decide if it should be strengthened, updated, or merged with similar memories.
+    const prompt = `You are a workspace memory manager. Your job is to review and maintain the brain's memory entries.
 
-Memory Entry:
-- Type: ${entry.type}
-- Category: ${entry.category}
-- Summary: ${entry.summary}
-- Current Confidence: ${entry.confidence}
-- Reinforcement Count: ${entry.reinforcementCount}
-${entry.recordType ? `- Related to: ${entry.recordType} (ID: ${entry.recordId})` : ""}
+Use the manage_brain tool to:
+1. List entries (action=list) to see all memories
+2. Search for similar entries (action=search) to find duplicates or contradictions
+3. Get specific entries (action=get) for details
+4. Update stale/wrong entries (action=update) with corrected summaries
+5. Delete redundant or inaccurate entries (action=delete)
 
-Based on your knowledge of the workspace, should this memory be:
-1. Strengthened (reaffirmed as accurate) - call manage_brain with action=update and the same summary
-2. Updated (refined with new information) - call manage_brain with action=update and an improved summary
-3. Merged with existing memories (if redundant)
+Look for:
+- Stale entries: outdated or no longer relevant memories
+- Contradictory entries: memories that conflict with each other
+- Redundant entries: duplicates of the same fact
+- Inaccurate entries: memories that appear wrong
 
-Call manage_brain with action=update (using brainEntryId=${entry.id}) with an appropriate summary to reinforce this memory.`;
+Use the tools freely to investigate and clean up the brain. Respond with a summary of what you found and fixed.`;
 
-        await appendUserMessageAndMarkPending({ chatId: chat.id, content: prompt });
+    await appendUserMessageAndMarkPending({ chatId: chat.id, content: prompt });
 
-        await enqueueChatExecution({ chatId: chat.id, workspaceId, userId });
-
-        console.log(`[brain-worker] Created reinforcement chat ${chat.id} for brain entry ${entry.id}`);
-      } catch (error) {
-        console.error(`[brain-worker] Failed to create reinforcement chat for brain entry ${entry.id}:`, error);
-      }
-    }
+    await enqueueChatExecution({ chatId: chat.id, workspaceId, userId });
 
     // Update last reinforcement run
     await updateLastReinforcementRun(workspaceId);
 
-    console.log(`[brain-worker] Reinforcement complete: ${entriesToReinforce.length} entries reinforced`);
+    console.log(`[brain-worker] Maintenance complete: created chat ${chat.id}`);
   } catch (error) {
-    console.error(`[brain-worker] Reinforcement error for workspace ${workspaceId}:`, error);
+    console.error(`[brain-worker] Maintenance error for workspace ${workspaceId}:`, error);
   }
 }
 
@@ -170,7 +152,7 @@ async function processAllWorkspaces() {
 
     for (const workspace of allWorkspaces) {
       await pollForIngestion(workspace.id);
-      await pollForReinforcement(workspace.id);
+      await pollForMaintenance(workspace.id);
     }
   } catch (error) {
     console.error("[brain-worker] Error processing workspaces:", error);
@@ -197,7 +179,7 @@ export async function startBrainWorker() {
     if (data.action === "ingest") {
       await pollForIngestion(data.workspaceId);
     } else if (data.action === "reinforce") {
-      await pollForReinforcement(data.workspaceId);
+      await pollForMaintenance(data.workspaceId);
     }
   });
 

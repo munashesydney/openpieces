@@ -5,6 +5,14 @@ import { Brain as BrainIcon, Settings, Clock, TrendingUp, Database, Play, Refres
 import { Card } from "../ui/card";
 import { Button } from "../basic/buttons/button";
 import { Sheet } from "../ui/sheet";
+import {
+  getBrainSettingsAction,
+  getBrainEntriesAction,
+  getBrainStatsAction,
+  updateBrainSettingsAction,
+  triggerBrainIngestionAction,
+  triggerBrainReinforcementAction,
+} from "@/app/workspace/[workspaceId]/brain/actions";
 
 type BrainStats = {
   totalEntries: number;
@@ -18,7 +26,6 @@ type BrainSettings = {
   ingestionIntervalMinutes: number;
   reinforcementEnabled: boolean;
   reinforcementIntervalHours: number;
-  reinforcementBatchSize: number;
   lastIngestionRun: Date | null;
   lastReinforcementRun: Date | null;
 };
@@ -55,18 +62,15 @@ export function BrainView({
 
   async function loadData() {
     try {
-      const [statsRes, settingsRes, entriesRes] = await Promise.all([
-        fetch(`/api/brain/${workspaceId}/stats`),
-        fetch(`/api/brain/${workspaceId}/settings`),
-        fetch(`/api/brain/${workspaceId}/entries`),
+      const [statsData, settingsData, entriesData] = await Promise.all([
+        getBrainStatsAction(workspaceId),
+        getBrainSettingsAction(workspaceId),
+        getBrainEntriesAction(workspaceId, 1),
       ]);
 
-      if (statsRes.ok) setStats(await statsRes.json());
-      if (settingsRes.ok) setSettings(await settingsRes.json());
-      if (entriesRes.ok) {
-        const data = await entriesRes.json();
-        setEntries(data.data || []);
-      }
+      setStats(statsData);
+      if (settingsData) setSettings(settingsData as BrainSettings);
+      setEntries(entriesData.data || []);
     } catch (error) {
       console.error("Failed to load brain data:", error);
     }
@@ -76,13 +80,12 @@ export function BrainView({
     setTriggering("ingest");
     setMessage(null);
     try {
-      const res = await fetch(`/api/brain/${workspaceId}/trigger-ingest`, { method: "POST" });
-      const data = await res.json();
-      if (res.ok) {
-        setMessage({ type: "success", text: data.message || "Ingestion triggered successfully" });
+      const result = await triggerBrainIngestionAction(workspaceId);
+      if ("chatId" in result) {
+        setMessage({ type: "success", text: result.message || "Ingestion triggered successfully" });
         await loadData();
       } else {
-        setMessage({ type: "error", text: data.error || "Failed to trigger ingestion" });
+        setMessage({ type: "error", text: result.error || "Failed to trigger ingestion" });
       }
     } catch {
       setMessage({ type: "error", text: "Failed to trigger ingestion" });
@@ -95,13 +98,12 @@ export function BrainView({
     setTriggering("reinforce");
     setMessage(null);
     try {
-      const res = await fetch(`/api/brain/${workspaceId}/trigger-reinforce`, { method: "POST" });
-      const data = await res.json();
-      if (res.ok) {
-        setMessage({ type: "success", text: data.message || "Reinforcement triggered successfully" });
+      const result = await triggerBrainReinforcementAction(workspaceId);
+      if ("chatId" in result) {
+        setMessage({ type: "success", text: result.message || "Reinforcement triggered successfully" });
         await loadData();
       } else {
-        setMessage({ type: "error", text: data.error || "Failed to trigger reinforcement" });
+        setMessage({ type: "error", text: result.error || "Failed to trigger reinforcement" });
       }
     } catch {
       setMessage({ type: "error", text: "Failed to trigger reinforcement" });
@@ -113,18 +115,14 @@ export function BrainView({
   async function handleSaveSettings(newSettings: Partial<BrainSettings>) {
     setSavingSettings(true);
     try {
-      const res = await fetch(`/api/brain/${workspaceId}/settings`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(newSettings),
-      });
-      const data = await res.json();
-      if (res.ok) {
-        setSettings(data);
+      const result = await updateBrainSettingsAction(workspaceId, newSettings);
+      if ("success" in result && result.success && "settings" in result && result.settings) {
+        setSettings(result.settings as BrainSettings);
         setSettingsSheetOpen(false);
         setMessage({ type: "success", text: "Settings saved successfully" });
       } else {
-        setMessage({ type: "error", text: data.error || "Failed to save settings" });
+        const errorMsg = "error" in result ? result.error : "Failed to save settings";
+        setMessage({ type: "error", text: errorMsg });
       }
     } catch {
       setMessage({ type: "error", text: "Failed to save settings" });
@@ -380,22 +378,6 @@ export function BrainView({
                     <option value={24}>Every 24 hours</option>
                     <option value={48}>Every 2 days</option>
                     <option value={168}>Every week</option>
-                  </select>
-                </div>
-                <div className="flex items-center justify-between rounded-md border p-3">
-                  <div>
-                    <p className="font-medium text-[var(--foreground)]">Batch Size</p>
-                    <p className="text-sm text-[var(--muted)]">Number of entries to reinforce per run</p>
-                  </div>
-                  <select
-                    value={settings.reinforcementBatchSize}
-                    onChange={(e) => setSettings({ ...settings, reinforcementBatchSize: Number(e.target.value) })}
-                    className="rounded-md border border-[var(--border)] bg-[var(--background)] px-3 py-2 text-sm"
-                  >
-                    <option value={5}>5 entries</option>
-                    <option value={10}>10 entries</option>
-                    <option value={20}>20 entries</option>
-                    <option value={50}>50 entries</option>
                   </select>
                 </div>
               </>
