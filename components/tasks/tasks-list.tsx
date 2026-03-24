@@ -12,6 +12,7 @@ import { Dropdown } from "@/components/basic/input/dropdown";
 import { Textarea } from "@/components/basic/input/textarea";
 import { createTaskAction, pauseTaskAction, resumeTaskAction, completeTaskAction, deleteTaskAction } from "@/app/workspace/[workspaceId]/personal/tasks/actions";
 import { type Task, type Workflow } from "@/lib/db/schema";
+import { TaskDeleteModal } from "./task-delete-modal";
 
 const WEEKDAYS = [
   { label: "Sunday", value: 0 },
@@ -101,6 +102,7 @@ export function TasksList({
   const [dayOfWeek, setDayOfWeek] = useState(0);
   const [dayOfMonth, setDayOfMonth] = useState(1);
   const [timeOfDay, setTimeOfDay] = useState("09:00");
+  const [taskToDelete, setTaskToDelete] = useState<Task | null>(null);
 
   const recurringTasks = initialTasks.filter((t) => t.type === "recurring");
   const upcomingTasks = initialTasks.filter((t) => t.type === "one-time" && t.status !== "completed");
@@ -159,15 +161,26 @@ export function TasksList({
     });
   };
 
-  const StatusAction = ({ task }: { task: Task }) => {
+  const handleDeleteTask = () => {
+    if (!taskToDelete) return;
+    startTransition(async () => {
+      await deleteTaskAction(workspaceId, taskToDelete.id);
+      setTaskToDelete(null);
+    });
+  };
+
+  const StatusAction = ({ task, onDeleteRequest }: { task: Task; onDeleteRequest: (task: Task) => void }) => {
     return (
       <ActionMenu
         onSelect={(val) => {
+          if (val === "delete") {
+            onDeleteRequest(task);
+            return;
+          }
           startTransition(async () => {
             if (val === "pause") await pauseTaskAction(workspaceId, task.id);
             if (val === "resume") await resumeTaskAction(workspaceId, task.id);
             if (val === "complete") await completeTaskAction(workspaceId, task.id);
-            if (val === "delete") await deleteTaskAction(workspaceId, task.id);
           });
         }}
         options={[
@@ -422,7 +435,7 @@ export function TasksList({
                     </div>
                   </div>
                   <div className="shrink-0">
-                    <StatusAction task={task} />
+                    <StatusAction task={task} onDeleteRequest={setTaskToDelete} />
                   </div>
                 </div>
               </Card>
@@ -468,7 +481,7 @@ export function TasksList({
                     </div>
                   </div>
                   <div className="shrink-0">
-                    <StatusAction task={task} />
+                    <StatusAction task={task} onDeleteRequest={setTaskToDelete} />
                   </div>
                 </div>
               </Card>
@@ -495,7 +508,7 @@ export function TasksList({
                   <div className="flex items-center gap-3">
                     {task.scheduledAt && <span className="text-[10px] font-bold uppercase text-[var(--muted)]">{formatSchedule(task)}</span>}
                     <div className="shrink-0">
-                      <StatusAction task={task} />
+                      <StatusAction task={task} onDeleteRequest={setTaskToDelete} />
                     </div>
                   </div>
                 </div>
@@ -546,6 +559,13 @@ export function TasksList({
             </div>
           </div>
         )}
+        <TaskDeleteModal
+          isOpen={taskToDelete !== null}
+          onClose={() => setTaskToDelete(null)}
+          onConfirm={handleDeleteTask}
+          taskTitle={taskToDelete?.title ?? ""}
+          isPending={isPending}
+        />
       </div>
     </div>
   );

@@ -12,6 +12,7 @@ import { Dropdown } from "@/components/basic/input/dropdown";
 import { ActionMenu } from "@/components/basic/input/action-menu";
 import { createServiceAction, deleteServiceAction } from "@/app/workspace/[workspaceId]/personal/services/actions";
 import { type Service, type Workflow } from "@/lib/db/schema";
+import { ServiceDeleteModal } from "./service-delete-modal";
 
 export function ServicesList({
   initialServices,
@@ -238,56 +239,62 @@ export function ServicesList({
 
 function ServiceCard({ service, workspaceId }: { service: Service; workspaceId: string }) {
   const [isPending, startTransition] = useTransition();
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const Icon = service.type === "trigger" ? Zap : Terminal;
   const iconColor = service.type === "trigger" ? "text-amber-500" : "text-[var(--accent)]";
-
-  const handleDelete = (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
+  const handleDelete = () => {
     startTransition(async () => {
       await deleteServiceAction(workspaceId, service.id);
+      setIsDeleteModalOpen(false);
     });
   };
 
   return (
-    <Link href={`/workspace/${workspaceId}/personal/services/${service.id}`}>
-      <Card hoverable className={`group cursor-pointer p-5 ${isPending ? "opacity-50 pointer-events-none" : ""}`}>
-        <div className="flex items-start justify-between gap-4">
-          <div className="flex flex-1 items-start gap-4">
-            <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[var(--hover-bg)] ${iconColor}`}>
-              <Icon className="h-5 w-5" />
+    <>
+      <Link href={`/workspace/${workspaceId}/personal/services/${service.id}`}>
+        <Card hoverable className={`group cursor-pointer p-5 ${isPending ? "opacity-50 pointer-events-none" : ""}`}>
+          <div className="flex items-start justify-between gap-4">
+            <div className="flex flex-1 items-start gap-4">
+              <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[var(--hover-bg)] ${iconColor}`}>
+                <Icon className="h-5 w-5" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <h3 className="text-base font-medium text-[var(--foreground)]">{service.title}</h3>
+                  <span className="text-[10px] font-medium uppercase tracking-wider text-[var(--muted)]">
+                    {service.type}
+                  </span>
+                </div>
+                <p className="mt-1 text-sm text-[var(--muted)]">{service.description}</p>
+                <div className="mt-3 flex items-center gap-3">
+                  <span className="text-[10px] font-bold uppercase text-emerald-500">Operational</span>
+                  <div className="h-1 w-1 rounded-full bg-[var(--border)]" />
+                  <span className="text-[10px] font-medium uppercase text-[var(--muted)]">Ready</span>
+                </div>
+              </div>
             </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h3 className="text-base font-medium text-[var(--foreground)]">{service.title}</h3>
-                <span className="text-[10px] font-medium uppercase tracking-wider text-[var(--muted)]">
-                  {service.type}
-                </span>
-              </div>
-              <p className="mt-1 text-sm text-[var(--muted)]">{service.description}</p>
-              <div className="mt-3 flex items-center gap-3">
-                <span className="text-[10px] font-bold uppercase text-emerald-500">Operational</span>
-                <div className="h-1 w-1 rounded-full bg-[var(--border)]" />
-                <span className="text-[10px] font-medium uppercase text-[var(--muted)]">Ready</span>
-              </div>
+            <div className="shrink-0" onClick={(e) => e.preventDefault()}>
+              <ActionMenu
+                onSelect={(val) => {
+                  if (val === "delete") {
+                    setIsDeleteModalOpen(true);
+                  }
+                }}
+                options={[
+                  { label: "Delete", value: "delete", icon: <Trash2 className="h-4 w-4" />, destructive: true },
+                ]}
+              />
             </div>
           </div>
-          <div className="shrink-0" onClick={(e) => e.preventDefault()}>
-            <ActionMenu
-              onSelect={(val) => {
-                if (val === "delete") {
-                  startTransition(async () => {
-                    await deleteServiceAction(workspaceId, service.id);
-                  });
-                }
-              }}
-              options={[
-                { label: "Delete", value: "delete", icon: <Trash2 className="h-4 w-4" />, destructive: true },
-              ]}
-            />
-          </div>
-        </div>
-      </Card>
-    </Link>
+        </Card>
+      </Link>
+      <ServiceDeleteModal
+        isOpen={isDeleteModalOpen}
+        onClose={() => setIsDeleteModalOpen(false)}
+        onConfirm={handleDelete}
+        serviceTitle={service.title}
+        isPending={isPending}
+      />
+    </>
   );
 }

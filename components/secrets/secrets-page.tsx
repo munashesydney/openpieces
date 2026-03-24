@@ -11,6 +11,7 @@
    updateSecretAction,
    deleteSecretAction,
  } from "@/app/workspace/[workspaceId]/personal/secrets/actions";
+import { SecretDeleteModal } from "./secret-delete-modal";
 
  type Secret = {
    id: string;
@@ -49,6 +50,7 @@
    const [editingId, setEditingId] = useState<string | null>(null);
    const [formError, setFormError] = useState<string | null>(null);
    const [isPending, startTransition] = useTransition();
+  const [secretToDelete, setSecretToDelete] = useState<Secret | null>(null);
 
    const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
      e.preventDefault();
@@ -107,12 +109,18 @@
      });
    };
 
-   const handleDelete = (id: string) => {
+  const handleDelete = (id: string) => {
      startTransition(async () => {
        await deleteSecretAction(workspaceId, id);
        setSecrets((prev) => prev.filter((s) => s.id !== id));
      });
    };
+
+  const handleConfirmDelete = () => {
+    if (!secretToDelete) return;
+    handleDelete(secretToDelete.id);
+    setSecretToDelete(null);
+  };
 
    const handleEdit = (secret: Secret) => {
      setEditingId(secret.id);
@@ -238,7 +246,7 @@
                   <SecretRow
                     key={secret.id}
                     secret={secret}
-                    onDelete={handleDelete}
+                    onDeleteRequest={setSecretToDelete}
                     onEdit={handleEdit}
                   />
                  ))}
@@ -246,6 +254,13 @@
              )}
            </div>
          </section>
+        <SecretDeleteModal
+          isOpen={secretToDelete !== null}
+          onClose={() => setSecretToDelete(null)}
+          onConfirm={handleConfirmDelete}
+          secretKey={secretToDelete?.key ?? ""}
+          isPending={isPending}
+        />
        </div>
     </div>
   );
@@ -253,11 +268,11 @@
 
 function SecretRow({
   secret,
-  onDelete,
+  onDeleteRequest,
   onEdit,
 }: {
   secret: Secret;
-  onDelete: (id: string) => void;
+  onDeleteRequest: (secret: Secret) => void;
   onEdit: (secret: Secret) => void;
 }) {
    const [revealed, setRevealed] = useState(false);
@@ -311,7 +326,7 @@ function SecretRow({
            size="icon"
            variant="ghost"
            className="h-7 w-7 text-[var(--muted)] hover:text-red-500"
-           onClick={() => onDelete(secret.id)}
+           onClick={() => onDeleteRequest(secret)}
            aria-label="Delete secret"
          >
            <Trash2 className="h-3.5 w-3.5" />

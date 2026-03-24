@@ -25,6 +25,7 @@ import {
   unlinkActionServiceFromWorkflowAction,
 } from "@/app/workspace/[workspaceId]/personal/workflows/actions";
 import Link from "next/link";
+import { WorkflowDeleteModal } from "./workflow-delete-modal";
 
 interface WorkflowDetailProps {
   workflow: Workflow;
@@ -48,6 +49,7 @@ export function WorkflowDetail({
   const [isLinkSheetOpen, setIsLinkSheetOpen] = useState(false);
   const [selectedActionServiceId, setSelectedActionServiceId] = useState("");
   const [linkError, setLinkError] = useState<string | null>(null);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
 
   const handleDelete = () => {
     startTransition(async () => {
@@ -117,7 +119,7 @@ export function WorkflowDetail({
             <div className="flex items-center gap-2 shrink-0">
               <ActionMenu
                 onSelect={(val) => {
-                  if (val === "delete") handleDelete();
+                  if (val === "delete") setIsDeleteModalOpen(true);
                 }}
                 options={[
                   {
@@ -135,6 +137,14 @@ export function WorkflowDetail({
             </div>
           </div>
         </div>
+
+        <WorkflowDeleteModal
+          isOpen={isDeleteModalOpen}
+          onClose={() => setIsDeleteModalOpen(false)}
+          onConfirm={handleDelete}
+          workflowTitle={workflow.title}
+          isPending={isPending}
+        />
 
         {/* Triggers: trigger services + tasks */}
         <div className="space-y-4">

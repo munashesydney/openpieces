@@ -13,6 +13,7 @@ interface ModalProps {
   children: React.ReactNode;
   footer?: React.ReactNode;
   maxWidthClassName?: string;
+  danger?: boolean;
 }
 
 export function Modal({
@@ -23,6 +24,7 @@ export function Modal({
   children,
   footer,
   maxWidthClassName = "max-w-2xl",
+  danger = false,
 }: ModalProps) {
   const [mounted, setMounted] = React.useState(false);
 
@@ -57,7 +59,7 @@ export function Modal({
       <div
         className={`fixed inset-0 z-50 bg-black/45 transition-opacity duration-200 ${
           isOpen ? "opacity-100" : "pointer-events-none opacity-0"
-        }`}
+        } backdrop-blur-sm`}
         onClick={onClose}
       />
 
@@ -77,7 +79,11 @@ export function Modal({
         >
           <div className="flex items-start justify-between border-b border-[var(--border)] px-6 py-4">
             <div className="pr-4">
-              {title && <h2 className="text-lg font-semibold text-[var(--foreground)]">{title}</h2>}
+              {title && (
+                <h2 className="text-lg font-semibold text-[var(--foreground)]">
+                  {title}
+                </h2>
+              )}
               {description && <p className="mt-1 text-sm text-[var(--muted)]">{description}</p>}
             </div>
             <Button variant="ghost" size="icon" onClick={onClose} className="h-8 w-8">

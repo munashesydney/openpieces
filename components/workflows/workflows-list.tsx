@@ -12,6 +12,7 @@ import { Dropdown } from "@/components/basic/input/dropdown";
 import { ActionMenu } from "@/components/basic/input/action-menu";
 import { createWorkflowAction, deleteWorkflowAction } from "@/app/workspace/[workspaceId]/personal/workflows/actions";
 import { type Workflow as WorkflowType } from "@/lib/db/schema";
+import { WorkflowDeleteModal } from "./workflow-delete-modal";
 
 function timeAgo(date: Date): string {
   const now = new Date();
@@ -197,67 +198,82 @@ function WorkflowCard({
   workspaceId: string;
 }) {
   const [isPending, startTransition] = useTransition();
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+
+  const handleDeleteWorkflow = () => {
+    startTransition(async () => {
+      await deleteWorkflowAction(workspaceId, workflow.id);
+      setIsDeleteModalOpen(false);
+    });
+  };
 
   return (
-    <Link href={`/workspace/${workspaceId}/personal/workflows/${workflow.id}`}>
-      <Card
-        hoverable
-        className={`group cursor-pointer p-5 ${isPending ? "opacity-50 pointer-events-none" : ""}`}
-      >
-        <div className="flex items-start justify-between gap-4">
-          <div className="flex flex-1 items-start gap-4">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[var(--hover-bg)] text-[var(--accent)] transition-colors group-hover:bg-[var(--accent)] group-hover:text-white">
-              <Workflow className="h-5 w-5" />
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h3 className="text-base font-medium text-[var(--foreground)]">{workflow.title}</h3>
-                <span
-                  className={`rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider ${
-                    workflow.status === "active"
-                      ? "bg-emerald-500/10 text-emerald-500"
-                      : workflow.status === "archived"
-                      ? "bg-red-500/10 text-red-500"
-                      : "bg-[var(--border)] text-[var(--muted)]"
-                  }`}
-                >
-                  {workflow.status}
-                </span>
+    <>
+      <Link href={`/workspace/${workspaceId}/personal/workflows/${workflow.id}`}>
+        <Card
+          hoverable
+          className={`group cursor-pointer p-5 ${isPending ? "opacity-50 pointer-events-none" : ""}`}
+        >
+          <div className="flex items-start justify-between gap-4">
+            <div className="flex flex-1 items-start gap-4">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[var(--hover-bg)] text-[var(--accent)] transition-colors group-hover:bg-[var(--accent)] group-hover:text-white">
+                <Workflow className="h-5 w-5" />
               </div>
-              {workflow.description && (
-                <p className="mt-1 text-sm text-[var(--muted)] line-clamp-2 max-w-[600px]">
-                  {workflow.description}
-                </p>
-              )}
-              <div className="mt-3 flex items-center gap-4 text-[10px] font-bold uppercase tracking-tight text-[var(--muted)]">
-                <div className="flex items-center gap-1.5">
-                  <Clock className="h-3.5 w-3.5" />
-                  <span>Updated {timeAgo(new Date(workflow.updatedAt))}</span>
+              <div>
+                <div className="flex items-center gap-2">
+                  <h3 className="text-base font-medium text-[var(--foreground)]">{workflow.title}</h3>
+                  <span
+                    className={`rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider ${
+                      workflow.status === "active"
+                        ? "bg-emerald-500/10 text-emerald-500"
+                        : workflow.status === "archived"
+                        ? "bg-red-500/10 text-red-500"
+                        : "bg-[var(--border)] text-[var(--muted)]"
+                    }`}
+                  >
+                    {workflow.status}
+                  </span>
+                </div>
+                {workflow.description && (
+                  <p className="mt-1 text-sm text-[var(--muted)] line-clamp-2 max-w-[600px]">
+                    {workflow.description}
+                  </p>
+                )}
+                <div className="mt-3 flex items-center gap-4 text-[10px] font-bold uppercase tracking-tight text-[var(--muted)]">
+                  <div className="flex items-center gap-1.5">
+                    <Clock className="h-3.5 w-3.5" />
+                    <span>Updated {timeAgo(new Date(workflow.updatedAt))}</span>
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
-          <div className="flex items-center gap-1 -mt-1">
-            <div className="shrink-0" onClick={(e) => e.preventDefault()}>
-              <ActionMenu
-                onSelect={(val) => {
-                  if (val === "delete") {
-                    startTransition(async () => {
-                      await deleteWorkflowAction(workspaceId, workflow.id);
-                    });
-                  }
-                }}
-                options={[
-                  { label: "Delete", value: "delete", icon: <Trash2 className="h-4 w-4" />, destructive: true },
-                ]}
-              />
-            </div>
-            <div className="flex h-10 w-10 items-center justify-center rounded-full text-[var(--muted)] transition-all group-hover:bg-[var(--hover-bg)] group-hover:text-[var(--foreground)] group-hover:translate-x-1">
-              <ChevronRightIcon className="h-5 w-5" />
+            <div className="flex items-center gap-1 -mt-1">
+              <div className="shrink-0" onClick={(e) => e.preventDefault()}>
+                <ActionMenu
+                  onSelect={(val) => {
+                    if (val === "delete") {
+                      setIsDeleteModalOpen(true);
+                    }
+                  }}
+                  options={[
+                    { label: "Delete", value: "delete", icon: <Trash2 className="h-4 w-4" />, destructive: true },
+                  ]}
+                />
+              </div>
+              <div className="flex h-10 w-10 items-center justify-center rounded-full text-[var(--muted)] transition-all group-hover:bg-[var(--hover-bg)] group-hover:text-[var(--foreground)] group-hover:translate-x-1">
+                <ChevronRightIcon className="h-5 w-5" />
+              </div>
             </div>
           </div>
-        </div>
-      </Card>
-    </Link>
+        </Card>
+      </Link>
+      <WorkflowDeleteModal
+        isOpen={isDeleteModalOpen}
+        onClose={() => setIsDeleteModalOpen(false)}
+        onConfirm={handleDeleteWorkflow}
+        workflowTitle={workflow.title}
+        isPending={isPending}
+      />
+    </>
   );
 }

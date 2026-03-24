@@ -13,6 +13,8 @@ import { ActionMenu } from "@/components/basic/input/action-menu";
 import { ServiceLogsPanel } from "./service-logs-panel";
 import { type Service, type ServiceEndpoint, type ServiceRequiredSecret } from "@/lib/db/schema";
 import { createEndpointAction, deleteEndpointAction, spawnServiceAction, stopServiceAction, addRequiredSecretAction, removeRequiredSecretAction } from "@/app/workspace/[workspaceId]/personal/services/[serviceId]/actions";
+import { deleteServiceAction } from "@/app/workspace/[workspaceId]/personal/services/actions";
+import { ServiceDeleteModal } from "./service-delete-modal";
 
 interface ServiceDetailProps {
   service: Service;
@@ -35,6 +37,7 @@ export function ServiceDetail({ service, endpoints, requiredSecrets, workspaceSe
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const [isSecretsSheetOpen, setIsSecretsSheetOpen] = useState(false);
   const [localRequiredSecrets, setLocalRequiredSecrets] = useState(requiredSecrets);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   
   const [method, setMethod] = useState("GET");
   const [path, setPath] = useState("");
@@ -155,6 +158,14 @@ export function ServiceDetail({ service, endpoints, requiredSecrets, workspaceSe
     });
   };
 
+  const handleDeleteService = () => {
+    startTransition(async () => {
+      await deleteServiceAction(workspaceId, service.id);
+      setIsDeleteModalOpen(false);
+      router.push(`/workspace/${workspaceId}/personal/services`);
+    });
+  };
+
   return (
     <div className="flex w-full justify-center px-6 pb-20 pt-10 font-Inter">
       <div className="w-full max-w-[820px] space-y-10">
@@ -177,8 +188,28 @@ export function ServiceDetail({ service, endpoints, requiredSecrets, workspaceSe
                 {service.description || "Service Details & API Reference"}
               </p>
             </div>
+            <div className="shrink-0">
+              <ActionMenu
+                onSelect={(val) => {
+                  if (val === "delete") {
+                    setIsDeleteModalOpen(true);
+                  }
+                }}
+                options={[
+                  { label: "Delete Service", value: "delete", icon: <Trash2 className="h-4 w-4" />, destructive: true },
+                ]}
+              />
+            </div>
           </div>
         </div>
+
+        <ServiceDeleteModal
+          isOpen={isDeleteModalOpen}
+          onClose={() => setIsDeleteModalOpen(false)}
+          onConfirm={handleDeleteService}
+          serviceTitle={service.title}
+          isPending={isPending}
+        />
 
         {/* Top Stats/Status */}
         <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
