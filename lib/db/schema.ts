@@ -243,7 +243,7 @@ export const activityLog = pgTable(
     id: uuid("id").defaultRandom().primaryKey(),
     recordType: text("record_type").notNull(),
     operation: text("operation", { enum: ["INSERT", "UPDATE", "DELETE"] }).notNull(),
-    recordId: uuid("record_id"),
+    recordId: text("record_id"),
     workspaceId: uuid("workspace_id").notNull(),
     oldData: jsonb("old_data"),
     newData: jsonb("new_data"),
