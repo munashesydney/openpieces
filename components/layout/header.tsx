@@ -122,9 +122,10 @@ export function Header() {
       <nav className="flex flex-1 flex-wrap items-center gap-1 px-6 scrollbar-hide">
         {navItems.map((item) => {
           const Icon = item.icon;
-          const active = item.label === "Overview" 
-            ? pathname === item.activePattern 
-            : pathname.startsWith(item.activePattern);
+          const active =
+            item.label === "Overview" || item.label === "Brain"
+              ? pathname === item.activePattern
+              : pathname.startsWith(item.activePattern);
 
           return (
             <Link
