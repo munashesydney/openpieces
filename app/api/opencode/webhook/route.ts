@@ -22,14 +22,19 @@ export async function POST(request: NextRequest) {
       body.message?.text ??
       null;
 
-    const updates: Record<string, unknown> = { updatedAt: new Date() };
+    if (
+      eventType === "session.idle" ||
+      eventType === "session.done" ||
+      eventType === "session.error" ||
+      eventType === "error"
+    ) {
+      const updates: Record<string, unknown> = { updatedAt: new Date() };
 
-    if (messageContent !== null) {
-      updates.lastMessage = messageContent;
-      updates.lastMessageAt = new Date();
-    }
+      if (messageContent !== null) {
+        updates.lastMessage = messageContent;
+        updates.lastMessageAt = new Date();
+      }
 
-    if (eventType) {
       if (
         eventType === "session.idle" ||
         eventType === "session.done"
@@ -38,15 +43,15 @@ export async function POST(request: NextRequest) {
       } else if (eventType === "session.error" || eventType === "error") {
         updates.status = "failed";
       }
-    }
 
-    await db
-      .update(opencodeSessions)
-      .set(updates)
-      .where(eq(opencodeSessions.sessionId, sessionId))
-      .catch(() => {
-        // Session may not exist yet — non-fatal
-      });
+      await db
+        .update(opencodeSessions)
+        .set(updates)
+        .where(eq(opencodeSessions.sessionId, sessionId))
+        .catch(() => {
+          // Session may not exist yet — non-fatal
+        });
+    }
 
     broadcastSessionEvent(sessionId, body);
 

@@ -155,6 +155,13 @@
       "when": 1774251142000,
       "tag": "0021_brain_tables",
       "breakpoints": true
+    },
+    {
+      "idx": 22,
+      "version": "7",
+      "when": 1775100000000,
+      "tag": "0022_opencode_activity_dedup",
+      "breakpoints": true
     }
   ]
 }
