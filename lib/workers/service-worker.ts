@@ -77,6 +77,41 @@ async function executeServiceSpawnJob(job: ServiceSpawnJob) {
     throw new Error(`Service ${serviceId} has no directory set`);
   }
 
+  // If service has a PID, check if it's still alive and kill it (force restart)
+  if (service.pid) {
+    try {
+      process.kill(service.pid, 0); // Signal 0 = check if process exists
+      // Process is alive, kill it first
+      console.log(`[service-worker] Service ${serviceId} has alive PID ${service.pid}, killing for force restart`);
+      await appendServiceLog(service.directory.trim(), "info", `Force restarting service (PID: ${service.pid})`);
+      process.kill(service.pid, "SIGTERM");
+      // Wait for graceful shutdown
+      await new Promise<void>((resolve) => {
+        const checkExit = setInterval(() => {
+          try {
+            process.kill(service.pid!, 0);
+          } catch {
+            clearInterval(checkExit);
+            resolve();
+          }
+        }, 500);
+        setTimeout(() => {
+          clearInterval(checkExit);
+          try {
+            process.kill(service.pid!, "SIGKILL");
+          } catch {
+            // Process already gone
+          }
+          resolve();
+        }, 5000);
+      });
+    } catch {
+      // PID is dead/stale, just continue
+      console.log(`[service-worker] Service ${serviceId} has stale PID ${service.pid}, will reset and restart`);
+      await updateService(serviceId, workspaceId, { port: null, pid: null, status: "stopped" });
+    }
+  }
+
   const indexPath = `./pieces/${service.directory.trim()}/index.ts`;
   if (!fs.existsSync(indexPath)) {
     const msg = `Service ${serviceId} has no index.ts at ${indexPath} - skipping spawn`;
@@ -295,66 +330,18 @@ async function executeServiceStopJob(job: ServiceStopJob) {
 async function recoverAndStartAllServices() {
   console.log("[service-worker] Recovering services...");
 
-  // 1. Find all services that claim to be running
-  const runningServices = await db
+  // Enqueue ALL services regardless of status.
+  // executeServiceSpawnJob handles:
+  //   - killing stale/alive PIDs
+  //   - validating directory, secrets, and index.ts
+  //   - spawning the service
+  const allServices = await db
     .select()
-    .from(services)
-    .where(eq(services.status, "running"));
+    .from(services);
 
-  // 2. Check if each PID is still alive, reset if not
-  for (const svc of runningServices) {
-    if (!svc.pid) {
-      await updateService(svc.id, svc.workspaceId, { port: null, pid: null, status: "stopped" });
-      console.log(`[service-worker] Reset stale service ${svc.id} (no PID)`);
-      continue;
-    }
-    try {
-      process.kill(svc.pid, 0); // Signal 0 = check if process exists
-    } catch {
-      // PID is dead, reset to stopped
-      await updateService(svc.id, svc.workspaceId, { port: null, pid: null, status: "stopped" });
-      console.log(`[service-worker] Reset stale service ${svc.id} (dead PID ${svc.pid})`);
-    }
-  }
-
-  // 3. Find all stopped services and try to start valid ones
-  const stoppedServices = await db
-    .select()
-    .from(services)
-    .where(eq(services.status, "stopped"));
-
-  for (const svc of stoppedServices) {
-    if (!svc.directory?.trim()) continue; // Skip services without directory
-
-    // Check if required secrets are set
-    const requiredSecrets = await getRequiredSecrets(svc.id);
-    if (requiredSecrets.length === 0) {
-      // No required secrets, enqueue directly
-      await enqueueServiceSpawn({ serviceId: svc.id, workspaceId: svc.workspaceId });
-      console.log(`[service-worker] Enqueued service ${svc.id} (${svc.title}) - no required secrets`);
-      continue;
-    }
-
-    const workspaceOwnerId = (await getWorkspaceOwnerId(svc.workspaceId)) ?? "";
-    const { data: secrets } = await getSecrets(svc.workspaceId, workspaceOwnerId, 1, 500);
-    const secretKeys = new Set(secrets.map((s) => s.key));
-    const missingSecrets = requiredSecrets
-      .filter((req) => !secretKeys.has(req.secretKey))
-      .map((req) => req.secretKey);
-    const emptyValueSecrets = requiredSecrets
-      .filter((req) => {
-        const secret = secrets.find((s) => s.key === req.secretKey);
-        return !secret?.value?.trim();
-      })
-      .map((req) => req.secretKey);
-    const allProblemSecrets = [...missingSecrets, ...emptyValueSecrets];
-
-    if (allProblemSecrets.length === 0) {
-      await enqueueServiceSpawn({ serviceId: svc.id, workspaceId: svc.workspaceId });
-      console.log(`[service-worker] Enqueued service ${svc.id} (${svc.title})`);
-    } else {
-      console.log(`[service-worker] Skipping service ${svc.id} (${svc.title}) - missing or empty secrets: ${allProblemSecrets.join(", ")}`);
-    }
+  for (const svc of allServices) {
+    await enqueueServiceSpawn({ serviceId: svc.id, workspaceId: svc.workspaceId });
+    console.log(`[service-worker] Enqueued service ${svc.id} (${svc.title})`);
   }
 
   console.log("[service-worker] Service recovery complete");
