@@ -3,11 +3,15 @@ import { broadcastSessionEvent } from "@/lib/opencode/event-stream";
 import { db } from "@/lib/db";
 import { opencodeSessions } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
+import { getMessages } from "@/lib/services/opencode.service";
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const sessionId = body.sessionId ?? body.session_id;
+    const sessionId = body.sessionId ?? 
+            body.session_id ?? 
+            body.properties?.sessionID ?? 
+            null;
     if (!sessionId || typeof sessionId !== "string") {
       return NextResponse.json(
         { error: "sessionId is required" },
@@ -16,22 +20,25 @@ export async function POST(request: NextRequest) {
     }
 
     const eventType = body.type ?? body.event?.type ?? null;
-    const messageContent =
-      body.content ??
-      body.message?.content ??
-      body.message?.text ??
-      null;
-
     if (
       eventType === "session.idle" ||
       eventType === "session.done" ||
       eventType === "session.error" ||
       eventType === "error"
     ) {
+      // Get the authoritative last message from OpenCode
+      const rawMessages = await getMessages(sessionId);
+      const lastMsg = rawMessages[rawMessages.length - 1];
+      const lastMessage = lastMsg
+        ? (lastMsg.parts || [])
+            .filter((p: any) => p.type === "text")
+            .map((p: any) => p.text)
+            .join("\n") || null
+        : null;
       const updates: Record<string, unknown> = { updatedAt: new Date() };
 
-      if (messageContent !== null) {
-        updates.lastMessage = messageContent;
+      if (lastMessage !== null) {
+        updates.lastMessage = lastMessage;
         updates.lastMessageAt = new Date();
       }
 
