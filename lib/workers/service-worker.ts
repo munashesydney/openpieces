@@ -95,9 +95,17 @@ async function executeServiceSpawnJob(job: ServiceSpawnJob) {
     const missingSecrets = requiredSecrets
       .filter(req => !secretKeys.has(req.secretKey))
       .map(req => req.secretKey);
-    
-    if (missingSecrets.length > 0) {
-      throw new Error(`Missing required secrets: ${missingSecrets.join(", ")}`);
+
+    const emptyValueSecrets = requiredSecrets
+      .filter(req => {
+        const secret = secrets.find(s => s.key === req.secretKey);
+        return !secret?.value?.trim();
+      })
+      .map(req => req.secretKey);
+
+    const allProblemSecrets = [...missingSecrets, ...emptyValueSecrets];
+    if (allProblemSecrets.length > 0) {
+      throw new Error(`Missing or empty required secrets: ${allProblemSecrets.join(", ")}`);
     }
   }
 
@@ -333,12 +341,19 @@ async function recoverAndStartAllServices() {
     const missingSecrets = requiredSecrets
       .filter((req) => !secretKeys.has(req.secretKey))
       .map((req) => req.secretKey);
+    const emptyValueSecrets = requiredSecrets
+      .filter((req) => {
+        const secret = secrets.find((s) => s.key === req.secretKey);
+        return !secret?.value?.trim();
+      })
+      .map((req) => req.secretKey);
+    const allProblemSecrets = [...missingSecrets, ...emptyValueSecrets];
 
-    if (missingSecrets.length === 0) {
+    if (allProblemSecrets.length === 0) {
       await enqueueServiceSpawn({ serviceId: svc.id, workspaceId: svc.workspaceId });
       console.log(`[service-worker] Enqueued service ${svc.id} (${svc.title})`);
     } else {
-      console.log(`[service-worker] Skipping service ${svc.id} (${svc.title}) - missing secrets: ${missingSecrets.join(", ")}`);
+      console.log(`[service-worker] Skipping service ${svc.id} (${svc.title}) - missing or empty secrets: ${allProblemSecrets.join(", ")}`);
     }
   }
 

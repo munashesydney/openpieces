@@ -436,7 +436,8 @@ export function ServiceDetail({ service, endpoints, requiredSecrets, workspaceSe
           <CardContent>
             <div className="divide-y divide-[var(--border)]">
               {localRequiredSecrets.map((req) => {
-                const hasSecret = workspaceSecrets.some(s => s.key === req.secretKey);
+                const secret = workspaceSecrets.find(s => s.key === req.secretKey);
+                const hasSecret = secret && secret.value?.trim();
                 return (
                   <div key={req.id} className={`group flex items-start justify-between gap-4 py-6 first:pt-0 last:pb-0 ${isPending ? "opacity-50" : ""}`}>
                     <div className="flex flex-col gap-2">
