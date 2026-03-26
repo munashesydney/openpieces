@@ -267,7 +267,9 @@ function ServiceCard({ service, workspaceId }: { service: Service; workspaceId: 
                 </div>
                 <p className="mt-1 text-sm text-[var(--muted)]">{service.description}</p>
                 <div className="mt-3 flex items-center gap-3">
-                  <span className="text-[10px] font-bold uppercase text-emerald-500">Operational</span>
+                  <span className={`text-[10px] font-bold uppercase ${service.status === "stopped" || service.status === "crashed" ? "text-red-500" : "text-emerald-500"}`}>
+                    {service.status}
+                  </span>
                   <div className="h-1 w-1 rounded-full bg-[var(--border)]" />
                   <span className="text-[10px] font-medium uppercase text-[var(--muted)]">Ready</span>
                 </div>
