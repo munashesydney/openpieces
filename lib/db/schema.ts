@@ -275,7 +275,7 @@ export const brain = pgTable(
     summary: text("summary").notNull(),
     // Soft link back to source
     recordType: text("record_type"),
-    recordId: uuid("record_id"),
+    recordId: text("record_id"),
     // Vector embedding for semantic search
     embedding: vector("embedding", { dimensions: 1536 }),
     tags: text("tags").array(),

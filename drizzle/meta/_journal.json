@@ -162,6 +162,20 @@
       "when": 1775100000000,
       "tag": "0022_opencode_activity_dedup",
       "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "7",
+      "when": 1742866200000,
+      "tag": "0023_activity_log_record_id_text",
+      "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1742866260000,
+      "tag": "0024_brain_record_id_text",
+      "breakpoints": true
     }
   ]
 }

@@ -39,7 +39,10 @@ services:
     env_file:
       - .env
     depends_on:
-      - opencode
+      opencode:
+        condition: service_started
+      db:
+        condition: service_healthy
     # Pretty, coloured logs streamed directly to your terminal
     logging:
       driver: json-file
@@ -58,11 +61,14 @@ services:
       - /app/.next
       - ./pieces:/app/pieces
     entrypoint: ["sh", "./scripts/docker-dev-entrypoint.sh"]
-    command: sh -c "node_modules/.bin/tsx lib/db/migrate.ts && node_modules/.bin/tsx scripts/ai-worker.ts"
+    command: sh -c "node_modules/.bin/tsx scripts/ai-worker.ts"
     environment:
       - WATCHPACK_POLLING=true
     env_file:
       - .env
+    depends_on:
+      db:
+        condition: service_healthy
     logging:
       driver: json-file
       options:
@@ -75,7 +81,9 @@ services:
     # COMPOSE_PROFILES in .env and point DATABASE_URL at your instance.
     profiles:
       - with-db
-    image: pgvector/pgvector:pg16
+    build:
+      context: .
+      dockerfile: Dockerfile.db
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-openpieces}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-openpieces}

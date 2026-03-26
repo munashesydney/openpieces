@@ -1,6 +1,3 @@
--- Enable pgvector extension
-CREATE EXTENSION IF NOT EXISTS vector;
-
 -- Add processedByBrain to activity_log
 ALTER TABLE activity_log ADD COLUMN processed_by_brain boolean NOT NULL DEFAULT false;
 CREATE INDEX IF NOT EXISTS activity_log_processed_by_brain_idx ON activity_log (processed_by_brain) WHERE processed_by_brain = false;
@@ -23,7 +20,7 @@ CREATE TABLE brain (
 );
 
 CREATE INDEX IF NOT EXISTS brain_workspace_id_idx ON brain (workspace_id);
-CREATE INDEX IF NOT EXISTS brain_embedding_idx USING hnsw (embedding vector_cosine_ops);
+CREATE INDEX IF NOT EXISTS brain_embedding_idx ON brain USING hnsw (embedding vector_cosine_ops);
 CREATE INDEX IF NOT EXISTS brain_category_idx ON brain (category);
 CREATE INDEX IF NOT EXISTS brain_confidence_idx ON brain (confidence);
 

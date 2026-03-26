@@ -18,6 +18,9 @@ services:
       target: migrator
     env_file:
       - .env
+    depends_on:
+      db:
+        condition: service_healthy
     # Runs once and exits — app waits for it to complete successfully
     restart: "no"
 
@@ -71,7 +74,9 @@ services:
     # in .env to point at your instance instead.
     profiles:
       - with-db
-    image: postgres:16-alpine
+    build:
+      context: .
+      dockerfile: Dockerfile.db
     environment:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
