@@ -100,6 +100,50 @@ export async function getMessages(sessionId: string): Promise<any[]> {
   }
 }
 
+type MessagePart = { type: string; text?: string };
+
+function extractContentFromParts(parts: MessagePart[]): string {
+  return (parts || [])
+    .filter((p) => p.type === "text" && p.text)
+    .map((p) => p.text)
+    .join("\n");
+}
+
+/**
+ * Formats messages for AI consumption: user, assistant, user, assistant...
+ * - Keeps all user messages
+ * - Only keeps the last assistant message (filters out intermediate streaming parts)
+ */
+export function getMessagesForAi(messages: OpenCodeMessage[]): { role: string; content: string }[] {
+  const result: { role: string; content: string }[] = [];
+  let lastAssistantMessage: { role: string; content: string } | null = null;
+
+  for (const msg of messages) {
+    const role = (msg as any).info?.role;
+    if (role === "user") {
+      if (lastAssistantMessage) {
+        result.push(lastAssistantMessage);
+        lastAssistantMessage = null;
+      }
+      result.push({
+        role: "user",
+        content: extractContentFromParts(msg.parts),
+      });
+    } else if (role === "assistant") {
+      lastAssistantMessage = {
+        role: "assistant",
+        content: extractContentFromParts(msg.parts),
+      };
+    }
+  }
+
+  if (lastAssistantMessage) {
+    result.push(lastAssistantMessage);
+  }
+
+  return result;
+}
+
 const DIRECTORY_INSTRUCTION_PREFIX =
   "Before doing anything else: ensure the directory '";
 

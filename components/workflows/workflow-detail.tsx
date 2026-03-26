@@ -7,7 +7,6 @@ import {
   Terminal,
   Repeat,
   Calendar,
-  Play,
   Trash2,
   Plus,
   Unlink,
@@ -130,10 +129,6 @@ export function WorkflowDetail({
                   },
                 ]}
               />
-              <Button className="gap-2" disabled={isPending}>
-                <Play className="h-4 w-4 fill-current" />
-                Run Workflow
-              </Button>
             </div>
           </div>
         </div>
@@ -352,11 +347,6 @@ function TaskRow({ task }: { task: Task }) {
           )}
         </div>
         <div className="flex items-center gap-2 shrink-0">
-          {task.frequency && (
-            <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--accent)]">
-              {task.frequency}
-            </span>
-          )}
           <span
             className={`text-[10px] font-bold uppercase tracking-wider ${
               task.status === "active"
