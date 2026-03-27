@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition, useEffect, useCallback } from "react";
-import { ChevronLeft, Activity, Code, Clock, ShieldCheck, Zap, Plus, Trash2, Play, Loader2, Square, KeyRound } from "lucide-react";
+import { ChevronLeft, Activity, Code, Clock, ShieldCheck, Zap, Plus, Trash2, Play, Loader2, Square, KeyRound, Link } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "../ui/card";
 import { Button } from "@/components/basic/buttons/button";
@@ -17,7 +17,7 @@ import { deleteServiceAction } from "@/app/workspace/[workspaceId]/personal/serv
 import { ServiceDeleteModal } from "./service-delete-modal";
 
 interface ServiceDetailProps {
-  service: Service;
+  service: Service & { url?: string };
   endpoints: ServiceEndpoint[];
   requiredSecrets: ServiceRequiredSecret[];
   workspaceSecrets: { key: string; id: string }[];
@@ -304,6 +304,27 @@ export function ServiceDetail({ service, endpoints, requiredSecrets, workspaceSe
               </div>
             </div>
           </Card>
+
+          {service.url && (
+            <Card className="p-6">
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[var(--hover-bg)] text-[var(--muted)]">
+                  <Link className="h-5 w-5" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-xs font-medium uppercase tracking-wider text-[var(--muted)]">Service URL</p>
+                  <a
+                    href={service.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-sm font-semibold text-[var(--foreground)] hover:text-blue-500 truncate block"
+                  >
+                    {service.url}
+                  </a>
+                </div>
+              </div>
+            </Card>
+          )}
         </div>
 
         <ServiceLogsPanel workspaceId={workspaceId} serviceId={service.id} />
