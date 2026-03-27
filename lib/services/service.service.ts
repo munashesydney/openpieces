@@ -3,6 +3,7 @@ import { db } from "../db";
 import { services, workflows, type NewService, type Service } from "../db/schema";
 import { isValidUuid } from "../utils/uuid";
 import { ValidationError } from "../errors/validation-error";
+import { getBaseUrl, buildServiceUrl } from "../utils/url";
 
 const VALID_SERVICE_TYPES = ["trigger", "action"] as const;
 
@@ -79,11 +80,12 @@ export async function createService(data: NewService): Promise<Service> {
 }
 
 
-export async function getServices(workspaceId: string, page: number = 1, pageSize: number = 10): Promise<{ data: Service[], total: number }> {
+export async function getServices(workspaceId: string, page: number = 1, pageSize: number = 10): Promise<{ data: (Service & { url: string })[], total: number }> {
   if (!isValidUuid(workspaceId)) return { data: [], total: 0 };
 
   const offset = (page - 1) * pageSize;
-  
+  const baseUrl = getBaseUrl();
+
   const [data, totalResult] = await Promise.all([
     db.select()
       .from(services)
@@ -96,17 +98,25 @@ export async function getServices(workspaceId: string, page: number = 1, pageSiz
   ]);
 
   return {
-    data,
+    data: data.map((service) => ({
+      ...service,
+      url: buildServiceUrl(baseUrl, service.id),
+    })),
     total: totalResult[0].count,
   };
 }
 
-export async function getServicesByWorkflowId(workflowId: string, workspaceId: string): Promise<Service[]> {
+export async function getServicesByWorkflowId(workflowId: string, workspaceId: string): Promise<(Service & { url: string })[]> {
   if (!isValidUuid(workflowId) || !isValidUuid(workspaceId)) return [];
-  return db
+  const baseUrl = getBaseUrl();
+  const data = await db
     .select()
     .from(services)
     .where(and(eq(services.workflowId, workflowId), eq(services.workspaceId, workspaceId)));
+  return data.map((service) => ({
+    ...service,
+    url: buildServiceUrl(baseUrl, service.id),
+  }));
 }
 
 export async function getServiceByIdOnly(serviceId: string): Promise<Service | null> {
@@ -115,15 +125,20 @@ export async function getServiceByIdOnly(serviceId: string): Promise<Service | n
   return result[0] ?? null;
 }
 
-export async function getServiceById(serviceId: string, workspaceId: string): Promise<Service | null> {
+export async function getServiceById(serviceId: string, workspaceId: string): Promise<(Service & { url: string }) | null> {
   if (!isValidUuid(serviceId) || !isValidUuid(workspaceId)) return null;
 
+  const baseUrl = getBaseUrl();
   const result = await db
     .select()
     .from(services)
     .where(and(eq(services.id, serviceId), eq(services.workspaceId, workspaceId)))
     .limit(1);
-  return result[0] ?? null;
+  if (!result[0]) return null;
+  return {
+    ...result[0],
+    url: buildServiceUrl(baseUrl, result[0].id),
+  };
 }
 
 
