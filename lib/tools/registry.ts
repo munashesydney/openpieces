@@ -8,6 +8,7 @@ import { createEndpointsTool } from "@/lib/tools/service-endpoints";
 import { createCallEndpointTool } from "@/lib/tools/call-endpoint";
 import { createWorkflowActionLinksTool } from "@/lib/tools/workflow-action-links";
 import { createBrainTool } from "@/lib/tools/brain";
+import { createRuntimeTool } from "@/lib/tools/runtime";
 
 export type ToolContext = {
   workspaceId: string;
@@ -27,5 +28,6 @@ export function createTools(context: ToolContext) {
     call_endpoint: createCallEndpointTool(context),
     manage_workflow_action_links: createWorkflowActionLinksTool(context),
     manage_brain: createBrainTool(context),
+    runtime: createRuntimeTool(context),
   };
 }
