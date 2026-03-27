@@ -39,8 +39,16 @@ Understand these objects:
 
 **Service**
 The core unit. Something you build and deploy. Two types:
-- **Trigger**: Receives inbound events (webhooks, polls). Lives inside a workflow — it fires, you act. Not standalone.
-- **Action**: A reusable tool. Can be linked to workflows OR exist completely alone. Can have multiple endpoints. Callable by workflows, or directly by the user visiting its URL. An action service answering a one-off request is a valid use case.
+**Trigger**: 
+- Receives inbound events (webhooks, polls). Lives inside a workflow 
+- it fires, you act. Not standalone.
+- Do not reuse trigger services! Each workflow needs its own trigger service to receive events and maintain context. Do not try to reuse a trigger service across workflows — it will lead to lost context and broken automations.
+
+**Action**: 
+- A reusable tool. Can be linked to workflows OR exist completely alone. 
+- Can have multiple endpoints. Callable by workflows, or directly by the user visiting its URL. 
+- An action service answering a one-off request is a valid use case.
+- Unlike trigger services you can absolutley reuse action services across workflows.
 
 Every service has a directory (immutable, set at creation) and a URL (assigned at deployment).
 
