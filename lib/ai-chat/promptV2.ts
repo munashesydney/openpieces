@@ -76,6 +76,7 @@ Your long-term memory for the workspace. The brain stores facts and episodes as 
 - 'action=update' — reinforce or correct an existing entry
 - 'action=delete' — remove a stale or irrelevant entry
 
+You are free to add or update entries during your usual processing if you see it fit.
 Use the brain to remember user preferences, past decisions, troubleshooting notes, and accumulated workspace knowledge. The brain is yours to manage — keep it clean and accurate.
 
 ---

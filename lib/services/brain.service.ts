@@ -433,9 +433,16 @@ After creating all relevant entries, respond with a brief summary of what you cr
 }
 
 export async function triggerBrainReinforcement(workspaceId: string): Promise<{
+  processed: number;
   chatId: string;
   message: string;
 }> {
+  const unreinforcedEntries = await getUnreinforcedBrainEntries(workspaceId, 50);
+
+  if (unreinforcedEntries.length === 0) {
+    return { processed: 0, chatId: "", message: "No unreinforced brain entries found" };
+  }
+
   const userId = await getWorkspaceOwnerId(workspaceId);
   if (!userId) {
     throw new Error("Could not find workspace owner");
@@ -443,14 +450,29 @@ export async function triggerBrainReinforcement(workspaceId: string): Promise<{
 
   const chat = await createAiChat({ workspaceId, userId });
 
-  const prompt = `You are a workspace memory manager. Your job is to review and maintain the brain's memory entries.
+  const entriesDescription = unreinforcedEntries
+    .map((entry, i) => `--- Memory ${i + 1} ---
+ID: ${entry.id}
+Type: ${entry.type}
+Category: ${entry.category}
+Summary: ${entry.summary}
+Confidence: ${entry.confidence}
+Reinforcement Count: ${entry.reinforcementCount}
+Tags: ${entry.tags?.join(", ") ?? "none"}
+Created: ${entry.createdAt.toISOString()}`)
+    .join("\n\n");
+
+  const prompt = `You are a workspace memory manager. Your job is to review and reinforce the brain's memory entries.
+
+The following entries need to be reviewed (system will automatically mark them as reinforced after this process):
+
+${entriesDescription}
 
 Use the manage_brain tool to:
-1. List entries (action=list) to see all memories
-2. Search for similar entries (action=search) to find duplicates or contradictions
-3. Get specific entries (action=get) for details
-4. Update stale/wrong entries (action=update) with corrected summaries
-5. Delete redundant or inaccurate entries (action=delete)
+1. Search for similar entries (action=search) to find duplicates or contradictions
+2. Get specific entries (action=get) for details
+3. Update stale/wrong entries (action=update) with corrected summaries
+4. Delete redundant or inaccurate entries (action=delete)
 
 Look for:
 - Stale entries: outdated or no longer relevant memories
@@ -464,9 +486,14 @@ Use the tools freely to investigate and clean up the brain. Respond with a summa
 
   await enqueueChatExecution({ chatId: chat.id, workspaceId, userId });
 
+  // Mark all unreinforced entries as reenforced
+  const entryIds = unreinforcedEntries.map((e) => e.id);
+  await markBrainEntriesReenforced(entryIds);
+
   return {
+    processed: unreinforcedEntries.length,
     chatId: chat.id,
-    message: `Created AI chat ${chat.id} for brain maintenance`,
+    message: `Created AI chat ${chat.id} to reinforce ${unreinforcedEntries.length} entries`,
   };
 }
 
