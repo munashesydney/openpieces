@@ -108,7 +108,7 @@ async function executeServiceSpawnJob(job: ServiceSpawnJob) {
     } catch {
       // PID is dead/stale, just continue
       console.log(`[service-worker] Service ${serviceId} has stale PID ${service.pid}, will reset and restart`);
-      await updateService(serviceId, workspaceId, { port: null, pid: null, status: "stopped" });
+      await updateService(serviceId, workspaceId, { port: null, pid: null, status: "stopped" }, "system");
     }
   }
 
@@ -229,7 +229,7 @@ async function executeServiceSpawnJob(job: ServiceSpawnJob) {
   const healthy = await pollHealth(port);
 
   if (healthy) {
-    await updateService(serviceId, workspaceId, { port, pid: proc.pid, status: "running" });
+    await updateService(serviceId, workspaceId, { port, pid: proc.pid, status: "running" }, "system");
     await appendServiceLog(directory, "info", `Service is healthy on port ${port}`);
     console.log(`[service-worker] Service "${service.title}" is healthy on port ${port}`);
   } else {

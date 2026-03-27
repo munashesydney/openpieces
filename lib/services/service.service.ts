@@ -143,10 +143,15 @@ export async function getServiceById(serviceId: string, workspaceId: string): Pr
 
 
 
-export async function updateService(serviceId: string, workspaceId: string, data: Partial<NewService>): Promise<Service> {
+export async function updateService(
+  serviceId: string,
+  workspaceId: string,
+  data: Partial<NewService>,
+  updateSource: "user" | "system" = "user"
+): Promise<Service> {
   const result = await db
     .update(services)
-    .set(data)
+    .set({ ...data, updateSource })
     .where(and(eq(services.id, serviceId), eq(services.workspaceId, workspaceId)))
     .returning();
   return result[0];
