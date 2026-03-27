@@ -283,6 +283,7 @@ export const brain = pgTable(
     // Confidence strengthens with reinforcement
     confidence: real("confidence").notNull().default(1.0),
     reinforcementCount: integer("reinforcement_count").notNull().default(0),
+    isReenforced: boolean("is_reenforced").notNull().default(false),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().notNull(),
   },

@@ -474,6 +474,29 @@ Use the tools freely to investigate and clean up the brain. Respond with a summa
 // Stats
 // ──────────────────────────────────────────────────────────────
 
+export async function getUnreinforcedBrainEntries(
+  workspaceId: string,
+  limit: number = 10
+): Promise<Brain[]> {
+  if (!isValidUuid(workspaceId)) return [];
+
+  return db
+    .select()
+    .from(brain)
+    .where(and(eq(brain.workspaceId, workspaceId), eq(brain.isReenforced, false)))
+    .orderBy(asc(brain.createdAt))
+    .limit(limit);
+}
+
+export async function markBrainEntriesReenforced(ids: string[]): Promise<void> {
+  if (ids.length === 0) return;
+
+  await db
+    .update(brain)
+    .set({ isReenforced: true, updatedAt: new Date() })
+    .where(inArray(brain.id, ids));
+}
+
 export async function getBrainStats(workspaceId: string): Promise<{
   totalEntries: number;
   factsCount: number;

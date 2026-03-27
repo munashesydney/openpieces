@@ -5,6 +5,8 @@ import {
   markActivityLogsProcessed,
   updateLastIngestionRun,
   updateLastReinforcementRun,
+  getUnreinforcedBrainEntries,
+  markBrainEntriesReenforced,
 } from "@/lib/services/brain.service";
 import { createAiChat, appendUserMessageAndMarkPending } from "@/lib/services/chat.service";
 import { getWorkspaceOwnerId } from "@/lib/services/workspace.service";
@@ -106,6 +108,13 @@ async function pollForMaintenance(workspaceId: string) {
       return; // Not time yet
     }
 
+    // Get unreinforced brain entries for this workspace
+    const unreinforcedEntries = await getUnreinforcedBrainEntries(workspaceId, 50);
+
+    if (unreinforcedEntries.length === 0) {
+      return; // Nothing to reinforce
+    }
+
     const userId = await getWorkspaceOwnerId(workspaceId);
     if (!userId) {
       console.error(`[brain-worker] Could not find owner for workspace ${workspaceId}`);
@@ -115,7 +124,24 @@ async function pollForMaintenance(workspaceId: string) {
     // ONE chat - AI fetches and cleans up using manage_brain tools
     const chat = await createAiChat({ workspaceId, userId });
 
-    const prompt = `You are a workspace memory manager. Your job is to review and maintain the brain's memory entries.
+    // Format unreinforced entries into the prompt
+    const entriesDescription = unreinforcedEntries
+      .map((entry, i) => `--- Memory ${i + 1} ---
+ID: ${entry.id}
+Type: ${entry.type}
+Category: ${entry.category}
+Summary: ${entry.summary}
+Confidence: ${entry.confidence}
+Reinforcement Count: ${entry.reinforcementCount}
+Tags: ${entry.tags?.join(", ") ?? "none"}
+Created: ${entry.createdAt.toISOString()}`)
+      .join("\n\n");
+
+    const prompt = `You are a workspace memory manager. Your job is to review and reinforce the brain's memory entries.
+
+The following entries need to be reviewed and reinforced:
+
+${entriesDescription}
 
 Use the manage_brain tool to:
 1. List entries (action=list) to see all memories
@@ -136,10 +162,14 @@ Use the tools freely to investigate and clean up the brain. Respond with a summa
 
     await enqueueChatExecution({ chatId: chat.id, workspaceId, userId });
 
+    // Mark all unreinforced entries as reenforced
+    const entryIds = unreinforcedEntries.map((e) => e.id);
+    await markBrainEntriesReenforced(entryIds);
+
     // Update last reinforcement run
     await updateLastReinforcementRun(workspaceId);
 
-    console.log(`[brain-worker] Maintenance complete: created chat ${chat.id}`);
+    console.log(`[brain-worker] Maintenance complete: created chat ${chat.id} for ${unreinforcedEntries.length} entries`);
   } catch (error) {
     console.error(`[brain-worker] Maintenance error for workspace ${workspaceId}:`, error);
   }
