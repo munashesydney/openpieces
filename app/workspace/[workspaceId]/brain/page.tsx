@@ -3,13 +3,17 @@ import { getBrainStats, getOrCreateBrainSettings, getBrainEntries } from "@/lib/
 
 export default async function BrainPage(props: {
   params: Promise<{ workspaceId: string }>;
+  searchParams: Promise<{ page?: string }>;
 }) {
   const { workspaceId } = await props.params;
+  const searchParams = await props.searchParams;
+  const currentPage = Number(searchParams?.page ?? 1);
+  const pageSize = 20;
 
   const [stats, settings, entriesData] = await Promise.all([
     getBrainStats(workspaceId),
     getOrCreateBrainSettings(workspaceId),
-    getBrainEntries(workspaceId, 1, 20),
+    getBrainEntries(workspaceId, currentPage, pageSize),
   ]);
 
   return (
@@ -18,6 +22,9 @@ export default async function BrainPage(props: {
       initialStats={stats}
       initialSettings={settings}
       initialEntries={entriesData.data}
+      totalEntries={entriesData.total}
+      currentPage={currentPage}
+      pageSize={pageSize}
     />
   );
 }

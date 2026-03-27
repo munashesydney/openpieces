@@ -1,19 +1,27 @@
-import { Brain as BrainIcon, Play, Tag } from "lucide-react";
+import Link from "next/link";
+import { Brain as BrainIcon, Play, Tag, ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "../basic/buttons/button";
 import { Card } from "../ui/card";
 import { BrainEntry } from "./brain-types";
 
 export function BrainEntriesPanel({
   entries,
+  totalEntries,
+  currentPage,
+  pageSize,
   triggering,
   onProcessLogs,
   onEntryClick,
 }: {
   entries: BrainEntry[];
+  totalEntries: number;
+  currentPage: number;
+  pageSize: number;
   triggering: "ingest" | "reinforce" | null;
   onProcessLogs: () => void;
   onEntryClick: (entry: BrainEntry) => void;
 }) {
+  const totalPages = Math.ceil(totalEntries / pageSize);
   return (
     <div className="overflow-hidden">
       <div className="mb-4 flex items-center justify-between px-1">
@@ -44,7 +52,7 @@ export function BrainEntriesPanel({
         </div>
       ) : (
         <div className="grid grid-cols-1 gap-3 overflow-x-hidden">
-          {entries.slice(0, 10).map((entry) => (
+          {entries.map((entry) => (
             <Card
               key={entry.id}
               hoverable
@@ -90,6 +98,48 @@ export function BrainEntriesPanel({
               </div>
             </Card>
           ))}
+        </div>
+      )}
+
+      {totalEntries > 0 && totalPages > 1 && (
+        <div className="mt-8 flex items-center justify-between px-2">
+          <div className="text-sm text-[var(--muted)]">
+            Showing{" "}
+            <span className="font-medium text-[var(--foreground)]">
+              {(currentPage - 1) * pageSize + 1}
+            </span>{" "}
+            to{" "}
+            <span className="font-medium text-[var(--foreground)]">
+              {Math.min(currentPage * pageSize, totalEntries)}
+            </span>{" "}
+            of{" "}
+            <span className="font-medium text-[var(--foreground)]">{totalEntries}</span> entries
+          </div>
+          <div className="flex items-center gap-2">
+            <Link href={currentPage > 1 ? `?page=${currentPage - 1}` : "#"}>
+              <Button variant="outline" size="icon" disabled={currentPage <= 1} aria-label="Previous">
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
+            </Link>
+            <div className="flex gap-1">
+              {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                <Link key={page} href={`?page=${page}`}>
+                  <Button
+                    variant={page === currentPage ? "primary" : "outline"}
+                    size="icon"
+                    className="text-sm"
+                  >
+                    {page}
+                  </Button>
+                </Link>
+              ))}
+            </div>
+            <Link href={currentPage < totalPages ? `?page=${currentPage + 1}` : "#"}>
+              <Button variant="outline" size="icon" disabled={currentPage >= totalPages} aria-label="Next">
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            </Link>
+          </div>
         </div>
       )}
     </div>

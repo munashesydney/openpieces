@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Brain as BrainIcon, Clock, Database, TrendingUp } from "lucide-react";
 import {
   getBrainSettingsAction,
@@ -22,11 +22,17 @@ export function BrainView({
   initialStats,
   initialSettings,
   initialEntries,
+  totalEntries,
+  currentPage,
+  pageSize,
 }: {
   workspaceId: string;
   initialStats: BrainStats;
   initialSettings: BrainSettings;
   initialEntries: BrainEntry[];
+  totalEntries: number;
+  currentPage: number;
+  pageSize: number;
 }) {
   const [stats, setStats] = useState(initialStats);
   const [settings, setSettings] = useState(initialSettings);
@@ -37,12 +43,12 @@ export function BrainView({
   const [savingSettings, setSavingSettings] = useState(false);
   const [selectedEntry, setSelectedEntry] = useState<BrainEntry | null>(null);
 
-  async function loadData() {
+  const loadData = useCallback(async (page: number) => {
     try {
       const [statsData, settingsData, entriesData] = await Promise.all([
         getBrainStatsAction(workspaceId),
         getBrainSettingsAction(workspaceId),
-        getBrainEntriesAction(workspaceId, 1),
+        getBrainEntriesAction(workspaceId, page),
       ]);
 
       setStats(statsData);
@@ -51,7 +57,11 @@ export function BrainView({
     } catch (error) {
       console.error("Failed to load brain data:", error);
     }
-  }
+  }, [workspaceId]);
+
+  useEffect(() => {
+    loadData(currentPage);
+  }, [currentPage, loadData]);
 
   async function handleTriggerIngest() {
     setTriggering("ingest");
@@ -60,7 +70,7 @@ export function BrainView({
       const result = await triggerBrainIngestionAction(workspaceId);
       if ("chatId" in result) {
         setMessage({ type: "success", text: result.message || "Ingestion triggered successfully" });
-        await loadData();
+        await loadData(currentPage);
       } else {
         setMessage({ type: "error", text: result.error || "Failed to trigger ingestion" });
       }
@@ -78,7 +88,7 @@ export function BrainView({
       const result = await triggerBrainReinforcementAction(workspaceId);
       if ("chatId" in result) {
         setMessage({ type: "success", text: result.message || "Reinforcement triggered successfully" });
-        await loadData();
+        await loadData(currentPage);
       } else {
         setMessage({ type: "error", text: result.error || "Failed to trigger reinforcement" });
       }
@@ -152,6 +162,9 @@ export function BrainView({
         <div className="grid gap-6">
           <BrainEntriesPanel
             entries={entries}
+            totalEntries={totalEntries}
+            currentPage={currentPage}
+            pageSize={pageSize}
             triggering={triggering}
             onProcessLogs={handleTriggerIngest}
             onEntryClick={setSelectedEntry}
