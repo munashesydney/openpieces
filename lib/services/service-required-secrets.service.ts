@@ -84,3 +84,28 @@ export async function getRequiredSecretsByServiceIds(serviceIds: string[]): Prom
     return acc;
   }, {} as Record<string, ServiceRequiredSecret[]>);
 }
+
+export async function getServicesByRequiredSecretKey(secretKey: string): Promise<ServiceRequiredSecret[]> {
+  const trimmed = secretKey.trim().toUpperCase();
+  return db
+    .select()
+    .from(serviceRequiredSecrets)
+    .where(eq(serviceRequiredSecrets.secretKey, trimmed));
+}
+
+export async function respawnServicesUsingSecret(workspaceId: string, secretKey: string) {
+  const { enqueueServiceSpawn } = await import("@/lib/queues/pg-boss");
+  const { validateServiceForSpawn } = await import("./service.service");
+
+  const servicesUsingSecret = await getServicesByRequiredSecretKey(secretKey);
+  const uniqueServiceIds = [...new Set(servicesUsingSecret.map((s) => s.serviceId))];
+
+  await Promise.all(
+    uniqueServiceIds.map(async (serviceId) => {
+      const validation = await validateServiceForSpawn(serviceId, workspaceId);
+      if (validation.valid) {
+        await enqueueServiceSpawn({ serviceId, workspaceId });
+      }
+    })
+  );
+}

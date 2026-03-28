@@ -100,7 +100,15 @@ export async function createSecret(input: {
 
   try {
     const [row] = await db.insert(secrets).values(toInsert).returning();
-    return mapRowToSecret(row);
+    const secret = mapRowToSecret(row);
+
+    // Auto-respawn services that use this secret
+    if (input.value) {
+      const { respawnServicesUsingSecret } = await import("./service-required-secrets.service");
+      respawnServicesUsingSecret(input.workspaceId, secret.key).catch(console.error);
+    }
+
+    return secret;
   } catch (err: any) {
     if (err?.code === "23505") {
       // unique violation
@@ -152,7 +160,15 @@ export async function updateSecret(input: {
       throw new ValidationError("Secret not found.");
     }
 
-    return mapRowToSecret(row);
+    const secret = mapRowToSecret(row);
+
+    // Auto-respawn services that use this secret
+    if (input.value) {
+      const { respawnServicesUsingSecret } = await import("./service-required-secrets.service");
+      respawnServicesUsingSecret(input.workspaceId, secret.key).catch(console.error);
+    }
+
+    return secret;
   } catch (err: any) {
     if (err?.code === "23505") {
       throw new ValidationError("A secret with that key already exists.");
