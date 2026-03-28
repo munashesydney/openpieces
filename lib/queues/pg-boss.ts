@@ -77,9 +77,15 @@ export type ChatExecutionJob = {
   userId: string;
 };
 
-export async function enqueueChatExecution(job: ChatExecutionJob) {
+export async function enqueueChatExecution(job: ChatExecutionJob): Promise<string> {
   const boss = await getPgBoss();
-  return boss.send(CHAT_EXECUTION_QUEUE, job);
+  const jobId = await boss.send(CHAT_EXECUTION_QUEUE, job);
+  return jobId ?? "";
+}
+
+export async function cancelChatExecution(jobId: string): Promise<void> {
+  const boss = await getPgBoss();
+  await boss.cancel(CHAT_EXECUTION_QUEUE, jobId);
 }
 
 export type ServiceSpawnJob = {

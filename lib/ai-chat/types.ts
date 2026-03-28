@@ -1,4 +1,4 @@
-export type AiChatStatus = "idle" | "pending" | "processing" | "completed" | "failed";
+export type AiChatStatus = "idle" | "pending" | "processing" | "completed" | "failed" | "stopped";
 
 export type AiMessageRole = "user" | "assistant";
 

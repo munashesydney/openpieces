@@ -131,11 +131,12 @@ export const aiChats = pgTable(
       .references(() => users.id, { onDelete: "cascade" }),
     title: text("title").notNull().default("New chat"),
     status: text("status", {
-      enum: ["idle", "pending", "processing", "completed", "failed"],
+      enum: ["idle", "pending", "processing", "completed", "failed", "stopped"],
     })
       .notNull()
       .default("idle"),
     error: text("error"),
+    stopped: boolean("stopped").notNull().default(false),
     model: text("model"),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().notNull(),

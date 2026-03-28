@@ -22,6 +22,7 @@ import {
 } from "@/lib/db/schema";
 import { createTools } from "@/lib/tools/registry";
 import { isValidUuid } from "@/lib/utils/uuid";
+import { getChatAbortController } from "@/lib/workers/chat-controller";
 
 const DEFAULT_CHAT_TITLE = "New chat";
 const DEFAULT_MODEL = process.env.AI_MODEL ?? "deepseek/deepseek-v3.2";
@@ -219,6 +220,22 @@ export async function updateAiChatStatus(
     .where(eq(aiChats.id, chatId));
 }
 
+export async function setChatStopped(chatId: string, stopped: boolean): Promise<void> {
+  await db
+    .update(aiChats)
+    .set({ stopped, updatedAt: new Date() })
+    .where(eq(aiChats.id, chatId));
+}
+
+export async function isChatStopped(chatId: string): Promise<boolean> {
+  const [chat] = await db
+    .select({ stopped: aiChats.stopped })
+    .from(aiChats)
+    .where(eq(aiChats.id, chatId))
+    .limit(1);
+  return chat?.stopped ?? false;
+}
+
 export async function updateAiMessage(
   messageId: string,
   data: {
@@ -280,11 +297,10 @@ async function getModelMessages(chatId: string): Promise<ModelMessage[]> {
   })) as ModelMessage[];
 }
 
-export async function executeAiChatJob(input: {
-  chatId: string;
-  workspaceId: string;
-  userId: string;
-}) {
+export async function executeAiChatJob(
+  input: { chatId: string; workspaceId: string; userId: string },
+  signal?: AbortSignal
+) {
   const chat = await getAiChatRecordById(input.chatId, input.userId);
   if (!chat) {
     throw new Error(`Chat ${input.chatId} was not found.`);
@@ -315,10 +331,35 @@ export async function executeAiChatJob(input: {
         userId: input.userId,
         chatId: input.chatId,
       }),
+      abortSignal: signal,
+      onAbort: async () => {
+        await updateAiMessage(assistantMessage.id, {
+          content: content || "Response was stopped.",
+          status: "complete",
+          toolCalls,
+          toolResults,
+        });
+        await updateAiChatStatus(chat.id, "stopped");
+      },
       stopWhen: stepCountIs(20),
     });
 
+    // Poll DB every 500ms to check if the user requested a stop
+    const stopPollInterval = setInterval(async () => {
+      if (signal?.aborted) {
+        clearInterval(stopPollInterval);
+        return;
+      }
+      const stopped = await isChatStopped(chat.id);
+      if (stopped) {
+        getChatAbortController(chat.id)?.abort();
+        clearInterval(stopPollInterval);
+      }
+    }, 500);
+
     for await (const part of result.fullStream) {
+      if (signal?.aborted) break;
+
       if (part.type === "text-delta") {
         content += part.text;
         await updateAiMessage(assistantMessage.id, {
@@ -386,6 +427,9 @@ export async function executeAiChatJob(input: {
 
     await updateAiChatStatus(chat.id, "completed");
   } catch (error) {
+    if (signal?.aborted) {
+      return;
+    }
     const errorMessage =
       error instanceof Error ? error.message : "An unexpected AI error occurred.";
 

@@ -209,6 +209,20 @@ export function OverviewPersonalView({
     }
   };
 
+  const handleStop = useCallback(async () => {
+    if (!selectedChatId) return;
+    clearPolling();
+    setIsSending(false);
+    setChats((currentChats) =>
+      currentChats.map((chat) =>
+        chat.id === selectedChatId
+          ? { ...chat, status: "stopped" as (typeof chat.status) }
+          : chat
+      )
+    );
+    await fetch(`/api/chats/${selectedChatId}/stop`, { method: "POST" });
+  }, [selectedChatId, clearPolling]);
+
   useEffect(() => {
     return () => {
       clearPolling();
@@ -282,8 +296,10 @@ export function OverviewPersonalView({
             <div className="shrink-0 animate-[slideDown_0.4s_ease-out_both]">
               <OverviewComposer
                 onSend={handleSend}
+                onStop={handleStop}
                 disabled={selectedChat.status === "pending" || selectedChat.status === "processing"}
                 isSending={isSending || loadingMessages}
+                isRunning={selectedChatIsRunning}
               />
             </div>
           </>

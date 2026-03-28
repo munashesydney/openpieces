@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Globe, Paperclip, Plus, Send, Waves } from "lucide-react";
+import { Globe, Paperclip, Plus, Send, Square, Waves } from "lucide-react";
 import { ModelPicker } from "./model-picker";
 import { ModeToggle, type ComposerMode } from "./mode-toggle";
 import { Card } from "../ui/card";
@@ -9,14 +9,18 @@ import { Button } from "@/components/basic/buttons/button";
 
 type OverviewComposerProps = {
   onSend?: (value: string) => void;
+  onStop?: () => void;
   disabled?: boolean;
   isSending?: boolean;
+  isRunning?: boolean;
 };
 
 export function OverviewComposer({
   onSend,
+  onStop,
   disabled = false,
   isSending = false,
+  isRunning = false,
 }: OverviewComposerProps) {
   const [mode, setMode] = useState<ComposerMode>("agent");
   const [value, setValue] = useState("");
@@ -123,15 +127,25 @@ export function OverviewComposer({
                 <Waves className="h-4 w-4" />
               </Button>
 
-              <Button
-                size="icon"
-                aria-label="Send"
-                onClick={handleSend}
-                isLoading={isSending}
-                disabled={disabled}
-              >
-                <Send className="h-4 w-4" />
-              </Button>
+              {isRunning ? (
+                <Button
+                  size="icon"
+                  aria-label="Stop"
+                  onClick={onStop}
+                >
+                  <Square className="h-4 w-4" />
+                </Button>
+              ) : (
+                <Button
+                  size="icon"
+                  aria-label="Send"
+                  onClick={handleSend}
+                  isLoading={isSending}
+                  disabled={disabled}
+                >
+                  <Send className="h-4 w-4" />
+                </Button>
+              )}
             </div>
           </div>
         </Card>
