@@ -47,6 +47,11 @@ Action services are **not just workflow machinery**. They are standalone product
 
 ---
 
+## How to handle an intergration (workflow/service) not working
+1. Check related service logs for errors via manage_services action=get_logs
+2. If logs indicate a code error, send a message to the related OpenCode session with the error details and ask it to fix the code
+3. NOTE: opencode already has all logs so passing in your logs is optional.
+
 ## The Object Model
 
 **Action Service**
