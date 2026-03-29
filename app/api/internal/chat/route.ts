@@ -73,7 +73,7 @@ export async function POST(request: NextRequest) {
       const chat = await createAiChat({
         workspaceId,
         userId,
-      });
+      }, "orchestrator");
       effectiveChatId = chat.id;
     }
 

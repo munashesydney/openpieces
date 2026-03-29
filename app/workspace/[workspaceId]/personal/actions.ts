@@ -36,7 +36,7 @@ export async function sendAiMessageAction(
     const chat = await createAiChat({
       workspaceId,
       userId: user.id,
-    });
+    }, "orchestrator");
     effectiveChatId = chat.id;
   }
 

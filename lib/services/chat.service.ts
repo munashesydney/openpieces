@@ -2,7 +2,8 @@ import { createGateway } from "@ai-sdk/gateway";
 import type { ModelMessage } from "ai";
 import { stepCountIs, streamText } from "ai";
 import { and, asc, desc, eq } from "drizzle-orm";
-import { OPENPIECES_CHAT_SYSTEM_PROMPT } from "@/lib/ai-chat/promptV2";
+import { OPENPIECES_CHAT_SYSTEM_PROMPT } from "@/lib/ai-chat/prompts/orchestratorV3";
+import { EVENTS_CHAT_SYSTEM_PROMPT } from "@/lib/ai-chat/prompts/events";
 import type {
   AiChatListItem,
   AiChatMessage,
@@ -107,7 +108,10 @@ function getToolResultError(value: unknown): string {
   }
 }
 
-export async function createAiChat(data: Pick<NewAiChat, "workspaceId" | "userId">) {
+export async function createAiChat(
+  data: Pick<NewAiChat, "workspaceId" | "userId">,
+  agentType: string = "orchestrator"
+) {
   const [chat] = await db
     .insert(aiChats)
     .values({
@@ -116,6 +120,7 @@ export async function createAiChat(data: Pick<NewAiChat, "workspaceId" | "userId
       title: DEFAULT_CHAT_TITLE,
       status: "idle",
       model: DEFAULT_MODEL,
+      agentType,
     })
     .returning();
 
@@ -322,9 +327,10 @@ export async function executeAiChatJob(
   let toolResults: AiToolResult[] = [];
 
   try {
+    const systemPrompt = chat.agentType === "events" ? EVENTS_CHAT_SYSTEM_PROMPT : OPENPIECES_CHAT_SYSTEM_PROMPT;
     const result = streamText({
       model: getModel(),
-      system: OPENPIECES_CHAT_SYSTEM_PROMPT,
+      system: systemPrompt,
       messages: await getModelMessages(chat.id),
       tools: createTools({
         workspaceId: input.workspaceId,

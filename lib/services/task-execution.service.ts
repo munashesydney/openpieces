@@ -124,7 +124,7 @@ export async function enqueueTaskForExecution(task: Task): Promise<void> {
   const chat = await createAiChat({
     workspaceId: task.workspaceId,
     userId,
-  });
+  }, "orchestrator");
 
   // Create a detailed message describing the task
   const taskDescription = task.description || "No description provided.";

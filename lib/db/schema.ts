@@ -138,6 +138,7 @@ export const aiChats = pgTable(
     error: text("error"),
     stopped: boolean("stopped").notNull().default(false),
     model: text("model"),
+    agentType: text("agent_type").notNull().default("orchestrator"),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().notNull(),
   },
