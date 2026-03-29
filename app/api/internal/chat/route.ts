@@ -64,12 +64,11 @@ export async function POST(request: NextRequest) {
     if (effectiveChatId) {
       const existingChat = await getAiChatRecordById(effectiveChatId, userId);
       if (!existingChat) {
-        return NextResponse.json(
-          { error: "Chat not found" },
-          { status: 404 }
-        );
+        effectiveChatId = null;
       }
-    } else {
+    }
+
+    if (!effectiveChatId) {
       const chat = await createAiChat({
         workspaceId,
         userId,

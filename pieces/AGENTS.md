@@ -287,6 +287,7 @@ payment_intent: pi_xyz789
 ```
 
 Pass `chatId` to continue an existing orchestrator conversation, or `null` to start a new one.
+IMPORTANT: chatId is an OPENPIECES chatId not telegram chatId or any other extenal chatId. Its optional so if you don't have it you don't have to pass it in.
 
 **Action services never call `notifyOrchestrator`** — they respond to the orchestrator, that's it.
 

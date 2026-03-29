@@ -1,6 +1,7 @@
 import { PgBoss } from "pg-boss";
 
 export const CHAT_EXECUTION_QUEUE = "ai-chat-execution";
+export const AGENT_CHAT_EXECUTION_QUEUE = "agent-chat-execution";
 export const SERVICE_SPAWN_QUEUE = "service-spawn";
 export const SERVICE_STOP_QUEUE = "service-stop";
 export const TASK_EXECUTION_QUEUE = "task-execution";
@@ -43,6 +44,11 @@ export async function getPgBoss(): Promise<PgBoss> {
         await boss.createQueue(CHAT_EXECUTION_QUEUE);
       }
 
+      const existingAgentQueue = await boss.getQueue(AGENT_CHAT_EXECUTION_QUEUE);
+      if (!existingAgentQueue) {
+        await boss.createQueue(AGENT_CHAT_EXECUTION_QUEUE);
+      }
+
       const existingSpawnQueue = await boss.getQueue(SERVICE_SPAWN_QUEUE);
       if (!existingSpawnQueue) {
         await boss.createQueue(SERVICE_SPAWN_QUEUE);
@@ -80,6 +86,12 @@ export type ChatExecutionJob = {
 export async function enqueueChatExecution(job: ChatExecutionJob): Promise<string> {
   const boss = await getPgBoss();
   const jobId = await boss.send(CHAT_EXECUTION_QUEUE, job);
+  return jobId ?? "";
+}
+
+export async function enqueueAgentChatExecution(job: ChatExecutionJob): Promise<string> {
+  const boss = await getPgBoss();
+  const jobId = await boss.send(AGENT_CHAT_EXECUTION_QUEUE, job);
   return jobId ?? "";
 }
 

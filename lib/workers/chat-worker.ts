@@ -1,4 +1,4 @@
-import { CHAT_EXECUTION_QUEUE, type ChatExecutionJob, getPgBoss } from "@/lib/queues/pg-boss";
+import { CHAT_EXECUTION_QUEUE, AGENT_CHAT_EXECUTION_QUEUE, type ChatExecutionJob, getPgBoss } from "@/lib/queues/pg-boss";
 import { executeAiChatJob, setChatStopped } from "@/lib/services/chat.service";
 import {
   registerChatController,
@@ -21,6 +21,35 @@ export async function startChatWorker() {
     const { chatId, workspaceId, userId } = job.data as ChatExecutionJob;
 
     // Reset stopped flag so a re-sent message can run
+    await setChatStopped(chatId, false);
+
+    const abortController = registerChatController(chatId, job.id);
+
+    try {
+      await executeAiChatJob({ chatId, workspaceId, userId }, abortController.signal);
+    } finally {
+      removeChatController(chatId);
+    }
+  });
+
+  return boss;
+}
+
+export async function startAgentChatWorker() {
+  const boss = await getPgBoss();
+
+  boss.on("error", (error) => {
+    console.error("[agent-worker] pg-boss error:", error);
+  });
+
+  await boss.work(AGENT_CHAT_EXECUTION_QUEUE, async (jobs) => {
+    const job = jobs[0];
+    if (!job) {
+      return;
+    }
+
+    const { chatId, workspaceId, userId } = job.data as ChatExecutionJob;
+
     await setChatStopped(chatId, false);
 
     const abortController = registerChatController(chatId, job.id);

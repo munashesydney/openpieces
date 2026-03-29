@@ -4,6 +4,7 @@ import { stepCountIs, streamText } from "ai";
 import { and, asc, desc, eq } from "drizzle-orm";
 import { OPENPIECES_CHAT_SYSTEM_PROMPT } from "@/lib/ai-chat/prompts/orchestratorV3";
 import { EVENTS_CHAT_SYSTEM_PROMPT } from "@/lib/ai-chat/prompts/events";
+import { ARCHITECTURE_CHAT_SYSTEM_PROMPT } from "@/lib/ai-chat/prompts/architectureV2";
 import type {
   AiChatListItem,
   AiChatMessage,
@@ -327,7 +328,12 @@ export async function executeAiChatJob(
   let toolResults: AiToolResult[] = [];
 
   try {
-    const systemPrompt = chat.agentType === "events" ? EVENTS_CHAT_SYSTEM_PROMPT : OPENPIECES_CHAT_SYSTEM_PROMPT;
+    const systemPrompt =
+      chat.agentType === "events"
+        ? EVENTS_CHAT_SYSTEM_PROMPT
+        : chat.agentType === "architecture"
+          ? ARCHITECTURE_CHAT_SYSTEM_PROMPT
+          : OPENPIECES_CHAT_SYSTEM_PROMPT;
     const result = streamText({
       model: getModel(),
       system: systemPrompt,
