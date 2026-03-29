@@ -5,12 +5,13 @@ import {
   createService,
   updateService,
   deleteService,
+  getServiceLogs,
 } from "@/lib/services/service.service";
 import type { ToolContext } from "@/lib/tools/registry";
 import type { ServiceToolInput } from "./definition";
 
 export async function executeService(input: ServiceToolInput, context: ToolContext) {
-  const { action, serviceId, workflowId, page, limit, createDetails, updateDetails } = input;
+  const { action, serviceId, workflowId, page, limit, createDetails, updateDetails, maxLines } = input;
   const { workspaceId } = context;
 
   if (!workspaceId) {
@@ -92,6 +93,13 @@ export async function executeService(input: ServiceToolInput, context: ToolConte
         throw new Error(`Service not found or delete failed: ${serviceId}`);
       }
       return { success: true, deleted: serviceId };
+    }
+
+    case "get_logs": {
+      if (!serviceId) {
+        throw new Error("serviceId is required for action 'get_logs'");
+      }
+      return await getServiceLogs(serviceId, workspaceId, maxLines);
     }
 
     default: {

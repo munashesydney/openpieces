@@ -85,6 +85,9 @@ export async function createSecret(input: {
   if (key.length > 128) {
     throw new ValidationError("Key is too long (max 128 characters).");
   }
+  if (input.value == null || input.value === "") {
+    throw new ValidationError("Value is required.");
+  }
 
   const encrypted = encryptSecret(input.value);
 
@@ -135,6 +138,9 @@ export async function updateSecret(input: {
   }
   if (key.length > 128) {
     throw new ValidationError("Key is too long (max 128 characters).");
+  }
+  if (input.value == null || input.value === "") {
+    throw new ValidationError("Value is required.");
   }
 
   const encrypted = encryptSecret(input.value);
@@ -212,7 +218,10 @@ function mapRowToSecret(row: SecretRow): Secret {
   };
 }
 
-function safeDecrypt(valueEncrypted: string): string {
+function safeDecrypt(valueEncrypted: string | null): string {
+  if (!valueEncrypted) {
+    return "";
+  }
   try {
     return decryptSecret(valueEncrypted);
   } catch (err) {

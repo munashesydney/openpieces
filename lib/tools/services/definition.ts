@@ -8,7 +8,7 @@ export const serviceToolDefinition = {
     "Manage services in the workspace. Use to list services, get one by id, list by workflow, create, update, or delete a service. Services can be type 'trigger' (requires workflowId) or 'action' (standalone, linked to workflows via workflow_action_services). Directory is required when creating a service (used for OpenCode sessions).",
   inputSchema: z.object({
     action: z
-      .enum(["list", "get", "create", "update", "delete"])
+      .enum(["list", "get", "create", "update", "delete", "get_logs"])
       .describe("The action to perform"),
     serviceId: z
       .string()
@@ -53,6 +53,11 @@ export const serviceToolDefinition = {
       })
       .optional()
       .describe("Details for update action. At least one field required."),
+    maxLines: z
+      .number()
+      .optional()
+      .default(50)
+      .describe("Maximum number of log lines to return for get_logs action. Max 50."),
   }),
 };
 

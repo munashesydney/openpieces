@@ -4,6 +4,7 @@ import { services, workflows, type NewService, type Service } from "../db/schema
 import { isValidUuid } from "../utils/uuid";
 import { ValidationError } from "../errors/validation-error";
 import { getBaseUrl, buildServiceUrl } from "../utils/url";
+import { readServiceLogTail } from "./service-log-stream";
 
 const VALID_SERVICE_TYPES = ["trigger", "action"] as const;
 
@@ -190,4 +191,28 @@ export async function validateServiceForSpawn(serviceId: string, workspaceId: st
   }
 
   return { valid: true };
+}
+
+export async function getServiceLogs(
+  serviceId: string,
+  workspaceId: string,
+  maxLines = 50
+): Promise<{ logs: string[]; totalLines: number }> {
+  const service = await getServiceById(serviceId, workspaceId);
+  if (!service) {
+    throw new ValidationError(`Service not found: ${serviceId}`);
+  }
+  if (!service.directory?.trim()) {
+    throw new ValidationError(`Service has no directory set: ${serviceId}`);
+  }
+
+  const { content } = await readServiceLogTail(service.directory);
+  const lines = content.split("\n").filter((line) => line.length > 0);
+  const clampedMax = Math.min(Math.max(1, maxLines), 50);
+  const selectedLines = lines.slice(-clampedMax);
+
+  return {
+    logs: selectedLines,
+    totalLines: lines.length,
+  };
 }

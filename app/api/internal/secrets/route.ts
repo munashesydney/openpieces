@@ -89,7 +89,7 @@ export async function POST(request: NextRequest) {
       }
 
       case "create": {
-        if (!body.key || body.value == null) {
+        if (!body.key || body.value == null || body.value === "") {
           return NextResponse.json(
             { error: "key and value are required for action 'create'" },
             { status: 400 }
@@ -111,7 +111,7 @@ export async function POST(request: NextRequest) {
             { status: 400 }
           );
         }
-        if (!body.key && body.value == null) {
+        if (!body.key && (body.value == null || body.value === "")) {
           return NextResponse.json(
             { error: "key or value is required for action 'update'" },
             { status: 400 }

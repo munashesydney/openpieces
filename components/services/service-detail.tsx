@@ -20,7 +20,7 @@ interface ServiceDetailProps {
   service: Service & { url?: string };
   endpoints: ServiceEndpoint[];
   requiredSecrets: ServiceRequiredSecret[];
-  workspaceSecrets: { key: string; id: string }[];
+  workspaceSecrets: { key: string; id: string; value: string }[];
   workspaceId: string;
 }
 

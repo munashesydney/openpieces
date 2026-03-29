@@ -19,6 +19,9 @@ function getKey(): Buffer {
 }
 
 export function encryptSecret(plaintext: string): string {
+  if (plaintext == null || plaintext === "") {
+    throw new Error("Cannot encrypt empty or null value");
+  }
   const key = getKey();
   const iv = crypto.randomBytes(IV_LENGTH);
   const cipher = crypto.createCipheriv(ALGORITHM, key, iv);
