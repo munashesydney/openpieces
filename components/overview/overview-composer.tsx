@@ -1,30 +1,39 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Globe, Paperclip, Plus, Send, Square, Waves } from "lucide-react";
+import { Globe, Paperclip, Plus, Send, Square, Waves, Minimize2 } from "lucide-react";
 import { ModelPicker } from "./model-picker";
 import { ModeToggle, type ComposerMode } from "./mode-toggle";
 import { Card } from "../ui/card";
 import { Button } from "@/components/basic/buttons/button";
+import type { ContextInfo } from "./overview-chat-area";
 
 type OverviewComposerProps = {
   onSend?: (value: string) => void;
   onStop?: () => void;
+  onCompact?: () => void;
   disabled?: boolean;
   isSending?: boolean;
   isRunning?: boolean;
+  isCompacting?: boolean;
+  contextInfo?: ContextInfo | null;
 };
 
 export function OverviewComposer({
   onSend,
   onStop,
+  onCompact,
   disabled = false,
   isSending = false,
   isRunning = false,
+  isCompacting = false,
+  contextInfo,
 }: OverviewComposerProps) {
   const [mode, setMode] = useState<ComposerMode>("agent");
   const [value, setValue] = useState("");
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  const canCompact = contextInfo && contextInfo.percentage >= 50 && onCompact && !isCompacting;
 
   const handleSend = () => {
     const trimmed = value.trim();
@@ -101,31 +110,21 @@ export function OverviewComposer({
 
               <ModelPicker />
 
-              <Button
-                variant="secondary"
-                size="icon"
-                aria-label="Browse"
-              >
-                <Globe className="h-4 w-4" />
-              </Button>
-
-              <Button
-                variant="secondary"
-                size="icon"
-                aria-label="More"
-              >
-                <span className="block text-lg leading-none pt-1">…</span>
-              </Button>
+              {canCompact && (
+                <Button
+                  variant="secondary"
+                  size="icon"
+                  aria-label="Compact context"
+                  title={`Context at ${Math.round(contextInfo.percentage)}% — click to compact`}
+                  onClick={onCompact}
+                  disabled={isCompacting}
+                >
+                  <Minimize2 className="h-4 w-4" />
+                </Button>
+              )}
             </div>
 
             <div className="flex items-center gap-2">
-              <Button
-                variant="secondary"
-                size="icon"
-                aria-label="Voice"
-              >
-                <Waves className="h-4 w-4" />
-              </Button>
 
               {isRunning ? (
                 <Button

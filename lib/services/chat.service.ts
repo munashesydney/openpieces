@@ -1,10 +1,12 @@
-import { createGateway } from "@ai-sdk/gateway";
+import { createGateway, GatewayInternalServerError } from "@ai-sdk/gateway";
 import type { ModelMessage } from "ai";
 import { stepCountIs, streamText } from "ai";
 import { and, asc, desc, eq } from "drizzle-orm";
 import { OPENPIECES_CHAT_SYSTEM_PROMPT } from "@/lib/ai-chat/prompts/orchestratorV3";
 import { EVENTS_CHAT_SYSTEM_PROMPT } from "@/lib/ai-chat/prompts/events";
 import { ARCHITECTURE_CHAT_SYSTEM_PROMPT } from "@/lib/ai-chat/prompts/architectureV2";
+import { COMPACTOR_PROMPT } from "@/lib/ai-chat/prompts/compactor";
+import { getContextInfo } from "@/lib/ai-chat/context-manager";
 import type {
   AiChatListItem,
   AiChatMessage,
@@ -303,6 +305,61 @@ async function getModelMessages(chatId: string): Promise<ModelMessage[]> {
   })) as ModelMessage[];
 }
 
+export async function compactChat(
+  chatId: string,
+  _systemPrompt: string
+): Promise<string> {
+  const messages = await getAiMessages(chatId);
+
+  const transcript = messages
+    .map((m) => `${m.role}: ${m.content}`)
+    .join("\n\n");
+
+  const result = streamText({
+    model: getModel(),
+    system: COMPACTOR_PROMPT,
+    messages: [
+      {
+        role: "user",
+        content: `Please summarize this conversation:\n\n${transcript}`,
+      },
+    ] as ModelMessage[],
+    maxOutputTokens: 4000,
+    stopWhen: stepCountIs(2),
+  });
+
+  let summary = "";
+  for await (const part of result.fullStream) {
+    if (part.type === "text-delta") {
+      summary += part.text;
+    }
+  }
+
+  return summary.trim();
+}
+
+export async function replaceMessagesWithSummary(
+  chatId: string,
+  summary: string
+): Promise<void> {
+  await db.delete(aiMessages).where(eq(aiMessages.chatId, chatId));
+
+  await createAiMessage({
+    chatId,
+    role: "user",
+    content: `## Prior Conversation Summary\n\n${summary}`,
+    status: "complete",
+  });
+
+  await createAiMessage({
+    chatId,
+    role: "assistant",
+    content:
+      "I've compacted our conversation history to get us back on track. What would you like to continue with?",
+    status: "complete",
+  });
+}
+
 export async function executeAiChatJob(
   input: { chatId: string; workspaceId: string; userId: string },
   signal?: AbortSignal
@@ -327,13 +384,21 @@ export async function executeAiChatJob(
   let toolCalls: AiToolCall[] = [];
   let toolResults: AiToolResult[] = [];
 
+  const systemPrompt =
+    chat.agentType === "events"
+      ? EVENTS_CHAT_SYSTEM_PROMPT
+      : chat.agentType === "architecture"
+        ? ARCHITECTURE_CHAT_SYSTEM_PROMPT
+        : OPENPIECES_CHAT_SYSTEM_PROMPT;
+
   try {
-    const systemPrompt =
-      chat.agentType === "events"
-        ? EVENTS_CHAT_SYSTEM_PROMPT
-        : chat.agentType === "architecture"
-          ? ARCHITECTURE_CHAT_SYSTEM_PROMPT
-          : OPENPIECES_CHAT_SYSTEM_PROMPT;
+    const messages = await getModelMessages(chat.id);
+    const contextInfo = await getContextInfo(chat.model ?? DEFAULT_MODEL, messages, systemPrompt);
+    if (contextInfo.needsCompaction) {
+      const summary = await compactChat(chat.id, systemPrompt);
+      await replaceMessagesWithSummary(chat.id, summary);
+    }
+
     const result = streamText({
       model: getModel(),
       system: systemPrompt,
@@ -442,6 +507,20 @@ export async function executeAiChatJob(
     if (signal?.aborted) {
       return;
     }
+
+    const isContextLengthError =
+      error instanceof GatewayInternalServerError &&
+      String(error.message).includes("token count exceeds");
+
+    if (isContextLengthError) {
+      try {
+        const summary = await compactChat(chat.id, systemPrompt);
+        await replaceMessagesWithSummary(chat.id, summary);
+      } catch {
+        // compaction failed, fall through to error handling
+      }
+    }
+
     const errorMessage =
       error instanceof Error ? error.message : "An unexpected AI error occurred.";
 

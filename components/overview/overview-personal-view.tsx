@@ -6,7 +6,7 @@ import { Button } from "@/components/basic/buttons/button";
 import type { AiChatListItem, AiChatMessage } from "@/lib/ai-chat/types";
 import type { SendAiMessageActionResult } from "@/app/workspace/[workspaceId]/personal/actions";
 import { OverviewAiChatsSidebar } from "./overview-ai-chats-sidebar";
-import { OverviewChatArea, type ChatMessage } from "./overview-chat-area";
+import { OverviewChatArea, type ChatMessage, type ContextInfo } from "./overview-chat-area";
 import { OverviewComposer } from "./overview-composer";
 import { OverviewTitle } from "./overview-title";
 
@@ -71,6 +71,8 @@ export function OverviewPersonalView({
   );
   const [loadingMessages, setLoadingMessages] = useState(false);
   const [isSending, setIsSending] = useState(false);
+  const [contextInfo, setContextInfo] = useState<ContextInfo | null>(null);
+  const [isCompacting, setIsCompacting] = useState(false);
   const pollingRef = useRef<number | null>(null);
 
   const selectedChat = useMemo(
@@ -109,6 +111,33 @@ export function OverviewPersonalView({
       setLoadingMessages(false);
     }
   }, []);
+
+  const fetchContextInfo = useCallback(async (chatId: string) => {
+    try {
+      const response = await fetch(`/api/chats/${chatId}/context`);
+      if (!response.ok) return;
+      const info = (await response.json()) as ContextInfo;
+      setContextInfo(info);
+    } catch {
+      // non-critical
+    }
+  }, []);
+
+  const handleCompact = useCallback(async () => {
+    if (!selectedChatId || isCompacting) return;
+    setIsCompacting(true);
+    try {
+      const response = await fetch(`/api/chats/${selectedChatId}/compact`, { method: "POST" });
+      if (response.ok) {
+        await fetchMessages(selectedChatId);
+        await fetchContextInfo(selectedChatId);
+      }
+    } catch {
+      // non-critical
+    } finally {
+      setIsCompacting(false);
+    }
+  }, [selectedChatId, isCompacting, fetchMessages, fetchContextInfo]);
 
   const startPolling = useCallback(
     (chatId: string) => {
@@ -236,7 +265,8 @@ export function OverviewPersonalView({
     }
 
     void fetchMessages(selectedChatId);
-  }, [selectedChatId, fetchMessages]);
+    void fetchContextInfo(selectedChatId);
+  }, [selectedChatId, fetchMessages, fetchContextInfo]);
 
   useEffect(() => {
     if (!selectedChatId) {
@@ -292,14 +322,19 @@ export function OverviewPersonalView({
               messages={selectedMessages}
               status={selectedChat.status}
               error={selectedChat.error}
+              contextInfo={contextInfo}
+              onCompact={handleCompact}
             />
             <div className="shrink-0 animate-[slideDown_0.4s_ease-out_both]">
               <OverviewComposer
                 onSend={handleSend}
                 onStop={handleStop}
+                onCompact={handleCompact}
                 disabled={selectedChat.status === "pending" || selectedChat.status === "processing"}
                 isSending={isSending || loadingMessages}
                 isRunning={selectedChatIsRunning}
+                isCompacting={isCompacting}
+                contextInfo={contextInfo}
               />
             </div>
           </>
