@@ -268,7 +268,7 @@ export async function summarizeActivityLogForBrain(
   const chat = await createAiChat({
     workspaceId: activityEntry.workspaceId,
     userId,
-  }, "orchestrator");
+  }, "brain");
 
   const activityDescription = `
 Activity Type: ${activityEntry.recordType}
@@ -338,7 +338,7 @@ export async function reinforceBrainEntryWithAI(
   const chat = await createAiChat({
     workspaceId: brainEntry.workspaceId,
     userId,
-  }, "orchestrator");
+  }, "brain");
 
   const messageContent = `Please review and reinforce the following memory entry. This entry has been reinforced ${brainEntry.reinforcementCount} times before and has a confidence score of ${brainEntry.confidence}.
 
@@ -391,7 +391,7 @@ export async function triggerBrainIngestion(workspaceId: string): Promise<{
     throw new Error("Could not find workspace owner");
   }
 
-  const chat = await createAiChat({ workspaceId, userId }, "orchestrator");
+  const chat = await createAiChat({ workspaceId, userId }, "brain");
 
   const logsDescription = unprocessedLogs
     .map((log, i) => `--- Activity ${i + 1} ---
@@ -448,7 +448,7 @@ export async function triggerBrainReinforcement(workspaceId: string): Promise<{
     throw new Error("Could not find workspace owner");
   }
 
-  const chat = await createAiChat({ workspaceId, userId }, "orchestrator");
+  const chat = await createAiChat({ workspaceId, userId }, "brain");
 
   const entriesDescription = unreinforcedEntries
     .map((entry, i) => `--- Memory ${i + 1} ---
