@@ -2,6 +2,7 @@
 
 import { CheckCircle2, Loader2, Wrench, XCircle } from "lucide-react";
 import type { AiToolCall, AiToolResult } from "@/lib/ai-chat/types";
+import { getActionLabel } from "@/lib/tools/action-labels";
 
 type ChatToolCallsProps = {
   toolCalls: AiToolCall[];
@@ -73,7 +74,10 @@ export function ChatToolCalls({ toolCalls, toolResults }: ChatToolCallsProps) {
                   <Wrench className="h-3.5 w-3.5 text-[var(--muted)]" />
                 </div>
                 <p className="truncate text-sm font-medium text-[var(--foreground)]">
-                  {toolCall.toolName}
+                  {getActionLabel(
+                  toolCall.toolName,
+                  (toolCall.input as { action?: string })?.action ?? ""
+                )}
                 </p>
               </div>
 
