@@ -1,4 +1,4 @@
-import { getPgBoss, BRAIN_QUEUE } from "@/lib/queues/pg-boss";
+import { getPgBoss, BRAIN_QUEUE, PG_BOSS_CONCURRENCY } from "@/lib/queues/pg-boss";
 import {
   getOrCreateBrainSettings,
   triggerBrainIngestion,
@@ -83,7 +83,7 @@ export async function startBrainWorker() {
   });
 
   // Handle brain processing jobs
-  await boss.work(BRAIN_QUEUE, async (jobs) => {
+  await boss.work(BRAIN_QUEUE, { localConcurrency: PG_BOSS_CONCURRENCY }, async (jobs) => {
     const job = jobs[0];
     if (!job) {
       return;

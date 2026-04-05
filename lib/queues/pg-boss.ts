@@ -14,6 +14,7 @@ declare global {
 
 // pg-boss manages its own connection pool — cap it to avoid exhausting PostgreSQL connections.
 const PG_BOSS_POOL_SIZE = parseInt(process.env.PG_BOSS_POOL_SIZE ?? "5", 10);
+export const PG_BOSS_CONCURRENCY = parseInt(process.env.PG_BOSS_CONCURRENCY ?? "10", 10);
 if (isNaN(PG_BOSS_POOL_SIZE) || PG_BOSS_POOL_SIZE < 1) {
   throw new Error(`Invalid PG_BOSS_POOL_SIZE value: ${process.env.PG_BOSS_POOL_SIZE}. Must be a positive integer.`);
 }

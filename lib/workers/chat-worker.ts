@@ -1,4 +1,4 @@
-import { CHAT_EXECUTION_QUEUE, AGENT_CHAT_EXECUTION_QUEUE, type ChatExecutionJob, getPgBoss } from "@/lib/queues/pg-boss";
+import { CHAT_EXECUTION_QUEUE, AGENT_CHAT_EXECUTION_QUEUE, type ChatExecutionJob, getPgBoss, PG_BOSS_CONCURRENCY } from "@/lib/queues/pg-boss";
 import { executeAiChatJob, setChatStopped } from "@/lib/services/chat.service";
 import {
   registerChatController,
@@ -12,7 +12,7 @@ export async function startChatWorker() {
     console.error("[ai-worker] pg-boss error:", error);
   });
 
-  await boss.work(CHAT_EXECUTION_QUEUE, async (jobs) => {
+  await boss.work(CHAT_EXECUTION_QUEUE, { localConcurrency: PG_BOSS_CONCURRENCY }, async (jobs) => {
     const job = jobs[0];
     if (!job) {
       return;
@@ -42,7 +42,7 @@ export async function startAgentChatWorker() {
     console.error("[agent-worker] pg-boss error:", error);
   });
 
-  await boss.work(AGENT_CHAT_EXECUTION_QUEUE, async (jobs) => {
+  await boss.work(AGENT_CHAT_EXECUTION_QUEUE, { localConcurrency: PG_BOSS_CONCURRENCY }, async (jobs) => {
     const job = jobs[0];
     if (!job) {
       return;

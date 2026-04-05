@@ -1,4 +1,4 @@
-import { getPgBoss, TASK_EXECUTION_QUEUE, type TaskExecutionJob } from "@/lib/queues/pg-boss";
+import { getPgBoss, TASK_EXECUTION_QUEUE, type TaskExecutionJob, PG_BOSS_CONCURRENCY } from "@/lib/queues/pg-boss";
 import { processDueTasks } from "@/lib/services/task-execution.service";
 
 const POLL_INTERVAL_MS = 30_000; // 30 seconds
@@ -22,7 +22,7 @@ export async function startTaskWorker() {
   });
 
   // Handle task execution jobs (when AI needs to process a task chat)
-  await boss.work(TASK_EXECUTION_QUEUE, async (jobs) => {
+  await boss.work(TASK_EXECUTION_QUEUE, { localConcurrency: PG_BOSS_CONCURRENCY }, async (jobs) => {
     const job = jobs[0];
     if (!job) {
       return;
