@@ -1,7 +1,7 @@
 import { createGateway, GatewayInternalServerError } from "@ai-sdk/gateway";
 import type { ModelMessage } from "ai";
 import { stepCountIs, streamText } from "ai";
-import { and, asc, desc, eq } from "drizzle-orm";
+import { and, asc, count, desc, eq } from "drizzle-orm";
 import { OPENPIECES_CHAT_SYSTEM_PROMPT } from "@/lib/ai-chat/prompts/orchestratorV3";
 import { EVENTS_CHAT_SYSTEM_PROMPT } from "@/lib/ai-chat/prompts/events";
 import { ARCHITECTURE_CHAT_SYSTEM_PROMPT } from "@/lib/ai-chat/prompts/architectureV2";
@@ -130,18 +130,36 @@ export async function createAiChat(
   return serializeChat(chat);
 }
 
-export async function getAiChatsForWorkspace(workspaceId: string, userId: string) {
+export async function getAiChatsForWorkspace(
+  workspaceId: string,
+  userId: string,
+  page: number = 1,
+  pageSize: number = 10
+) {
   if (!isValidUuid(workspaceId) || !isValidUuid(userId)) {
-    return [];
+    return { data: [], total: 0 };
   }
 
-  const chats = await db
-    .select()
-    .from(aiChats)
-    .where(and(eq(aiChats.workspaceId, workspaceId), eq(aiChats.userId, userId)))
-    .orderBy(desc(aiChats.updatedAt), desc(aiChats.createdAt));
+  const offset = (page - 1) * pageSize;
 
-  return chats.map(serializeChat);
+  const [data, totalResult] = await Promise.all([
+    db
+      .select()
+      .from(aiChats)
+      .where(and(eq(aiChats.workspaceId, workspaceId), eq(aiChats.userId, userId)))
+      .orderBy(desc(aiChats.updatedAt), desc(aiChats.createdAt))
+      .limit(pageSize)
+      .offset(offset),
+    db
+      .select({ count: count() })
+      .from(aiChats)
+      .where(and(eq(aiChats.workspaceId, workspaceId), eq(aiChats.userId, userId))),
+  ]);
+
+  return {
+    data: data.map(serializeChat),
+    total: totalResult[0]?.count ?? 0,
+  };
 }
 
 export async function getAiChatById(chatId: string, userId: string) {

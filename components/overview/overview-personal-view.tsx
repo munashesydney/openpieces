@@ -22,6 +22,7 @@ type OverviewPersonalViewProps = {
   initialChats: AiChatListItem[];
   initialSelectedChatId: string | null;
   initialMessages: Record<string, AiChatMessage[]>;
+  initialTotal: number;
   sendMessageAction: (
     chatId: string | null,
     content: string
@@ -53,14 +54,20 @@ function upsertChat(currentChats: Chat[], chat: Chat): Chat[] {
 }
 
 export function OverviewPersonalView({
+  workspaceId,
   initialChats,
   initialSelectedChatId,
   initialMessages,
+  initialTotal,
   sendMessageAction,
 }: OverviewPersonalViewProps) {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [chats, setChats] = useState<Chat[]>(initialChats.map(mapChat));
   const [selectedChatId, setSelectedChatId] = useState<string | null>(initialSelectedChatId);
+  const [hasMore, setHasMore] = useState(initialChats.length < initialTotal);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 10;
   const [messages, setMessages] = useState<Record<string, ChatMessage[]>>(() =>
     Object.fromEntries(
       Object.entries(initialMessages).map(([chatId, chatMessages]) => [
@@ -252,6 +259,27 @@ export function OverviewPersonalView({
     await fetch(`/api/chats/${selectedChatId}/stop`, { method: "POST" });
   }, [selectedChatId, clearPolling]);
 
+  const handleLoadMore = useCallback(async () => {
+    if (isLoadingMore || !hasMore) return;
+    setIsLoadingMore(true);
+    try {
+      const nextPage = currentPage + 1;
+      const response = await fetch(
+        `/api/chats?workspaceId=${workspaceId}&page=${nextPage}&pageSize=${pageSize}`
+      );
+      if (!response.ok) throw new Error("Failed to load more chats");
+      const result = (await response.json()) as { data: AiChatListItem[]; total: number };
+      const newChats = result.data.map(mapChat);
+      setChats((prev) => [...prev, ...newChats]);
+      setCurrentPage(nextPage);
+      setHasMore(newChats.length > 0 && (nextPage * pageSize) < result.total);
+    } catch {
+      // non-critical
+    } finally {
+      setIsLoadingMore(false);
+    }
+  }, [isLoadingMore, hasMore, currentPage, workspaceId]);
+
   useEffect(() => {
     return () => {
       clearPolling();
@@ -294,6 +322,9 @@ export function OverviewPersonalView({
             clearPolling();
           }}
           onCollapse={() => setSidebarOpen(false)}
+          onLoadMore={handleLoadMore}
+          hasMore={hasMore}
+          isLoadingMore={isLoadingMore}
         />
       )}
       <div className="flex min-w-0 flex-1 flex-col min-h-0 overflow-hidden">

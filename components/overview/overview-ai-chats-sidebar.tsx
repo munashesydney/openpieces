@@ -16,6 +16,9 @@ type OverviewAiChatsSidebarProps = {
   onSelectChat: (chatId: string) => void;
   onNewChat: () => void;
   onCollapse: () => void;
+  onLoadMore: () => void;
+  hasMore: boolean;
+  isLoadingMore: boolean;
 };
 
 export function OverviewAiChatsSidebar({
@@ -24,6 +27,9 @@ export function OverviewAiChatsSidebar({
   onSelectChat,
   onNewChat,
   onCollapse,
+  onLoadMore,
+  hasMore,
+  isLoadingMore,
 }: OverviewAiChatsSidebarProps) {
   return (
     <aside className="flex h-full w-56 shrink-0 flex-col border-r border-[var(--border)] bg-[var(--sidebar-bg)]">
@@ -76,6 +82,18 @@ export function OverviewAiChatsSidebar({
           ))}
         </ul>
       </nav>
+      {hasMore && (
+        <div className="border-t border-[var(--border)] p-3">
+          <Button
+            variant="outline"
+            className="w-full text-xs"
+            onClick={onLoadMore}
+            disabled={isLoadingMore}
+          >
+            {isLoadingMore ? "Loading..." : "Load more"}
+          </Button>
+        </div>
+      )}
     </aside>
   );
 }
