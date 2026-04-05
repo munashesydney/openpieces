@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { ChatMessageCard } from "./chat-message-card";
+import { ChatThinkingIndicator } from "./chat-thinking-indicator";
 import type { AiToolCall, AiToolResult } from "@/lib/ai-chat/types";
 
 export type ChatMessage = {
@@ -25,84 +26,132 @@ type OverviewChatAreaProps = {
   messages: ChatMessage[];
   status?: string | null;
   error?: string | null;
-  contextInfo?: ContextInfo | null;
-  onCompact?: () => void;
+  /** When the backend job is still running (pending / processing). */
+  isChatRunning?: boolean;
+  /** Initial / refetch load for the thread message list. */
+  isLoadingMessages?: boolean;
 };
 
-const STATUS_COLORS = {
-  ok: "bg-green-500",
-  warning: "bg-yellow-500",
-  critical: "bg-red-500",
-};
+function ChatMessagesLoadingSkeleton() {
+  return (
+    <div
+      className="flex flex-col gap-7 max-w-[820px] mx-auto w-full animate-pulse"
+      aria-busy={true}
+      aria-label="Loading messages"
+    >
+      <div className="flex justify-end">
+        <div className="h-11 w-[min(52%,280px)] rounded-[1.35rem] bg-[var(--hover-bg)]" />
+      </div>
+      <div className="flex flex-col gap-2.5">
+        <div className="h-3.5 w-full max-w-[92%] rounded-md bg-[var(--hover-bg)]" />
+        <div className="h-3.5 w-full max-w-[88%] rounded-md bg-[var(--hover-bg)]" />
+        <div className="h-3.5 w-full max-w-[64%] rounded-md bg-[var(--hover-bg)]" />
+      </div>
+      <div className="flex justify-end">
+        <div className="h-10 w-[min(44%,240px)] rounded-[1.35rem] bg-[var(--hover-bg)]" />
+      </div>
+      <div className="flex flex-col gap-2">
+        <div className="h-3.5 w-full max-w-[80%] rounded-md bg-[var(--hover-bg)]" />
+        <div className="h-3.5 w-full max-w-[55%] rounded-md bg-[var(--hover-bg)]" />
+      </div>
+    </div>
+  );
+}
 
-const STATUS_TEXT_COLORS = {
-  ok: "text-green-600",
-  warning: "text-yellow-600",
-  critical: "text-red-600",
-};
+function hasPendingToolCalls(msg: ChatMessage): boolean {
+  if (msg.toolCalls.length === 0) return false;
+  const resultIds = new Set(msg.toolResults.map((r) => r.toolCallId));
+  return msg.toolCalls.some((tc) => !resultIds.has(tc.toolCallId));
+}
 
-export function OverviewChatArea({ messages, status, error, contextInfo, onCompact }: OverviewChatAreaProps) {
+export function OverviewChatArea({
+  messages,
+  status,
+  error,
+  isChatRunning = false,
+  isLoadingMessages = false,
+}: OverviewChatAreaProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    if (scrollRef.current && messages.length > 0) {
-      scrollRef.current.scrollTo({
-        top: scrollRef.current.scrollHeight,
-        behavior: "smooth",
-      });
-    }
-  }, [messages.length]);
+  const showThinking = useMemo(() => {
+    if (!isChatRunning) return false;
+    const last = messages[messages.length - 1];
+    if (!last) return true;
+    if (last.role === "user") return true;
+    if (last.role !== "assistant") return false;
+    if (last.status !== "streaming" && last.status !== "pending") return false;
+    const hasText = last.content.trim().length > 0;
+    // Keep visible while tools are still running (no result yet), or before any assistant text.
+    if (hasPendingToolCalls(last)) return true;
+    if (!hasText) return true;
+    return false;
+  }, [isChatRunning, messages]);
 
-  const contextBar = contextInfo ? (
-    <div className="flex items-center gap-3 px-2 py-2 border-b border-[var(--border)]">
-      <div className="flex-1 h-2 bg-[var(--bg-secondary)] rounded-full overflow-hidden">
-        <div
-          className={`h-full transition-all duration-300 ${STATUS_COLORS[contextInfo.status]}`}
-          style={{ width: `${contextInfo.percentage}%` }}
-        />
-      </div>
-      <div className={`text-xs font-medium ${STATUS_TEXT_COLORS[contextInfo.status]}`}>
-        {Math.round(contextInfo.percentage)}%
-      </div>
-      {contextInfo.status === "critical" && onCompact && (
-        <button
-          onClick={onCompact}
-          className="text-xs px-2 py-1 rounded bg-red-500/10 text-red-500 hover:bg-red-500/20 transition-colors"
-          title="Compact context to continue"
-        >
-          Compact
-        </button>
-      )}
-    </div>
-  ) : null;
+  const thinkingToolPhase = useMemo(() => {
+    if (!isChatRunning) return false;
+    const last = messages[messages.length - 1];
+    return last?.role === "assistant" && hasPendingToolCalls(last);
+  }, [isChatRunning, messages]);
+
+  /** Omit empty in-flight assistant rows; the thinking strip replaces them. */
+  const visibleMessages = useMemo(() => {
+    return messages.filter((msg) => {
+      if (msg.role !== "assistant") return true;
+      const isPlaceholder =
+        !msg.content.trim() &&
+        msg.toolCalls.length === 0 &&
+        (msg.status === "streaming" || msg.status === "pending");
+      if (isPlaceholder && isChatRunning) return false;
+      return true;
+    });
+  }, [messages, isChatRunning]);
+
+  useEffect(() => {
+    if (!scrollRef.current) return;
+    if (messages.length === 0 && !showThinking && !isLoadingMessages) return;
+    scrollRef.current.scrollTo({
+      top: scrollRef.current.scrollHeight,
+      behavior: "smooth",
+    });
+  }, [messages, showThinking, isLoadingMessages]);
 
   return (
     <div className="flex flex-col flex-1 min-h-0">
-      {contextBar}
       <div
         ref={scrollRef}
-        className="flex-1 min-h-0 overflow-auto px-6 py-4"
+        className="flex-1 min-h-0 overflow-auto px-4 py-6 sm:px-8"
       >
-        {messages.length === 0 ? (
-          <p className="text-sm text-[var(--muted)] text-center py-8">
-            Messages will appear here
+        {isLoadingMessages && visibleMessages.length === 0 && !showThinking ? (
+          <ChatMessagesLoadingSkeleton />
+        ) : visibleMessages.length === 0 && !showThinking ? (
+          <p className="text-sm text-[var(--muted)] text-center py-12">
+            No messages yet
           </p>
         ) : (
-          <div className="flex flex-col gap-3 max-w-[820px] mx-auto">
-            {messages.map((msg) => (
+          <div className="flex flex-col gap-7 max-w-[820px] mx-auto w-full">
+            {visibleMessages.map((msg) => (
               <div
                 key={msg.id}
-                className="animate-[messageIn_0.3s_ease-out_both]"
+                className={`flex w-full animate-[messageIn_0.3s_ease-out_both] ${
+                  msg.role === "user" ? "justify-end" : "justify-start"
+                }`}
               >
                 <ChatMessageCard
                   content={msg.content}
                   role={msg.role}
-                  status={msg.status}
                   toolCalls={msg.toolCalls}
                   toolResults={msg.toolResults}
                 />
               </div>
             ))}
+            {showThinking ? (
+              <div className="flex w-full justify-start">
+                <ChatThinkingIndicator
+                  key={thinkingToolPhase ? "tools" : "pre"}
+                  toolPhase={thinkingToolPhase}
+                />
+              </div>
+            ) : null}
             {status === "failed" && error ? (
               <p className="text-sm text-red-500">{error}</p>
             ) : null}

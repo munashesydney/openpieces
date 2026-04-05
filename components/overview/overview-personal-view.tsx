@@ -322,8 +322,8 @@ export function OverviewPersonalView({
               messages={selectedMessages}
               status={selectedChat.status}
               error={selectedChat.error}
-              contextInfo={contextInfo}
-              onCompact={handleCompact}
+              isChatRunning={selectedChatIsRunning}
+              isLoadingMessages={loadingMessages}
             />
             <div className="shrink-0 animate-[slideDown_0.4s_ease-out_both]">
               <OverviewComposer

@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Globe, Paperclip, Plus, Send, Square, Waves, Minimize2 } from "lucide-react";
+import { Paperclip, Plus, Send, Square, Minimize2 } from "lucide-react";
+import { ContextProgressRing } from "./context-progress-ring";
 import { ModelPicker } from "./model-picker";
 import { ModeToggle, type ComposerMode } from "./mode-toggle";
 import { Card } from "../ui/card";
@@ -107,6 +108,8 @@ export function OverviewComposer({
               >
                 <Paperclip className="h-4 w-4" />
               </Button>
+
+              {contextInfo ? <ContextProgressRing info={contextInfo} /> : null}
 
               <ModelPicker />
 

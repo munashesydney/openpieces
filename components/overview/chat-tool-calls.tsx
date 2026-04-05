@@ -7,6 +7,8 @@ import { getActionLabel } from "@/lib/tools/action-labels";
 type ChatToolCallsProps = {
   toolCalls: AiToolCall[];
   toolResults: AiToolResult[];
+  /** When there is no assistant text above (tools only), skip the top rule spacing. */
+  standalone?: boolean;
 };
 
 type ToolExecutionState = "running" | "success" | "failed";
@@ -50,11 +52,13 @@ function getToolStateMeta(state: ToolExecutionState) {
   };
 }
 
-export function ChatToolCalls({ toolCalls, toolResults }: ChatToolCallsProps) {
+export function ChatToolCalls({ toolCalls, toolResults, standalone = false }: ChatToolCallsProps) {
   if (toolCalls.length === 0) return null;
 
   return (
-    <div className="mt-3 space-y-2 border-t border-[var(--border)] pt-3">
+    <div
+      className={`space-y-2 ${standalone ? "mt-0 pt-0" : "mt-3 border-t border-[var(--border)] pt-3"}`}
+    >
       {toolCalls.map((toolCall) => {
         const result = toolResults.find(
           (toolResult) => toolResult.toolCallId === toolCall.toolCallId
