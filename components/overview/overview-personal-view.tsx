@@ -67,7 +67,7 @@ export function OverviewPersonalView({
   const [hasMore, setHasMore] = useState(initialChats.length < initialTotal);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
-  const pageSize = 10;
+  const pageSize = 20;
   const [messages, setMessages] = useState<Record<string, ChatMessage[]>>(() =>
     Object.fromEntries(
       Object.entries(initialMessages).map(([chatId, chatMessages]) => [

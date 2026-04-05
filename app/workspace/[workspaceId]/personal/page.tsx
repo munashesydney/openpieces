@@ -9,7 +9,7 @@ export default async function Home(props: {
   params: Promise<{ workspaceId: string }>;
 }) {
   const { workspaceId } = await props.params;
-  const pageSize = 10;
+  const pageSize = 20;
 
   const { user } = await requireWorkspaceOwner(workspaceId);
   const { data: initialChats, total: initialTotal } = await getAiChatsForWorkspace(workspaceId, user.id, 1, pageSize);

@@ -1,6 +1,7 @@
 "use client";
 
 import { PanelLeftClose, Plus } from "lucide-react";
+import { useCallback, useRef } from "react";
 import { Button } from "@/components/basic/buttons/button";
 import type { AiChatStatus } from "@/lib/ai-chat/types";
 
@@ -31,6 +32,18 @@ export function OverviewAiChatsSidebar({
   hasMore,
   isLoadingMore,
 }: OverviewAiChatsSidebarProps) {
+  const navRef = useRef<HTMLDivElement>(null);
+
+  const handleScroll = useCallback(() => {
+    if (!hasMore || isLoadingMore) return;
+    const nav = navRef.current;
+    if (!nav) return;
+    const { scrollTop, scrollHeight, clientHeight } = nav;
+    if (scrollTop + clientHeight >= scrollHeight - 50) {
+      onLoadMore();
+    }
+  }, [hasMore, isLoadingMore, onLoadMore]);
+
   return (
     <aside className="flex h-full w-56 shrink-0 flex-col border-r border-[var(--border)] bg-[var(--sidebar-bg)]">
       <div className="flex items-center justify-between gap-2 px-4 py-4">
@@ -58,7 +71,11 @@ export function OverviewAiChatsSidebar({
           </Button>
         </div>
       </div>
-      <nav className="flex-1 overflow-auto px-3 pb-4">
+      <nav
+        ref={navRef}
+        className="flex-1 overflow-auto px-3 pb-4"
+        onScroll={handleScroll}
+      >
         <ul className="space-y-1">
           {chats.map((chat) => (
             <li key={chat.id}>
@@ -81,19 +98,10 @@ export function OverviewAiChatsSidebar({
             </li>
           ))}
         </ul>
+        {isLoadingMore && (
+          <div className="py-2 text-center text-xs text-[var(--muted)]">Loading...</div>
+        )}
       </nav>
-      {hasMore && (
-        <div className="border-t border-[var(--border)] p-3">
-          <Button
-            variant="outline"
-            className="w-full text-xs"
-            onClick={onLoadMore}
-            disabled={isLoadingMore}
-          >
-            {isLoadingMore ? "Loading..." : "Load more"}
-          </Button>
-        </div>
-      )}
     </aside>
   );
 }
