@@ -15,7 +15,7 @@ export const runtimeToolDefinition = {
       .describe("Number of seconds to sleep"),
     // spawn_agent
     agentType: z
-      .enum(["architecture", "events"])
+      .enum(["architecture", "orchestrator"])
       .optional()
       .describe("Type of agent to spawn"),
     prompt: z.string().optional().describe("Prompt to send to the agent"),

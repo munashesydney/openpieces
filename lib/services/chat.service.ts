@@ -134,26 +134,31 @@ export async function getAiChatsForWorkspace(
   workspaceId: string,
   userId: string,
   page: number = 1,
-  pageSize: number = 10
+  pageSize: number = 10,
+  agentType?: string
 ) {
   if (!isValidUuid(workspaceId) || !isValidUuid(userId)) {
     return { data: [], total: 0 };
   }
 
   const offset = (page - 1) * pageSize;
+  const conditions = [and(eq(aiChats.workspaceId, workspaceId), eq(aiChats.userId, userId))];
+  if (agentType) {
+    conditions.push(eq(aiChats.agentType, agentType));
+  }
 
   const [data, totalResult] = await Promise.all([
     db
       .select()
       .from(aiChats)
-      .where(and(eq(aiChats.workspaceId, workspaceId), eq(aiChats.userId, userId)))
+      .where(and(...conditions))
       .orderBy(desc(aiChats.updatedAt), desc(aiChats.createdAt))
       .limit(pageSize)
       .offset(offset),
     db
       .select({ count: count() })
       .from(aiChats)
-      .where(and(eq(aiChats.workspaceId, workspaceId), eq(aiChats.userId, userId))),
+      .where(and(...conditions)),
   ]);
 
   return {

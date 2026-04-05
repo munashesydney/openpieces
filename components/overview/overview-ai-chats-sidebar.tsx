@@ -11,6 +11,16 @@ export type SidebarChat = {
   status: AiChatStatus;
 };
 
+export const AGENT_TYPES = ["orchestrator", "architecture", "events", "brain"] as const;
+export type AgentType = (typeof AGENT_TYPES)[number];
+
+const AGENT_TYPE_LABELS: Record<AgentType, string> = {
+  orchestrator: "AI",
+  architecture: "Architecture",
+  events: "Events",
+  brain: "Brain",
+};
+
 type OverviewAiChatsSidebarProps = {
   chats: SidebarChat[];
   selectedChatId: string | null;
@@ -18,6 +28,8 @@ type OverviewAiChatsSidebarProps = {
   onNewChat: () => void;
   onCollapse: () => void;
   onLoadMore: () => void;
+  onFilterChange: (agentType: AgentType | null) => void;
+  selectedAgentType: AgentType | null;
   hasMore: boolean;
   isLoadingMore: boolean;
 };
@@ -29,6 +41,8 @@ export function OverviewAiChatsSidebar({
   onNewChat,
   onCollapse,
   onLoadMore,
+  onFilterChange,
+  selectedAgentType,
   hasMore,
   isLoadingMore,
 }: OverviewAiChatsSidebarProps) {
@@ -70,6 +84,27 @@ export function OverviewAiChatsSidebar({
             <PanelLeftClose className="h-4 w-4" />
           </Button>
         </div>
+      </div>
+      <div className="flex flex-wrap gap-1 px-3 pb-2">
+        <Button
+          variant={selectedAgentType === null ? "primary" : "outline"}
+          size="sm"
+          className="h-6 text-xs px-1.5"
+          onClick={() => onFilterChange(null)}
+        >
+          All
+        </Button>
+        {AGENT_TYPES.map((type) => (
+          <Button
+            key={type}
+            variant={selectedAgentType === type ? "primary" : "outline"}
+            size="sm"
+            className="h-6 text-xs px-1.5"
+            onClick={() => onFilterChange(type)}
+          >
+            {AGENT_TYPE_LABELS[type]}
+          </Button>
+        ))}
       </div>
       <nav
         ref={navRef}

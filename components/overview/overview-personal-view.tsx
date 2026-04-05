@@ -5,7 +5,7 @@ import { PanelLeftOpen } from "lucide-react";
 import { Button } from "@/components/basic/buttons/button";
 import type { AiChatListItem, AiChatMessage } from "@/lib/ai-chat/types";
 import type { SendAiMessageActionResult } from "@/app/workspace/[workspaceId]/personal/actions";
-import { OverviewAiChatsSidebar } from "./overview-ai-chats-sidebar";
+import { OverviewAiChatsSidebar, type AgentType, AGENT_TYPES } from "./overview-ai-chats-sidebar";
 import { OverviewChatArea, type ChatMessage, type ContextInfo } from "./overview-chat-area";
 import { OverviewComposer } from "./overview-composer";
 import { OverviewTitle } from "./overview-title";
@@ -67,6 +67,7 @@ export function OverviewPersonalView({
   const [hasMore, setHasMore] = useState(initialChats.length < initialTotal);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
+  const [selectedAgentType, setSelectedAgentType] = useState<AgentType | null>("orchestrator");
   const pageSize = 20;
   const [messages, setMessages] = useState<Record<string, ChatMessage[]>>(() =>
     Object.fromEntries(
@@ -264,21 +265,47 @@ export function OverviewPersonalView({
     setIsLoadingMore(true);
     try {
       const nextPage = currentPage + 1;
-      const response = await fetch(
-        `/api/chats?workspaceId=${workspaceId}&page=${nextPage}&pageSize=${pageSize}`
-      );
+      const base = typeof window !== "undefined" ? window.location.origin : "";
+      const url = new URL(`${base}/api/chats?workspaceId=${workspaceId}&page=${nextPage}&pageSize=${pageSize}`);
+      if (selectedAgentType) url.searchParams.set("agentType", selectedAgentType);
+      const response = await fetch(url.toString());
       if (!response.ok) throw new Error("Failed to load more chats");
       const result = (await response.json()) as { data: AiChatListItem[]; total: number };
       const newChats = result.data.map(mapChat);
       setChats((prev) => [...prev, ...newChats]);
       setCurrentPage(nextPage);
       setHasMore(newChats.length > 0 && (nextPage * pageSize) < result.total);
-    } catch {
-      // non-critical
+    } catch (e) {
+      console.error("Failed to load more chats:", e);
     } finally {
       setIsLoadingMore(false);
     }
-  }, [isLoadingMore, hasMore, currentPage, workspaceId]);
+  }, [isLoadingMore, hasMore, currentPage, workspaceId, selectedAgentType]);
+
+  const handleFilterChange = useCallback(async (agentType: AgentType | null) => {
+    if (agentType === null) {
+      setSelectedAgentType(null);
+    } else {
+      setSelectedAgentType(agentType);
+    }
+    setCurrentPage(1);
+    setChats([]);
+    setIsLoadingMore(true);
+    try {
+      const base = typeof window !== "undefined" ? window.location.origin : "";
+      const url = new URL(`${base}/api/chats?workspaceId=${workspaceId}&page=1&pageSize=${pageSize}`);
+      if (agentType) url.searchParams.set("agentType", agentType);
+      const response = await fetch(url.toString());
+      if (!response.ok) throw new Error("Failed to load chats");
+      const result = (await response.json()) as { data: AiChatListItem[]; total: number };
+      setChats(result.data.map(mapChat));
+      setHasMore(result.data.length > 0 && result.data.length < result.total);
+    } catch (e) {
+      console.error("Failed to filter chats:", e, "agentType:", agentType, "workspaceId:", workspaceId);
+    } finally {
+      setIsLoadingMore(false);
+    }
+  }, [workspaceId]);
 
   useEffect(() => {
     return () => {
@@ -323,6 +350,8 @@ export function OverviewPersonalView({
           }}
           onCollapse={() => setSidebarOpen(false)}
           onLoadMore={handleLoadMore}
+          onFilterChange={handleFilterChange}
+          selectedAgentType={selectedAgentType}
           hasMore={hasMore}
           isLoadingMore={isLoadingMore}
         />
