@@ -15,6 +15,7 @@
   "dependencies": {
     "@ai-sdk/gateway": "^3.0.66",
     "@ai-sdk/openai": "^3.0.47",
+    "@tavily/core": "^0.6.4",
     "ai": "^6.0.116",
     "bcryptjs": "^3.0.3",
     "drizzle-orm": "^0.45.1",

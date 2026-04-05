@@ -65,6 +65,12 @@ export const ACTION_LABELS: Record<string, Record<string, string>> = {
     spawn_agent: "Spawn Agent",
     check_agent_progress: "Check Agent Progress",
   },
+  web_search: {
+    search: "Web Search",
+    extract: "Extract Web Content",
+    crawl: "Crawl Web Pages",
+    map: "Map Website Structure",
+  },
 };
 
 // Helper function to get a human-readable label for a tool action

@@ -9,7 +9,6 @@ import {
   type ServiceStopJob,
   enqueueServiceSpawn,
   getPgBoss,
-  PG_BOSS_CONCURRENCY,
 } from "@/lib/queues/pg-boss";
 import { getServiceById, updateService } from "@/lib/services/service.service";
 import { getWorkspaceOwnerId } from "@/lib/services/workspace.service";
@@ -351,13 +350,13 @@ async function recoverAndStartAllServices() {
 export async function startServiceWorker() {
   const boss = await getPgBoss();
 
-  await boss.work(SERVICE_SPAWN_QUEUE, { localConcurrency: PG_BOSS_CONCURRENCY }, async (jobs) => {
+  await boss.work(SERVICE_SPAWN_QUEUE, { localConcurrency: 1 }, async (jobs) => {
     const job = jobs[0];
     if (!job) return;
     await executeServiceSpawnJob(job.data as ServiceSpawnJob);
   });
 
-  await boss.work(SERVICE_STOP_QUEUE, { localConcurrency: PG_BOSS_CONCURRENCY }, async (jobs) => {
+  await boss.work(SERVICE_STOP_QUEUE, { localConcurrency: 1 }, async (jobs) => {
     const job = jobs[0];
     if (!job) return;
     await executeServiceStopJob(job.data as ServiceStopJob);
