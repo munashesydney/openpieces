@@ -3,12 +3,14 @@
 import { CheckCircle2, Loader2, Wrench, XCircle } from "lucide-react";
 import type { AiToolCall, AiToolResult } from "@/lib/ai-chat/types";
 import { getActionLabel } from "@/lib/tools/action-labels";
+import { QuestionInputCard } from "./question-input-card";
 
 type ChatToolCallsProps = {
   toolCalls: AiToolCall[];
   toolResults: AiToolResult[];
   /** When there is no assistant text above (tools only), skip the top rule spacing. */
   standalone?: boolean;
+  onQuestionSubmit?: (answers: Record<string, string>) => void;
 };
 
 type ToolExecutionState = "running" | "success" | "failed";
@@ -52,7 +54,7 @@ function getToolStateMeta(state: ToolExecutionState) {
   };
 }
 
-export function ChatToolCalls({ toolCalls, toolResults, standalone = false }: ChatToolCallsProps) {
+export function ChatToolCalls({ toolCalls, toolResults, standalone = false, onQuestionSubmit }: ChatToolCallsProps) {
   if (toolCalls.length === 0) return null;
 
   return (
@@ -66,6 +68,21 @@ export function ChatToolCalls({ toolCalls, toolResults, standalone = false }: Ch
         const toolState = getToolExecutionState(result);
         const stateMeta = getToolStateMeta(toolState);
         const StateIcon = stateMeta.icon;
+        const action = (toolCall.input as { action?: string })?.action ?? "";
+
+        // Detect ask_question action
+        if (action === "ask_question") {
+          const questions = (toolCall.input as { questions?: Array<{ question: string; suggestedAnswers?: string[] }> }).questions ?? [];
+          return (
+            <QuestionInputCard
+              key={toolCall.toolCallId}
+              toolCallId={toolCall.toolCallId}
+              questions={questions}
+              isPending={toolState === "running"}
+              onSubmit={onQuestionSubmit ?? (() => {})}
+            />
+          );
+        }
 
         return (
           <div

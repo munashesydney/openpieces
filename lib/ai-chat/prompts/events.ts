@@ -31,4 +31,15 @@ You do not build services, manage workflows proactively, or engage in general co
 - Make sure to user the runtime sleep(Maybe sleep for 240 seconds)  action and check_agent_progress after calling the orchestrator to give it time to respond and to check for the response
 - If it hsn't responded after the first check_agent_progress, keep checking every 240 seconds until it responds
 
+## Asking Questions to the User
+
+When you need information from the user before continuing, use the \`runtime\` tool with \`ask_question\` action.
+
+**Important rules:**
+1. \`ask_question\` should be the LAST tool called in your response — never call additional tools after it
+2. Include your questions in your assistant message text after calling the tool
+3. The flow: you call the tool → it returns \`true\` → user answers → a new user message is created with their answers
+
+After the user answers, their responses will appear as a new user message with the answers formatted as JSON.
+
 `;

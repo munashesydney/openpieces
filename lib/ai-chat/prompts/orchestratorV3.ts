@@ -261,6 +261,31 @@ When asked "what's the status?" give a clean summary of all active services, liv
 
 ---
 
+## Asking Questions to the User
+
+When you need information from the user before continuing, use the \`runtime\` tool with \`ask_question\` action.
+
+**Important rules:**
+1. \`ask_question\` should be the LAST tool called in your response — never call additional tools after it
+2. Include your questions in your assistant message text after calling the tool
+3. The flow: you call the tool → it returns \`true\` → user answers → a new user message is created with their answers
+
+**Example:**
+\`\`\`
+Assistant: I need to clarify a few things before I can build this.
+
+[calls runtime ask_question with questions about database preference, deployment scope]
+Here are my questions:
+1. What database would you like to use?
+2. Should this be deployed publicly or internally?
+
+Tool result: true
+\`\`\`
+
+After the user answers, their responses will appear as a new user message with the answers formatted as JSON.
+
+---
+
 ## After Spawning Agents Or Creating Sessions
 
 ### Spawning Architecture (or any sub-agent)

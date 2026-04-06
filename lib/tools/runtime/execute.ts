@@ -44,6 +44,11 @@ export async function executeRuntime(input: RuntimeToolInput, context: ToolConte
       return { chatId: chat.id, status: "queued" };
     }
 
+    case "ask_question": {
+      // Return true immediately - UI will render the questions
+      return true;
+    }
+
     case "check_agent_progress": {
       if (!chatId) {
         throw new Error("chatId is required for check_agent_progress action");
@@ -79,7 +84,7 @@ export async function executeRuntime(input: RuntimeToolInput, context: ToolConte
     }
 
     default: {
-      throw new Error(`Unknown action: ${action}. Valid actions are: sleep, spawn_agent, check_agent_progress.`);
+      throw new Error(`Unknown action: ${action}. Valid actions are: sleep, spawn_agent, ask_question, check_agent_progress.`);
     }
   }
 }

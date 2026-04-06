@@ -10,6 +10,7 @@ type ChatMessageCardProps = {
   role?: "user" | "assistant";
   toolCalls?: AiToolCall[];
   toolResults?: AiToolResult[];
+  onQuestionSubmit?: (answers: Record<string, string>) => void;
 };
 
 const assistantMarkdownClass =
@@ -20,6 +21,7 @@ export function ChatMessageCard({
   role = "user",
   toolCalls = [],
   toolResults = [],
+  onQuestionSubmit,
 }: ChatMessageCardProps) {
   if (role === "user") {
     return (
@@ -47,6 +49,7 @@ export function ChatMessageCard({
         toolCalls={toolCalls}
         toolResults={toolResults}
         standalone={!hasBody}
+        onQuestionSubmit={onQuestionSubmit}
       />
     </div>
   );

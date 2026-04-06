@@ -30,6 +30,7 @@ type OverviewChatAreaProps = {
   isChatRunning?: boolean;
   /** Initial / refetch load for the thread message list. */
   isLoadingMessages?: boolean;
+  onQuestionSubmit?: (answers: Record<string, string>) => void;
 };
 
 function ChatMessagesLoadingSkeleton() {
@@ -70,6 +71,7 @@ export function OverviewChatArea({
   error,
   isChatRunning = false,
   isLoadingMessages = false,
+  onQuestionSubmit,
 }: OverviewChatAreaProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -141,6 +143,7 @@ export function OverviewChatArea({
                   role={msg.role}
                   toolCalls={msg.toolCalls}
                   toolResults={msg.toolResults}
+                  onQuestionSubmit={onQuestionSubmit}
                 />
               </div>
             ))}

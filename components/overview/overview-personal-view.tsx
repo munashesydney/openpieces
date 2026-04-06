@@ -260,6 +260,14 @@ export function OverviewPersonalView({
     await fetch(`/api/chats/${selectedChatId}/stop`, { method: "POST" });
   }, [selectedChatId, clearPolling]);
 
+  const handleQuestionSubmit = useCallback(
+    async (answers: Record<string, string>) => {
+      const answersJson = JSON.stringify(answers, null, 2);
+      await handleSend(answersJson);
+    },
+    [handleSend]
+  );
+
   const handleLoadMore = useCallback(async () => {
     if (isLoadingMore || !hasMore) return;
     setIsLoadingMore(true);
@@ -384,6 +392,7 @@ export function OverviewPersonalView({
               error={selectedChat.error}
               isChatRunning={selectedChatIsRunning}
               isLoadingMessages={loadingMessages}
+              onQuestionSubmit={handleQuestionSubmit}
             />
             <div className="shrink-0 animate-[slideDown_0.4s_ease-out_both]">
               <OverviewComposer

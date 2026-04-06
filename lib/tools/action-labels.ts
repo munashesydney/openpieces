@@ -63,6 +63,7 @@ export const ACTION_LABELS: Record<string, Record<string, string>> = {
   runtime: {
     sleep: "Sleep",
     spawn_agent: "Spawn Agent",
+    ask_question: "Ask Question",
     check_agent_progress: "Check Agent Progress",
   },
   web_search: {
