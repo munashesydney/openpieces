@@ -11,6 +11,8 @@ type ChatToolCallsProps = {
   /** When there is no assistant text above (tools only), skip the top rule spacing. */
   standalone?: boolean;
   onQuestionSubmit?: (answers: Record<string, string>) => void;
+  /** When true, question cards are hidden (user already answered via a follow-up message) */
+  isFollowedByUserMessage?: boolean;
 };
 
 type ToolExecutionState = "running" | "success" | "failed";
@@ -54,7 +56,7 @@ function getToolStateMeta(state: ToolExecutionState) {
   };
 }
 
-export function ChatToolCalls({ toolCalls, toolResults, standalone = false, onQuestionSubmit }: ChatToolCallsProps) {
+export function ChatToolCalls({ toolCalls, toolResults, standalone = false, onQuestionSubmit, isFollowedByUserMessage = false }: ChatToolCallsProps) {
   if (toolCalls.length === 0) return null;
 
   return (
@@ -70,8 +72,8 @@ export function ChatToolCalls({ toolCalls, toolResults, standalone = false, onQu
         const StateIcon = stateMeta.icon;
         const action = (toolCall.input as { action?: string })?.action ?? "";
 
-        // Detect ask_question action
-        if (action === "ask_question") {
+        // Detect ask_question action - don't render if user already answered
+        if (action === "ask_question" && !isFollowedByUserMessage) {
           const questions = (toolCall.input as { questions?: Array<{ question: string; suggestedAnswers?: string[] }> }).questions ?? [];
           return (
             <QuestionInputCard

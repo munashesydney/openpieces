@@ -131,22 +131,30 @@ export function OverviewChatArea({
           </p>
         ) : (
           <div className="flex flex-col gap-7 max-w-[820px] mx-auto w-full">
-            {visibleMessages.map((msg) => (
-              <div
-                key={msg.id}
-                className={`flex w-full animate-[messageIn_0.3s_ease-out_both] ${
-                  msg.role === "user" ? "justify-end" : "justify-start"
-                }`}
-              >
-                <ChatMessageCard
-                  content={msg.content}
-                  role={msg.role}
-                  toolCalls={msg.toolCalls}
-                  toolResults={msg.toolResults}
-                  onQuestionSubmit={onQuestionSubmit}
-                />
-              </div>
-            ))}
+            {visibleMessages.map((msg, index) => {
+              const nextMsg = visibleMessages[index + 1];
+              const isFollowedByUserMessage =
+                msg.role === "assistant" &&
+                nextMsg?.role === "user";
+
+              return (
+                <div
+                  key={msg.id}
+                  className={`flex w-full animate-[messageIn_0.3s_ease-out_both] ${
+                    msg.role === "user" ? "justify-end" : "justify-start"
+                  }`}
+                >
+                  <ChatMessageCard
+                    content={msg.content}
+                    role={msg.role}
+                    toolCalls={msg.toolCalls}
+                    toolResults={msg.toolResults}
+                    onQuestionSubmit={onQuestionSubmit}
+                    isFollowedByUserMessage={isFollowedByUserMessage}
+                  />
+                </div>
+              );
+            })}
             {showThinking ? (
               <div className="flex w-full justify-start">
                 <ChatThinkingIndicator

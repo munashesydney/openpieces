@@ -11,6 +11,7 @@ type ChatMessageCardProps = {
   toolCalls?: AiToolCall[];
   toolResults?: AiToolResult[];
   onQuestionSubmit?: (answers: Record<string, string>) => void;
+  isFollowedByUserMessage?: boolean;
 };
 
 const assistantMarkdownClass =
@@ -22,6 +23,7 @@ export function ChatMessageCard({
   toolCalls = [],
   toolResults = [],
   onQuestionSubmit,
+  isFollowedByUserMessage,
 }: ChatMessageCardProps) {
   if (role === "user") {
     return (
@@ -50,6 +52,7 @@ export function ChatMessageCard({
         toolResults={toolResults}
         standalone={!hasBody}
         onQuestionSubmit={onQuestionSubmit}
+        isFollowedByUserMessage={isFollowedByUserMessage}
       />
     </div>
   );
