@@ -67,7 +67,7 @@ async function pollHealth(port: number, timeoutMs = 45000, intervalMs = 500): Pr
 }
 
 async function executeServiceSpawnJob(job: ServiceSpawnJob) {
-  const { serviceId, workspaceId } = job;
+  const { serviceId, workspaceId, sessionId } = job;
 
   const service = await getServiceById(serviceId, workspaceId);
   if (!service) {
@@ -236,12 +236,12 @@ async function executeServiceSpawnJob(job: ServiceSpawnJob) {
     await appendServiceLog(directory, "error", `Service did not become healthy on port ${port}`);
     console.error(`[service-worker] Service "${service.title}" did not become healthy on port ${port}`);
     // Send failure message to opencode immediately (pg-boss will retry separately)
-    await sendSpawnFailureMessage(service, workspaceId, `Service did not become healthy on port ${port}`);
+    await sendSpawnFailureMessage(service, workspaceId, sessionId, `Service did not become healthy on port ${port}`);
     throw new Error(`Service did not become healthy on port ${port}`);
   }
 }
 
-async function sendSpawnFailureMessage(service: Service, workspaceId: string, error: string) {
+async function sendSpawnFailureMessage(service: Service, workspaceId: string, sessionId: string | undefined, error: string) {
   try {
     const { content: logTail } = await readServiceLogTail(service.directory!);
     // Extract last 10 lines for a concise error message
@@ -249,21 +249,29 @@ async function sendSpawnFailureMessage(service: Service, workspaceId: string, er
       ? logTail.split("\n").filter((l) => l.trim()).slice(-10).join("\n")
       : "";
 
-    const { createSession, sendMessageWithContext } = await import("@/lib/services/opencode.service");
-    const { setService } = await import("@/lib/services/opencode-session.service");
-    const { getWorkspaceOwnerId } = await import("@/lib/services/workspace.service");
-
-    const newSession = await createSession();
-    const newSessionId = (newSession as any).session_id ?? (newSession as any).id;
-    await setService(newSessionId, service.id);
+    const { sendMessage } = await import("@/lib/services/opencode.service");
 
     const errorText = lastLines
       ? `Service "${service.title}" failed to start. Last output:\n\`\`\`\n${lastLines}\n\`\`\`\n\nFull logs available at: pieces/${service.directory}/logs/`
       : `Service "${service.title}" failed to start: ${error}\n\nFull logs available at: pieces/${service.directory}/logs/`;
 
-    const workspaceOwnerId = (await getWorkspaceOwnerId(workspaceId)) ?? "";
-    await sendMessageWithContext(newSessionId, errorText, workspaceOwnerId);
-    console.log(`[service-worker] Sent spawn failure message to opencode session ${newSessionId}`);
+    // Prefer replying in the originating session; fall back to a new session if none was provided
+    if (sessionId) {
+      await sendMessage(sessionId, errorText);
+      console.log(`[service-worker] Sent spawn failure message to originating session ${sessionId}`);
+    } else {
+      const { createSession, sendMessageWithContext } = await import("@/lib/services/opencode.service");
+      const { setService } = await import("@/lib/services/opencode-session.service");
+      const { getWorkspaceOwnerId } = await import("@/lib/services/workspace.service");
+
+      const newSession = await createSession();
+      const newSessionId = (newSession as any).session_id ?? (newSession as any).id;
+      await setService(newSessionId, service.id);
+
+      const workspaceOwnerId = (await getWorkspaceOwnerId(workspaceId)) ?? "";
+      await sendMessageWithContext(newSessionId, errorText, workspaceOwnerId);
+      console.log(`[service-worker] Sent spawn failure message to new opencode session ${newSessionId}`);
+    }
   } catch (err) {
     console.error("[service-worker] sendSpawnFailureMessage error:", err);
   }

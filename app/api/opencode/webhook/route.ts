@@ -72,7 +72,7 @@ export async function POST(request: NextRequest) {
         if (!sessionInfo?.serviceId) return;
         const validation = await validateServiceForSpawn(sessionInfo.serviceId, sessionInfo.workspaceId);
         if (validation.valid) {
-          await enqueueServiceSpawn({ serviceId: sessionInfo.serviceId, workspaceId: sessionInfo.workspaceId });
+          await enqueueServiceSpawn({ serviceId: sessionInfo.serviceId, workspaceId: sessionInfo.workspaceId, sessionId });
         }
         // invalid (missing secrets, no dir) → skip silently
       }).catch(() => {});

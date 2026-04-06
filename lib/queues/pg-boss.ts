@@ -104,6 +104,7 @@ export async function cancelChatExecution(jobId: string): Promise<void> {
 export type ServiceSpawnJob = {
   serviceId: string;
   workspaceId: string;
+  sessionId?: string;
 };
 
 export async function enqueueServiceSpawn(job: ServiceSpawnJob) {
