@@ -1,13 +1,13 @@
 # =============================================================================
-# Development — hot reload, verbose logs, source code mounted as a volume
+# Production — standalone Next.js build, no source mounts, restart policies
 #
-# With bundled Postgres (default):
-#   COMPOSE_PROFILES=with-db docker compose up --build
-#   (or set COMPOSE_PROFILES=with-db in your .env)
+# Usage:
+#   docker compose -f docker-compose.prod.yml up -d
 #
-# With your own hosted Postgres (Supabase, Neon, Railway, etc.):
-#   docker compose up --build
-#   (set DATABASE_URL in .env to point at your instance)
+# Requirements:
+#   - All env vars set in .env or injected by your platform
+#   - Named volumes are provisioned automatically on first run
+#
 # =============================================================================
 
 services:
@@ -15,104 +15,93 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-      target: development
-    volumes:
-      # Mount source so edits hot-reload inside the container
-      - .:/app
-      # Keep container's node_modules isolated from host (avoids cross-platform binary issues)
-      - /app/node_modules
-      # Keep Next.js build cache isolated
-      - /app/.next
-      # Shared pieces volume for OpenCode
-      - ./pieces:/app/pieces
-    # Run DB migrations then start dev server.
-    # Turbopack's file watcher doesn't support polling in Docker yet,
-    # so we fall back to Webpack mode where WATCHPACK_POLLING works.
-    entrypoint: ["sh", "./scripts/docker-dev-entrypoint.sh"]
-    command: sh -c "node_modules/.bin/tsx lib/db/migrate.ts && node_modules/.bin/next dev --webpack"
+      target: runner
     ports:
       - "3000:3000"
+    volumes:
+      - pieces:/app/pieces
     environment:
-      - WATCHPACK_POLLING=true
+      - NODE_ENV=production
+      - NEXT_TELEMETRY_DISABLED=1
+      - DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
       - OPENCODE_INTERNAL_URL=http://opencode:4096
       - SERVICE_HOST=http://worker
     env_file:
       - .env
     depends_on:
-      opencode:
-        condition: service_started
       db:
         condition: service_healthy
-    # Pretty, coloured logs streamed directly to your terminal
+      opencode:
+        condition: service_started
+    restart: always
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:${APP_PORT}/ || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 40s
     logging:
       driver: json-file
       options:
-        max-size: "10m"
-        max-file: "3"
+        max-size: "20m"
+        max-file: "5"
 
   worker:
     build:
       context: .
       dockerfile: Dockerfile
-      target: development
-    volumes:
-      - .:/app
-      - /app/node_modules
-      - /app/.next
-      - ./pieces:/app/pieces
-    entrypoint: ["sh", "./scripts/docker-dev-entrypoint.sh"]
-    command: sh -c "node_modules/.bin/tsx scripts/ai-worker.ts"
-    environment:
-      - WATCHPACK_POLLING=true
+      target: worker
     env_file:
       - .env
+    volumes:
+      - pieces:/app/pieces
+    environment:
+      - NODE_ENV=production
+      - DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
     depends_on:
       db:
         condition: service_healthy
+    restart: always
+    logging:
+      driver: json-file
+      options:
+        max-size: "20m"
+        max-file: "5"
+
+  db:
+    build:
+      context: .
+      dockerfile: Dockerfile.db
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    expose:
+      - "5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    restart: always
     logging:
       driver: json-file
       options:
         max-size: "10m"
         max-file: "3"
 
-  db:
-    # Only started when COMPOSE_PROFILES includes "with-db".
-    # If you have your own hosted Postgres, remove "with-db" from
-    # COMPOSE_PROFILES in .env and point DATABASE_URL at your instance.
-    profiles:
-      - with-db
-    build:
-      context: .
-      dockerfile: Dockerfile.db
-    environment:
-      POSTGRES_USER: ${POSTGRES_USER:-openpieces}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-openpieces}
-      POSTGRES_DB: ${POSTGRES_DB:-openpieces}
-    ports:
-      # Expose so you can connect with pgAdmin / psql from the host
-      - "5432:5432"
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-openpieces} -d ${POSTGRES_DB:-openpieces}"]
-      interval: 5s
-      timeout: 5s
-      retries: 10
-    logging:
-      driver: json-file
-      options:
-        max-size: "5m"
-        max-file: "2"
-
   opencode:
     image: ghcr.io/anomalyco/opencode:latest
     command: serve --hostname 0.0.0.0
     working_dir: /pieces
-    ports:
-      - "4096:4096"
+    expose:
+      - "4096"
     volumes:
-      - ./pieces:/pieces
-      - ./opencode-data:/root/.local/share/opencode
+      - pieces:/pieces
+      - opencode_data:/root/.local/share/opencode
     environment:
       - PORT=4096
       - HOSTNAME_OVERRIDE=0.0.0.0
@@ -120,7 +109,15 @@ services:
       - OPENCODE_SERVER_PASSWORD=${OPENCODE_SERVER_PASSWORD}
       - INTERNAL_API_KEY=${INTERNAL_API_KEY}
       - OPENCODE_SERVER_USERNAME=opencode
-      - OPENPIECES_WEBHOOK_URL=http://app:3000/api/opencode/webhook
+      - OPENPIECES_WEBHOOK_URL=http://app:${APP_PORT}/api/opencode/webhook
+    restart: always
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
 
 volumes:
+  pieces:
   postgres_data:
+  opencode_data:

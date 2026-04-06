@@ -1,171 +1,163 @@
-# openpieces
+# OpenPieces
 
 A workflow management platform built with Next.js 16, React 19, and Tailwind CSS v4.
+
+---
+
+## Quick Start
+
+```bash
+cp .env.example .env
+# Fill in the required values in .env — see Environment Variables below
+docker compose up -d --build
+```
+
+Open [http://localhost:3141](http://localhost:3141) and go to `/setup`.
 
 ---
 
 ## Prerequisites
 
 - [Docker](https://docs.docker.com/get-docker/) ≥ 24
-- [Docker Compose](https://docs.docker.com/compose/install/) v2 (ships with Docker Desktop)
+- [Docker Compose](https://docs.docker.com/compose/install/) v2
 
 ---
 
-## Setup
+## Production Deploy
 
-Copy the environment template and fill in your values:
+### 1. Clone and configure
 
 ```bash
+git clone <your-repo>
+cd openpieces
 cp .env.example .env
 ```
 
-### Choosing your database
+Edit `.env` — at minimum you need to set:
+- `AUTH_SECRET` — session signing key
+- `SECRETS_ENCRYPTION_KEY` — encryption key
+- `INTERNAL_API_KEY` — internal service auth
+- `OPENCODE_SERVER_PASSWORD` — OpenCode server password
+- `POSTGRES_PASSWORD` — database password
+- `DEEPSEEK_API_KEY` — for AI features
 
-Open `.env` and set `COMPOSE_PROFILES`:
+Generate a secret: `node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"`
 
-| Value | What happens |
-|---|---|
-| `with-db` *(default)* | Docker builds and manages a Postgres container for you — zero config |
-| *(empty)* | No DB container is started; set `DATABASE_URL` to your own hosted instance |
+### 2. Launch
 
-**Using your own hosted Postgres** (Supabase, Neon, Railway, PlanetScale, etc.):
-
-```env
-COMPOSE_PROFILES=
-DATABASE_URL=postgresql://user:password@your-host:5432/dbname
+```bash
+docker compose up -d --build
 ```
+
+This starts all services with health checks and restart policies:
+- **app** — Next.js standalone server
+- **worker** — background job processor (AI tasks, brain reinforcement)
+- **db** — PostgreSQL 16 with pgvector (bundled)
+- **opencode** — AI coding assistant
+
+### 3. Access
+
+Go to `http://localhost:3141/setup` to create your admin account.
 
 ---
 
 ## Development
 
-Starts the app with **hot reload** and streams all logs directly to your terminal so you can see exactly what's happening in real time.
+For local development with hot reload:
 
 ```bash
-# With bundled Postgres (COMPOSE_PROFILES=with-db in .env)
-docker compose up --build
-
-# With your own hosted Postgres (COMPOSE_PROFILES= in .env)
-docker compose up --build
+docker compose -f docker-compose.dev.yml up --build
 ```
 
-- App → [http://localhost:3000](http://localhost:3000)
-- Bundled Postgres → `localhost:5432` (connect with any GUI like pgAdmin or TablePlus)
+- App → [http://localhost:3141](http://localhost:3141)
+- OpenCode → `localhost:4096`
 
-**Watching logs for a specific service:**
-
+**Rebuild after dependency changes:**
 ```bash
-# App logs only
-docker compose logs -f app
-
-# Database logs only (only available when using bundled Postgres)
-docker compose logs -f db
+docker compose -f docker-compose.dev.yml up --build
 ```
 
-**Rebuilding after dependency changes** (`package.json` changed etc.):
-
+**Clean slate:**
 ```bash
-docker compose up --build
+docker compose -f docker-compose.dev.yml down -v
 ```
 
-**Stopping and cleaning up:**
+---
 
+## Managing
+
+**Tail logs:**
 ```bash
-# Stop containers but keep the database volume
+docker compose logs --tail=50 -f
+```
+
+**Restart a service:**
+```bash
+docker compose restart app
+```
+
+**Update to latest:**
+```bash
+docker compose up -d --build
+```
+
+**Stop everything:**
+```bash
 docker compose down
+```
 
-# Nuclear — also wipe the postgres volume (fresh DB)
+**Wipe database and start fresh:**
+```bash
 docker compose down -v
 ```
 
-**Running a one-off command inside the app container:**
-
-```bash
-docker compose exec app sh
-```
-
 ---
 
-## Production
+## Using an External Database
 
-Builds the optimised **standalone** Next.js image and runs everything detached. The Postgres port is intentionally **not** exposed to the host in this mode.
+By default a PostgreSQL container is started automatically. To use your own (Supabase, Neon, Railway, etc.):
 
-```bash
-# Set real secrets in .env before running this
-# With bundled Postgres (COMPOSE_PROFILES=with-db):
-docker compose -f docker-compose.prod.yml up --build -d
+1. Set `DATABASE_URL` in `.env` to your connection string
+2. Remove the `db` service from `docker-compose.yml`
 
-# With your own hosted Postgres (COMPOSE_PROFILES=):
-docker compose -f docker-compose.prod.yml up --build -d
-```
-
-**Checking status:**
-
-```bash
-docker compose -f docker-compose.prod.yml ps
-```
-
-**Tailing production logs** (last 50 lines then follow):
-
-```bash
-docker compose -f docker-compose.prod.yml logs --tail=50 -f
-```
-
-**Deploying an update:**
-
-```bash
-docker compose -f docker-compose.prod.yml up --build -d
-```
-
-**Stopping production:**
-
-```bash
-docker compose -f docker-compose.prod.yml down
-```
-
----
-
-## Project Structure
-
-```
-openpieces/
-├── app/                  # Next.js App Router pages
-│   ├── workflows/        # Workflow builder & execution viewer
-│   ├── pieces/           # Pieces catalogue
-│   ├── memory/           # Memory store
-│   └── settings/         # App settings
-├── components/           # Shared UI components
-│   ├── layout/           # Sidebar, header, dashboard shell
-│   ├── workflows/        # Workflow canvas, nodes, AI chat
-│   ├── overview/         # Composer, model/mode pickers
-│   ├── settings/         # Settings sections & rows
-│   └── basic/            # Buttons, dropdowns, page titles
-├── lib/                  # Shared utilities & data
-├── Dockerfile            # Multi-stage build (dev + prod)
-└── next.config.ts        # Next.js config (standalone output)
-```
+The bundled Postgres includes `pgvector` for embedding storage — your external DB will need it too.
 
 ---
 
 ## Environment Variables
 
-| Variable | Description | Default |
+### Required for production
+
+| Variable | Description |
+|---|---|
+| `AUTH_SECRET` | Auth.js session signing key. Generate with `node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"` |
+| `SECRETS_ENCRYPTION_KEY` | Encryption key for stored secrets. Generate with the command above. |
+| `INTERNAL_API_KEY` | Key used by OpenCode to authenticate against the internal API. Generate with the command above. |
+| `OPENCODE_SERVER_PASSWORD` | Password for the OpenCode server. |
+| `POSTGRES_PASSWORD` | Password for the bundled PostgreSQL database. |
+| `DEEPSEEK_API_KEY` | API key for DeepSeek AI models. |
+
+### Optional
+
+| Variable | Default | Description |
 |---|---|---|
-| `COMPOSE_PROFILES` | Set to `with-db` to spin up a bundled Postgres container; leave empty to use your own | `with-db` |
-| `POSTGRES_USER` | Database username (bundled DB only) | `openpieces` |
-| `POSTGRES_PASSWORD` | Database password (bundled DB only) | — |
-| `POSTGRES_DB` | Database name (bundled DB only) | `openpieces` |
-| `DATABASE_URL` | Full Postgres connection string | — |
-| `NEXT_PUBLIC_APP_URL` | Public URL of the app | `http://localhost:3000` |
+| `APP_PORT` | `3141` | Internal port for the Next.js app (exposed to host) |
+| `OPENCODE_PORT` | `4096` | Internal port for the OpenCode server |
+| `NEXT_PUBLIC_APP_URL` | `http://localhost:3141` | Public URL — change to your domain in production |
+| `AI_GATEWAY_API_KEY` | — | AI Gateway key (alternative to DeepSeek) |
+| `AI_MODEL` | `deepseek/deepseek-v3.2` | AI model to use |
+| `TAVILY_API_KEY` | — | Tavily web search API key |
+| `DB_POOL_MAX` | `5` | Connection pool size for the app |
+| `PG_BOSS_POOL_SIZE` | `5` | Connection pool size for the worker |
+| `PG_BOSS_CONCURRENCY` | `10` | Max concurrent background jobs |
 
 ---
 
 ## Tech Stack
 
 - **[Next.js 16](https://nextjs.org)** — App Router, React Server Components
-- **[React 19](https://react.dev)** — latest concurrent features
-- **[Tailwind CSS v4](https://tailwindcss.com)** — utility-first styling
-- **[Xyflow](https://xyflow.com)** — workflow canvas / node graph
+- **[React 19](https://react.dev)** — concurrent features
+- **[Tailwind CSS v4](https://tailwindcss.com)** — styling
+- **[Xyflow](https://xyflow.com)** — workflow canvas
 - **[Motion](https://motion.dev)** — animations
-- **[next-themes](https://github.com/pacocoursey/next-themes)** — dark/light mode
-- **[PostgreSQL 16](https://www.postgresql.org)** — relational database
+- **[PostgreSQL 16](https://www.postgresql.org)** + **[pgvector](https://github.com/pgvector/pgvector)** — database and embeddings
