@@ -6,10 +6,9 @@
    Calendar,
    Settings,
    Shield,
-   Bell,
-   Globe,
    Monitor,
    Menu,
+   X,
    Puzzle,
    Terminal,
    KeyRound,
@@ -18,11 +17,13 @@
  } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useState } from "react";
 import { ThemeToggle } from "../theme-toggle";
 import { ProfileDropdown } from "../layout/profile-dropdown";
 
 export function Header() {
   const pathname = usePathname();
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const segments = pathname.split("/").filter(Boolean);
   const workspaceId = segments[1]; // ['', 'workspace', '{id}', ...] -> ['workspace','{id}',...]
 
@@ -119,8 +120,8 @@ export function Header() {
   const navItems = isSettingsPage ? settingsNavItems : isBrainPage ? brainNavItems : personalNavItems;
 
   return (
-    <header className="flex h-14 shrink-0 items-center border-b border-[var(--border)] bg-[var(--background)]">
-      <nav className="flex flex-1 flex-wrap items-center gap-1 px-6 scrollbar-hide">
+    <header className="relative flex h-14 shrink-0 items-center border-b border-[var(--border)] bg-[var(--background)]">
+      <nav className="hidden flex-1 flex-wrap items-center gap-1 px-6 scrollbar-hide lg:flex">
         {navItems.map((item) => {
           const Icon = item.icon;
           const active =
@@ -152,24 +153,48 @@ export function Header() {
         })}
       </nav>
 
-      <div className="flex shrink-0 items-center gap-3 px-6">
-        <ProfileDropdown />
+      <div className="ml-auto flex shrink-0 items-center gap-3 px-6">
         <ThemeToggle />
-        {/* <button
-          type="button"
-          className="rounded-lg p-2.5 text-[var(--muted)] transition-colors hover:bg-[var(--hover-bg)] hover:text-[var(--foreground)]"
-          aria-label="Notifications"
-        >
-          <Bell className="h-5 w-5" />
-        </button>*/}
+        <ProfileDropdown />
         <button
           type="button"
-          className="rounded-lg p-2.5 text-[var(--muted)] transition-colors hover:bg-[var(--hover-bg)] hover:text-[var(--foreground)]"
+          onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+          className="rounded-lg p-2.5 text-[var(--muted)] transition-colors hover:bg-[var(--hover-bg)] hover:text-[var(--foreground)] lg:hidden"
           aria-label="Menu"
         >
-          <Menu className="h-5 w-5" />
+          {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
         </button>
       </div>
+
+      {mobileMenuOpen && (
+        <div className="absolute left-0 top-14 z-50 w-full border-b border-[var(--border)] bg-[var(--background)] p-4 lg:hidden">
+          <nav className="flex flex-col gap-1">
+            {navItems.map((item) => {
+              const Icon = item.icon;
+              const active =
+                item.label === "Overview" || item.label === "Brain"
+                  ? pathname === item.activePattern
+                  : pathname.startsWith(item.activePattern);
+
+              return (
+                <Link
+                  key={item.label}
+                  href={item.href}
+                  onClick={() => setMobileMenuOpen(false)}
+                  className={`flex items-center gap-3 rounded-lg px-4 py-3 text-sm font-medium transition-colors ${
+                    active
+                      ? "text-[var(--foreground)]"
+                      : "text-[var(--muted)] hover:bg-[var(--hover-bg)] hover:text-[var(--foreground)]"
+                  }`}
+                >
+                  <Icon className="h-5 w-5" strokeWidth={active ? 2.5 : 1.5} />
+                  {item.label}
+                </Link>
+              );
+            })}
+          </nav>
+        </div>
+      )}
     </header>
   );
 }
