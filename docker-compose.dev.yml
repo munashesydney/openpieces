@@ -1,13 +1,11 @@
 # =============================================================================
 # Development — hot reload, verbose logs, source code mounted as a volume
 #
-# With bundled Postgres (default):
-#   COMPOSE_PROFILES=with-db docker compose up --build
-#   (or set COMPOSE_PROFILES=with-db in your .env)
+# Start:
+#   docker compose -f docker-compose.dev.yml up --build
 #
-# With your own hosted Postgres (Supabase, Neon, Railway, etc.):
-#   docker compose up --build
-#   (set DATABASE_URL in .env to point at your instance)
+# With your own hosted Postgres instead:
+#   Remove the `db` service below and set DATABASE_URL in .env
 # =============================================================================
 
 services:
@@ -31,9 +29,10 @@ services:
     entrypoint: ["sh", "./scripts/docker-dev-entrypoint.sh"]
     command: sh -c "node_modules/.bin/tsx lib/db/migrate.ts && node_modules/.bin/next dev --webpack"
     ports:
-      - "3000:3000"
+      - "${APP_PORT:-3141}:3000"
     environment:
       - WATCHPACK_POLLING=true
+      - DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
       - OPENCODE_INTERNAL_URL=http://opencode:4096
       - SERVICE_HOST=http://worker
     env_file:
@@ -64,6 +63,7 @@ services:
     command: sh -c "node_modules/.bin/tsx scripts/ai-worker.ts"
     environment:
       - WATCHPACK_POLLING=true
+      - DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
     env_file:
       - .env
     depends_on:
@@ -76,11 +76,6 @@ services:
         max-file: "3"
 
   db:
-    # Only started when COMPOSE_PROFILES includes "with-db".
-    # If you have your own hosted Postgres, remove "with-db" from
-    # COMPOSE_PROFILES in .env and point DATABASE_URL at your instance.
-    profiles:
-      - with-db
     build:
       context: .
       dockerfile: Dockerfile.db
@@ -120,7 +115,7 @@ services:
       - OPENCODE_SERVER_PASSWORD=${OPENCODE_SERVER_PASSWORD}
       - INTERNAL_API_KEY=${INTERNAL_API_KEY}
       - OPENCODE_SERVER_USERNAME=opencode
-      - OPENPIECES_WEBHOOK_URL=http://app:3000/api/opencode/webhook
+      - OPENPIECES_WEBHOOK_URL=http://app:${APP_PORT:-3141}/api/opencode/webhook
 
 volumes:
   postgres_data:
