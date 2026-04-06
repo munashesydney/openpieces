@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useTransition } from "react";
 import {
   Card,
   CardHeader,
@@ -10,46 +11,80 @@ import {
 import { Button } from "@/components/basic/buttons/button";
 import { Input } from "@/components/basic/input/input";
 import { Textarea } from "@/components/basic/input/textarea";
+import { updateGeneralSettingsAction } from "@/app/workspace/[workspaceId]/settings/general/actions";
 
-export function GeneralSettings() {
+type GeneralSettingsProps = {
+  workspaceId: string;
+  initialName: string;
+  initialDescription: string;
+};
+
+export function GeneralSettings({
+  workspaceId,
+  initialName,
+  initialDescription,
+}: GeneralSettingsProps) {
+  const [name, setName] = useState(initialName);
+  const [description, setDescription] = useState(initialDescription);
+  const [formError, setFormError] = useState<string | null>(null);
+  const [isPending, startTransition] = useTransition();
+
+  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setFormError(null);
+
+    const formData = new FormData();
+    formData.set("name", name);
+    formData.set("description", description);
+
+    startTransition(async () => {
+      const result = await updateGeneralSettingsAction(workspaceId, formData);
+      if ("error" in result) {
+        setFormError(result.error);
+      }
+    });
+  };
+
   return (
     <div className="flex w-full justify-center px-6 pb-20 pt-10">
       <div className="w-full max-w-[820px] space-y-8">
         <Card>
           <CardHeader>
             <CardTitle>Workspace Identity</CardTitle>
-            <CardDescription>Manage how your workspace is identified and accessed.</CardDescription>
+            <CardDescription>Manage how your workspace is identified.</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="space-y-6">
+            <form onSubmit={handleSubmit} className="space-y-6">
               <Input
                 label="Workspace Name"
                 placeholder="e.g. Acme Corporation"
-                defaultValue="My Project"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                required
               />
-
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-[var(--foreground)]">Workspace URL</label>
-                <div className="flex rounded-lg border border-[var(--border)] bg-[var(--background)] overflow-hidden focus-within:ring-1 focus-within:ring-[var(--accent)] focus-within:border-[var(--accent)] transition-all">
-                  <span className="flex items-center bg-[var(--hover-bg)] px-4 text-sm text-[var(--muted)] border-r border-[var(--border)]">
-                    app.openpieces.com/
-                  </span>
-                  <input
-                    type="text"
-                    className="flex-1 px-4 py-2.5 text-sm text-[var(--foreground)] bg-transparent focus:outline-none"
-                    placeholder="workspace-slug"
-                    defaultValue="my-project"
-                  />
-                </div>
-                <p className="text-xs text-[var(--muted)]">This is your persistent workspace identifier.</p>
-              </div>
 
               <Textarea
                 label="Description"
                 placeholder="Tell us about this workspace..."
-                defaultValue="This is my primary workspace for AI automation."
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
               />
-            </div>
+
+              {formError && (
+                <div className="rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-500">
+                  {formError}
+                </div>
+              )}
+
+              <div className="flex items-center justify-end gap-3 pt-4">
+                <Button variant="ghost" type="button">
+                  Cancel
+                </Button>
+                <Button type="submit" disabled={isPending}>
+                  {isPending ? "Saving..." : "Save Changes"}
+                </Button>
+              </div>
+            </form>
           </CardContent>
         </Card>
 
@@ -64,15 +99,6 @@ export function GeneralSettings() {
             </Button>
           </CardContent>
         </Card>
-
-        <div className="flex items-center justify-end gap-3 pt-4">
-          <Button variant="ghost">
-            Cancel
-          </Button>
-          <Button>
-            Save Changes
-          </Button>
-        </div>
       </div>
     </div>
   );

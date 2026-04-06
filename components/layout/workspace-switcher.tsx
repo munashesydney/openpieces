@@ -162,7 +162,10 @@ export function WorkspaceSwitcher({
           <button
             type="button"
             role="menuitem"
-            onClick={() => setOpen(false)}
+            onClick={() => {
+              setOpen(false);
+              router.push("/workspace/create");
+            }}
             className="flex w-full items-center gap-2 px-3 py-2.5 text-sm font-medium text-[var(--foreground)] transition-colors hover:bg-[var(--hover-bg)]"
           >
             <Plus className="h-4 w-4 text-[var(--muted)]" />

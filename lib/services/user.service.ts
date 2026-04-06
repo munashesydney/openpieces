@@ -51,3 +51,27 @@ export async function verifyPassword(
 ): Promise<boolean> {
   return bcrypt.compare(plaintext, hash);
 }
+
+export async function changePassword(
+  userId: string,
+  currentPassword: string,
+  newPassword: string
+): Promise<{ success: boolean; error?: string }> {
+  const user = await findUserById(userId);
+  if (!user) {
+    return { success: false, error: "User not found" };
+  }
+
+  const isValid = await verifyPassword(currentPassword, user.password);
+  if (!isValid) {
+    return { success: false, error: "Current password is incorrect" };
+  }
+
+  const newPasswordHash = await bcrypt.hash(newPassword, 12);
+  await db
+    .update(users)
+    .set({ password: newPasswordHash })
+    .where(eq(users.id, userId));
+
+  return { success: true };
+}

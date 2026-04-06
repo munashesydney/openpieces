@@ -3,12 +3,13 @@ import { db } from "../db";
 import { workspaces, type NewWorkspace, type Workspace } from "../db/schema";
 
 export async function createWorkspace(
-  data: Pick<NewWorkspace, "name" | "userId">
+  data: Pick<NewWorkspace, "name" | "userId"> & { description?: string }
 ): Promise<Workspace> {
   const result = await db
     .insert(workspaces)
     .values({
       name: data.name.trim(),
+      description: data.description?.trim() ?? "",
       userId: data.userId,
     })
     .returning();

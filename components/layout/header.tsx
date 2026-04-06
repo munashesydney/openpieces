@@ -96,23 +96,23 @@ export function Header() {
       activePattern: workspaceId ? `/workspace/${workspaceId}/settings/security` : "/settings/security",
     },
     {
+      label: "Preferences",
+      href: workspaceId ? `/workspace/${workspaceId}/settings/preferences` : "/settings/preferences",
+      icon: Monitor,
+      activePattern: workspaceId ? `/workspace/${workspaceId}/settings/preferences` : "/settings/preferences",
+    },
+    /*{
       label: "Notifications",
       href: workspaceId ? `/workspace/${workspaceId}/settings/notifications` : "/settings/notifications",
       icon: Bell,
       activePattern: workspaceId ? `/workspace/${workspaceId}/settings/notifications` : "/settings/notifications",
     },
     {
-      label: "Preferences",
-      href: workspaceId ? `/workspace/${workspaceId}/settings/preferences` : "/settings/preferences",
-      icon: Monitor,
-      activePattern: workspaceId ? `/workspace/${workspaceId}/settings/preferences` : "/settings/preferences",
-    },
-    {
       label: "Advanced",
       href: workspaceId ? `/workspace/${workspaceId}/settings/advanced` : "/settings/advanced",
       icon: Globe,
       activePattern: workspaceId ? `/workspace/${workspaceId}/settings/advanced` : "/settings/advanced",
-    },
+    },*/
   ];
 
   const navItems = isSettingsPage ? settingsNavItems : isBrainPage ? brainNavItems : personalNavItems;

@@ -16,6 +16,7 @@ export type NewUser = typeof users.$inferInsert;
 export const workspaces = pgTable("workspaces", {
   id: uuid("id").defaultRandom().primaryKey(),
   name: text("name").notNull(),
+  description: text("description").notNull().default(""),
   userId: uuid("user_id")
     .notNull()
     .references(() => users.id, { onDelete: "cascade" }),
