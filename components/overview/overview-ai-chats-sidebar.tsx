@@ -141,7 +141,7 @@ export function OverviewAiChatsSidebar({
             </div>
             <p className="text-sm font-medium text-[var(--foreground)]">No chats yet</p>
             <p className="mt-1.5 max-w-[13rem] text-xs leading-relaxed text-[var(--muted)]">
-              Conversations you start from the overview will show up here. Send a message in the composer to begin.
+              Conversations will show here.
             </p>
           </div>
         ) : null}
