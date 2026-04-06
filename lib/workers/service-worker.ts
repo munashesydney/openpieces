@@ -257,6 +257,13 @@ async function sendSpawnFailureMessage(service: Service, workspaceId: string, se
 
     // Prefer replying in the originating session; fall back to a new session if none was provided
     if (sessionId) {
+      const { serviceHasWorkingSession } = await import("@/lib/services/opencode-session.service");
+      const hasWorking = await serviceHasWorkingSession(service.id, sessionId);
+      if (hasWorking) {
+        const errMsg = `Cannot send spawn failure message: Another opencode session linked to this service is running - opencode session id: ${sessionId}`;
+        console.error(`[service-worker] ${errMsg}`);
+        throw new Error(errMsg);
+      }
       await sendMessage(sessionId, errorText);
       console.log(`[service-worker] Sent spawn failure message to originating session ${sessionId}`);
     } else {
