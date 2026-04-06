@@ -35,7 +35,7 @@ services:
         condition: service_started
     restart: always
     healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://localhost:3000/ || exit 1"]
+      test: ["CMD-SHELL", "wget -qO- http://localhost:${APP_PORT}/ || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 5
@@ -109,7 +109,7 @@ services:
       - OPENCODE_SERVER_PASSWORD=${OPENCODE_SERVER_PASSWORD}
       - INTERNAL_API_KEY=${INTERNAL_API_KEY}
       - OPENCODE_SERVER_USERNAME=opencode
-      - OPENPIECES_WEBHOOK_URL=http://app:3000/api/opencode/webhook
+      - OPENPIECES_WEBHOOK_URL=http://app:${APP_PORT}/api/opencode/webhook
     restart: always
     logging:
       driver: json-file
