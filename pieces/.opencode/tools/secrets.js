@@ -14,7 +14,7 @@ export const manageSecrets = tool({
     const baseUrl =
       process.env.OPENPIECES_INTERNAL_URL ||
       process.env.OPENPIECES_APP_URL ||
-      "http://app:3000";
+      "http://app:3141";
 
     const internalSecret = process.env.INTERNAL_API_KEY;
     if (!internalSecret) {

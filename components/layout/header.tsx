@@ -19,6 +19,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { ThemeToggle } from "../theme-toggle";
+import { ProfileDropdown } from "../layout/profile-dropdown";
 
 export function Header() {
   const pathname = usePathname();
@@ -152,14 +153,15 @@ export function Header() {
       </nav>
 
       <div className="flex shrink-0 items-center gap-3 px-6">
+        <ProfileDropdown />
         <ThemeToggle />
-        <button
+        {/* <button
           type="button"
           className="rounded-lg p-2.5 text-[var(--muted)] transition-colors hover:bg-[var(--hover-bg)] hover:text-[var(--foreground)]"
           aria-label="Notifications"
         >
           <Bell className="h-5 w-5" />
-        </button>
+        </button>*/}
         <button
           type="button"
           className="rounded-lg p-2.5 text-[var(--muted)] transition-colors hover:bg-[var(--hover-bg)] hover:text-[var(--foreground)]"
