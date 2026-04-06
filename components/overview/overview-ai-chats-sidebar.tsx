@@ -136,7 +136,7 @@ export function OverviewAiChatsSidebar({
             role="status"
             aria-live="polite"
           >
-            <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-[var(--hover-bg)] text-[var(--muted)] ring-1 ring-[var(--border)]">
+            <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-[var(--hover-bg)] text-[var(--muted)] ring-1 ring-[var(--border)]">
               <MessageSquare className="h-6 w-6" strokeWidth={1.5} />
             </div>
             <p className="text-sm font-medium text-[var(--foreground)]">No chats yet</p>
