@@ -15,6 +15,8 @@ export interface DropdownProps {
   onChange?: (value: string) => void;
   placeholder?: string;
   className?: string;
+  /** Applied only to the trigger button (not menu options). */
+  triggerClassName?: string;
   error?: string;
 }
 
@@ -25,6 +27,7 @@ export function Dropdown({
   onChange,
   placeholder = "Select an option",
   className = "",
+  triggerClassName = "",
   error,
 }: DropdownProps) {
   const [isOpen, setIsOpen] = React.useState(false);
@@ -58,9 +61,9 @@ export function Dropdown({
         <button
           type="button"
           onClick={() => setIsOpen(!isOpen)}
-          className={`flex w-full items-center justify-between rounded-lg border border-[var(--border)] bg-[var(--background)] px-4 py-2.5 text-left text-sm transition-all focus:border-[var(--accent)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)] ${
+          className={`flex w-full items-center justify-between rounded-lg border border-[var(--border)] bg-[var(--background)] px-4 py-2.5 text-left text-sm transition-colors focus:border-[var(--accent)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)] hover:bg-[var(--hover-bg)] ${
             isOpen ? "border-[var(--accent)] ring-1 ring-[var(--accent)]" : ""
-          }`}
+          } ${triggerClassName}`}
         >
           <span className={`whitespace-nowrap truncate ${selectedOption ? "text-[var(--foreground)]" : "text-[var(--muted)]"}`}>
             {selectedOption ? selectedOption.label : placeholder}

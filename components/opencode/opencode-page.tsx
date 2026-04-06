@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import { Loader2, Send, Plus, Terminal, FolderOpen, X, Activity } from "lucide-react";
 import { Dropdown } from "@/components/basic/input/dropdown";
+import { OpenCodePageSkeleton } from "@/components/opencode/opencode-page-skeleton";
 import type { Service } from "@/lib/db/schema";
 
 type SessionEvent = { type: string; sessionId?: string; [key: string]: unknown };
@@ -18,7 +19,11 @@ export function OpenCodePage({
   const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null);
   const [messages, setMessages] = useState<any[]>([]);
   const [input, setInput] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
+  /** Initial / refresh of session list (page 1) */
+  const [isSessionsLoading, setIsSessionsLoading] = useState(true);
+  /** Loading messages for the selected session */
+  const [isMessagesLoading, setIsMessagesLoading] = useState(false);
+  const [isCreatingSession, setIsCreatingSession] = useState(false);
   const [isSending, setIsSending] = useState(false);
   const [events, setEvents] = useState<SessionEvent[]>([]);
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -224,7 +229,7 @@ export function OpenCodePage({
 
   const loadSessions = async (page = 1, append = false) => {
     try {
-      if (page === 1) setIsLoading(true);
+      if (page === 1) setIsSessionsLoading(true);
       else setIsLoadingMore(true);
       const res = await fetch(`/api/opencode/sessions?workspaceId=${workspaceId}&page=${page}&pageSize=20`);
       const data = await res.json();
@@ -243,7 +248,7 @@ export function OpenCodePage({
     } catch (e) {
       console.error(e);
     } finally {
-      setIsLoading(false);
+      setIsSessionsLoading(false);
       setIsLoadingMore(false);
     }
   };
@@ -262,7 +267,7 @@ export function OpenCodePage({
   const createSession = async () => {
     if (!selectedServiceId) return;
     try {
-      setIsLoading(true);
+      setIsCreatingSession(true);
       const res = await fetch("/api/opencode/sessions", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -282,7 +287,7 @@ export function OpenCodePage({
     } catch (e) {
       console.error(e);
     } finally {
-      setIsLoading(false);
+      setIsCreatingSession(false);
     }
   };
 
@@ -293,7 +298,7 @@ export function OpenCodePage({
       return;
     }
     try {
-      setIsLoading(true);
+      setIsMessagesLoading(true);
       const res = await fetch(`/api/opencode/sessions/${id}/messages`);
       if (!res.ok) return;
       // Double-check after fetch
@@ -304,7 +309,7 @@ export function OpenCodePage({
     } catch (e) {
       console.error(e);
     } finally {
-      setIsLoading(false);
+      setIsMessagesLoading(false);
     }
   };
 
@@ -422,6 +427,10 @@ export function OpenCodePage({
     }
   };
 
+  if (isSessionsLoading && sessions.length === 0) {
+    return <OpenCodePageSkeleton />;
+  }
+
   return (
     <div className="flex h-full text-sm">
       {/* Sidebar: Sessions */}
@@ -432,7 +441,7 @@ export function OpenCodePage({
           </h2>
           <button
             onClick={openCreateModal}
-            disabled={isLoading}
+            disabled={isCreatingSession}
             className="p-1.5 hover:bg-[var(--hover-bg)] rounded-md transition-colors"
             title="New Session"
           >
@@ -484,10 +493,10 @@ export function OpenCodePage({
                 </button>
                 <button
                   onClick={createSession}
-                  disabled={!selectedServiceId || isLoading || servicesWithDirectory.length === 0}
+                  disabled={!selectedServiceId || isCreatingSession || servicesWithDirectory.length === 0}
                   className="px-4 py-2 rounded-lg bg-[var(--accent)] text-white hover:opacity-90 disabled:opacity-50 transition-opacity"
                 >
-                  {isLoading ? (
+                  {isCreatingSession ? (
                     <Loader2 className="h-4 w-4 animate-spin inline" />
                   ) : (
                     "Create"
@@ -498,7 +507,7 @@ export function OpenCodePage({
           </div>
         )}
         <div className="flex-1 overflow-y-auto p-2">
-          {sessions.length === 0 && !isLoading && (
+          {sessions.length === 0 && !isSessionsLoading && (
             <div className="text-[var(--muted)] text-center mt-4">No sessions found</div>
           )}
           {sessions.map((session) => {
@@ -569,56 +578,76 @@ export function OpenCodePage({
               </div>
             )}
             <div className="flex-1 overflow-y-auto p-6 space-y-6">
-              {messages.map((msg, i) => (
+              {isMessagesLoading && messages.length === 0 ? (
                 <div
-                  key={i}
-                  className={`flex ${
-                    msg.role === "user" ? "justify-end" : "justify-start"
-                  }`}
+                  className="space-y-6 animate-pulse"
+                  aria-busy={true}
+                  aria-label="Loading messages"
                 >
-                  <div
-                    className={`max-w-[80%] rounded-xl px-4 py-3 whitespace-pre-wrap ${
-                      msg.role === "user"
-                        ? "bg-[var(--accent)] text-white"
-                        : "bg-[var(--input-bg)] border border-[var(--border)] text-[var(--foreground)]"
-                    }`}
-                  >
-                    {msg.content}
+                  <div className="flex justify-end">
+                    <div className="h-16 w-[min(72%,320px)] rounded-xl bg-[var(--hover-bg)]" />
+                  </div>
+                  <div className="flex justify-start">
+                    <div className="h-24 w-[min(85%,420px)] rounded-xl bg-[var(--hover-bg)]" />
+                  </div>
+                  <div className="flex justify-end">
+                    <div className="h-12 w-[min(55%,240px)] rounded-xl bg-[var(--hover-bg)]" />
                   </div>
                 </div>
-              ))}
-              {(isSending || events.length > 0) && (
-                <div className="flex justify-start">
-                  <div className="max-w-[80%] rounded-xl px-4 py-3 bg-[var(--input-bg)] border border-[var(--border)] text-[var(--foreground)] w-full">
-                    <div className="flex items-center gap-2 mb-2 text-[var(--muted)]">
-                      <Activity className="h-4 w-4 shrink-0" />
-                      <span className="text-xs font-medium">
-                        {isSending ? "Session in progress..." : "Activity"}
-                      </span>
+              ) : (
+                <>
+                  {messages.map((msg, i) => (
+                    <div
+                      key={i}
+                      className={`flex ${
+                        msg.role === "user" ? "justify-end" : "justify-start"
+                      }`}
+                    >
+                      <div
+                        className={`max-w-[80%] rounded-xl px-4 py-3 whitespace-pre-wrap ${
+                          msg.role === "user"
+                            ? "bg-[var(--accent)] text-white"
+                            : "bg-[var(--input-bg)] border border-[var(--border)] text-[var(--foreground)]"
+                        }`}
+                      >
+                        {msg.content}
+                      </div>
                     </div>
-                    <div className="space-y-1 max-h-48 overflow-y-auto text-xs">
-                      {events.map((ev, i) => {
-                        const e = ev as { input?: { tool?: string }; properties?: { status?: string } };
-                        let label = ev.type;
-                        if (ev.type === "tool.execute.before" && e.input?.tool)
-                          label = `Running ${e.input.tool}...`;
-                        else if (ev.type === "tool.execute.after" && e.input?.tool)
-                          label = `Finished ${e.input.tool}`;
-                        else if (ev.type === "session.status" && e.properties?.status)
-                          label = String(e.properties.status);
-                        else if (ev.type === "message.part.updated") label = "Updating message...";
-                        return (
-                          <div
-                            key={i}
-                            className="py-1 border-b border-[var(--border)]/50 last:border-0"
-                          >
-                            <span className="text-[var(--muted)]">[{ev.type}]</span> {label}
-                          </div>
-                        );
-                      })}
+                  ))}
+                  {(isSending || events.length > 0) && (
+                    <div className="flex justify-start">
+                      <div className="max-w-[80%] rounded-xl px-4 py-3 bg-[var(--input-bg)] border border-[var(--border)] text-[var(--foreground)] w-full">
+                        <div className="flex items-center gap-2 mb-2 text-[var(--muted)]">
+                          <Activity className="h-4 w-4 shrink-0" />
+                          <span className="text-xs font-medium">
+                            {isSending ? "Session in progress..." : "Activity"}
+                          </span>
+                        </div>
+                        <div className="space-y-1 max-h-48 overflow-y-auto text-xs">
+                          {events.map((ev, i) => {
+                            const e = ev as { input?: { tool?: string }; properties?: { status?: string } };
+                            let label = ev.type;
+                            if (ev.type === "tool.execute.before" && e.input?.tool)
+                              label = `Running ${e.input.tool}...`;
+                            else if (ev.type === "tool.execute.after" && e.input?.tool)
+                              label = `Finished ${e.input.tool}`;
+                            else if (ev.type === "session.status" && e.properties?.status)
+                              label = String(e.properties.status);
+                            else if (ev.type === "message.part.updated") label = "Updating message...";
+                            return (
+                              <div
+                                key={i}
+                                className="py-1 border-b border-[var(--border)]/50 last:border-0"
+                              >
+                                <span className="text-[var(--muted)]">[{ev.type}]</span> {label}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                </div>
+                  )}
+                </>
               )}
               <div ref={messagesEndRef} />
             </div>
