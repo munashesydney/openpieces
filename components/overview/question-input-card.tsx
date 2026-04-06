@@ -49,7 +49,13 @@ export function QuestionInputCard({
   };
 
   const handleSkip = () => {
-    handleNext();
+    setAnswers((prev) => ({
+      ...prev,
+      [`q${currentStep}`]: "[User decided to skip this question]",
+    }));
+    if (currentStep < questions.length - 1) {
+      setCurrentStep((prev) => prev + 1);
+    }
   };
 
   const handleSubmit = () => {

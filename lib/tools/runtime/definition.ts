@@ -2,7 +2,7 @@ import { z } from "zod";
 
 const questionSchema = z.object({
   question: z.string().describe("The question text to display to the user"),
-  suggestedAnswers: z.array(z.string()).optional().describe("Optional selectable answer options"),
+  suggestedAnswers: z.array(z.string()).max(3).optional().describe("Optional selectable answer options, max 3"),
 });
 
 export const runtimeToolDefinition = {
