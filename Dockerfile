@@ -5,12 +5,17 @@ FROM node:20-alpine AS base
 RUN apk add --no-cache libc6-compat
 WORKDIR /app
 
+# Defaults for build-time env vars (overridden at runtime by compose env)
+ENV NODE_ENV=production
+ENV NEXT_TELEMETRY_DISABLED=1
+ENV DATABASE_URL=postgresql://localhost/openpieces
+
 # =============================================================================
 # Stage 2: Deps - install all dependencies (cached layer)
 # =============================================================================
 FROM base AS deps
 COPY package.json package-lock.json ./
-RUN npm ci
+RUN npm ci --include=dev
 
 # =============================================================================
 # Stage 3: Development - hot-reload dev server with source mounted at runtime
@@ -71,15 +76,21 @@ ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 
 RUN addgroup --system --gid 1001 nodejs \
- && adduser --system --uid 1001 nextjs
+ && adduser --system --uid 1001 nextjs \
+ && apk add --no-cache wget
 
 COPY --from=builder /app/public ./public
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
+COPY --from=deps /app/node_modules ./node_modules
+COPY lib/db/migrate.ts ./lib/db/migrate.ts
+COPY lib/db/schema.ts ./lib/db/schema.ts
+COPY drizzle/ ./drizzle/
 
 USER nextjs
 EXPOSE 3000
 ENV PORT=3000
 ENV HOSTNAME="0.0.0.0"
 
-CMD ["node", "server.js"]
+ENTRYPOINT ["sh", "-c"]
+CMD ["npx tsx lib/db/migrate.ts && node server.js"]

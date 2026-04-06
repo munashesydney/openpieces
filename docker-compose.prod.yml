@@ -1,29 +1,16 @@
 # =============================================================================
 # Production — standalone Next.js build, no source mounts, restart policies
 #
-# With bundled Postgres (default):
-#   COMPOSE_PROFILES=with-db docker compose -f docker-compose.prod.yml up -d
-#   (or set COMPOSE_PROFILES=with-db in your .env)
-#
-# With your own hosted Postgres (Supabase, Neon, Railway, etc.):
+# Usage:
 #   docker compose -f docker-compose.prod.yml up -d
-#   (set DATABASE_URL in .env to point at your instance)
+#
+# Requirements:
+#   - All env vars set in .env or injected by your platform
+#   - Named volumes are provisioned automatically on first run
+#
 # =============================================================================
 
 services:
-  migrate:
-    build:
-      context: .
-      dockerfile: Dockerfile
-      target: migrator
-    env_file:
-      - .env
-    depends_on:
-      db:
-        condition: service_healthy
-    # Runs once and exits — app waits for it to complete successfully
-    restart: "no"
-
   app:
     build:
       context: .
@@ -32,19 +19,27 @@ services:
     ports:
       - "3000:3000"
     volumes:
-      - ./pieces:/app/pieces
+      - pieces:/app/pieces
     environment:
+      - NODE_ENV=production
+      - NEXT_TELEMETRY_DISABLED=1
+      - DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
       - OPENCODE_INTERNAL_URL=http://opencode:4096
       - SERVICE_HOST=http://worker
     env_file:
       - .env
     depends_on:
-      migrate:
-        condition: service_completed_successfully
+      db:
+        condition: service_healthy
       opencode:
         condition: service_started
-    restart: unless-stopped
-    # Minimal log retention in prod — use your log aggregator of choice
+    restart: always
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:3000/ || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 40s
     logging:
       driver: json-file
       options:
@@ -58,10 +53,15 @@ services:
       target: worker
     env_file:
       - .env
+    volumes:
+      - pieces:/app/pieces
+    environment:
+      - NODE_ENV=production
+      - DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
     depends_on:
-      migrate:
-        condition: service_completed_successfully
-    restart: unless-stopped
+      db:
+        condition: service_healthy
+    restart: always
     logging:
       driver: json-file
       options:
@@ -69,11 +69,6 @@ services:
         max-file: "5"
 
   db:
-    # Only started when COMPOSE_PROFILES includes "with-db".
-    # If you have your own hosted Postgres, skip this and set DATABASE_URL
-    # in .env to point at your instance instead.
-    profiles:
-      - with-db
     build:
       context: .
       dockerfile: Dockerfile.db
@@ -81,7 +76,6 @@ services:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_DB: ${POSTGRES_DB}
-    # Do NOT expose 5432 to the host in production
     expose:
       - "5432"
     volumes:
@@ -91,7 +85,8 @@ services:
       interval: 10s
       timeout: 5s
       retries: 10
-    restart: unless-stopped
+      start_period: 30s
+    restart: always
     logging:
       driver: json-file
       options:
@@ -105,8 +100,8 @@ services:
     expose:
       - "4096"
     volumes:
-      - ./pieces:/pieces
-      - ./opencode-data:/root/.local/share/opencode
+      - pieces:/pieces
+      - opencode_data:/root/.local/share/opencode
     environment:
       - PORT=4096
       - HOSTNAME_OVERRIDE=0.0.0.0
@@ -115,7 +110,7 @@ services:
       - INTERNAL_API_KEY=${INTERNAL_API_KEY}
       - OPENCODE_SERVER_USERNAME=opencode
       - OPENPIECES_WEBHOOK_URL=http://app:3000/api/opencode/webhook
-    restart: unless-stopped
+    restart: always
     logging:
       driver: json-file
       options:
@@ -123,4 +118,6 @@ services:
         max-file: "3"
 
 volumes:
+  pieces:
   postgres_data:
+  opencode_data:

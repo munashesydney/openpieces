@@ -37,7 +37,7 @@ export function broadcastSessionEvent(sessionId: string, event: unknown): void {
 
   for (const writer of writers) {
     writer.write(data).catch(() => {
-      removeWriter(sessionId, writer, "write_failed");
+      removeWriter(sessionId, writer);
     });
   }
 }
