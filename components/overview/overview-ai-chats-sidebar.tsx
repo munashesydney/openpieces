@@ -32,6 +32,7 @@ type OverviewAiChatsSidebarProps = {
   selectedAgentType: AgentType | null;
   hasMore: boolean;
   isLoadingMore: boolean;
+  className?: string;
 };
 
 export function OverviewAiChatsSidebar({
@@ -45,6 +46,7 @@ export function OverviewAiChatsSidebar({
   selectedAgentType,
   hasMore,
   isLoadingMore,
+  className,
 }: OverviewAiChatsSidebarProps) {
   const navRef = useRef<HTMLDivElement>(null);
 
@@ -59,7 +61,9 @@ export function OverviewAiChatsSidebar({
   }, [hasMore, isLoadingMore, onLoadMore]);
 
   return (
-    <aside className="flex h-full w-56 shrink-0 flex-col border-r border-[var(--border)] bg-[var(--sidebar-bg)]">
+    <aside
+      className={`flex h-full min-h-0 w-56 shrink-0 flex-col border-r border-[var(--border)] bg-[var(--sidebar-bg)] ${className ?? ""}`}
+    >
       <div className="flex items-center justify-between gap-2 px-4 py-4">
         <h2 className="text-sm font-semibold text-[var(--foreground)]">
           Chats

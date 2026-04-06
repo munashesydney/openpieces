@@ -61,10 +61,10 @@ export function OverviewComposer({
   }, [value]);
 
   return (
-    <div className="flex w-full justify-center px-6 pb-14 pt-14">
-      <div className="relative w-full max-w-[820px]">
+    <div className="flex w-full justify-center px-4 pb-8 pt-8 sm:px-6 sm:pb-14 sm:pt-14">
+      <div className="relative w-full max-w-[820px] min-w-0">
         <Card className="rounded-[28px] shadow-[0_18px_60px_rgba(0,0,0,0.12)] dark:shadow-[0_18_60px_rgba(0,0,0,0.35)] transition-all duration-300">
-          <div className="px-4 py-4">
+          <div className="px-3 py-3 sm:px-4 sm:py-4">
             <div className="grid grid-cols-[40px_1fr] items-center gap-x-3">
               <Button
                 variant="ghost"
@@ -92,15 +92,15 @@ export function OverviewComposer({
                       ? "What shall we automate today?"
                       : "Ask me anything!"
                   }
-                  className="w-full resize-none overflow-y-auto bg-transparent py-1 text-lg text-[var(--foreground)] placeholder:text-[var(--muted)] focus:outline-none scrollbar-hide"
+                  className="w-full resize-none overflow-y-auto bg-transparent py-1 text-base text-[var(--foreground)] placeholder:text-[var(--muted)] focus:outline-none scrollbar-hide sm:text-lg"
                   style={{ minHeight: "32px" }}
                 />
               </div>
             </div>
           </div>
 
-          <div className="flex items-center justify-between gap-3 px-4 pb-4">
-            <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center justify-between gap-2 gap-y-3 px-3 pb-3 sm:gap-3 sm:px-4 sm:pb-4">
+            <div className="flex min-w-0 flex-wrap items-center gap-2">
               <Button
                 variant="secondary"
                 size="icon"
@@ -127,8 +127,7 @@ export function OverviewComposer({
               )}
             </div>
 
-            <div className="flex items-center gap-2">
-
+            <div className="flex shrink-0 items-center gap-2">
               {isRunning ? (
                 <Button
                   size="icon"

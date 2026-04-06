@@ -2,8 +2,8 @@
 
 export function OverviewTitle() {
   return (
-    <div className="px-10 pt-10 flex flex-col items-center justify-center text-center">
-      <h1 className="text-3xl font-semibold tracking-wide text-[var(--foreground)]">
+    <div className="flex flex-col items-center justify-center px-4 pt-8 text-center sm:px-10 sm:pt-10">
+      <h1 className="text-2xl font-semibold tracking-wide text-[var(--foreground)] sm:text-3xl">
         Overview
       </h1>
       <p className="mt-2 text-lg text-[var(--muted)]">

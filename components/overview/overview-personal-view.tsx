@@ -1,11 +1,12 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useMediaQuery } from "@/lib/hooks/use-media-query";
 import { PanelLeftOpen } from "lucide-react";
 import { Button } from "@/components/basic/buttons/button";
 import type { AiChatListItem, AiChatMessage } from "@/lib/ai-chat/types";
 import type { SendAiMessageActionResult } from "@/app/workspace/[workspaceId]/personal/actions";
-import { OverviewAiChatsSidebar, type AgentType, AGENT_TYPES } from "./overview-ai-chats-sidebar";
+import { OverviewAiChatsSidebar, type AgentType } from "./overview-ai-chats-sidebar";
 import { OverviewChatArea, type ChatMessage, type ContextInfo } from "./overview-chat-area";
 import { OverviewComposer } from "./overview-composer";
 import { OverviewTitle } from "./overview-title";
@@ -61,7 +62,12 @@ export function OverviewPersonalView({
   initialTotal,
   sendMessageAction,
 }: OverviewPersonalViewProps) {
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const isLg = useMediaQuery("(min-width: 1024px)");
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  useLayoutEffect(() => {
+    setSidebarOpen(isLg);
+  }, [isLg]);
   const [chats, setChats] = useState<Chat[]>(initialChats.map(mapChat));
   const [selectedChatId, setSelectedChatId] = useState<string | null>(initialSelectedChatId);
   const [hasMore, setHasMore] = useState(initialChats.length < initialTotal);
@@ -345,28 +351,67 @@ export function OverviewPersonalView({
     clearPolling();
   }, [selectedChatId, selectedChatIsRunning, startPolling]);
 
+  useEffect(() => {
+    if (!sidebarOpen || isLg) return;
+    const previous = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = previous;
+    };
+  }, [sidebarOpen, isLg]);
+
+  useEffect(() => {
+    if (!sidebarOpen || isLg) return;
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.key === "Escape") setSidebarOpen(false);
+    }
+    document.addEventListener("keydown", onKeyDown);
+    return () => document.removeEventListener("keydown", onKeyDown);
+  }, [sidebarOpen, isLg]);
+
+  const handleSelectChat = useCallback(
+    (chatId: string) => {
+      setSelectedChatId(chatId);
+      if (!isLg) setSidebarOpen(false);
+    },
+    [isLg]
+  );
+
+  const chatsSidebarProps = {
+    chats: chats.map(({ id, title, status }) => ({ id, title, status })),
+    selectedChatId,
+    onSelectChat: handleSelectChat,
+    onNewChat: () => {
+      setSelectedChatId(null);
+      clearPolling();
+    },
+    onCollapse: () => setSidebarOpen(false),
+    onLoadMore: handleLoadMore,
+    onFilterChange: handleFilterChange,
+    selectedAgentType,
+    hasMore,
+    isLoadingMore,
+  };
+
   return (
     <div className="flex h-full min-h-0 overflow-hidden">
-      {sidebarOpen && (
-        <OverviewAiChatsSidebar
-          chats={chats.map(({ id, title, status }) => ({ id, title, status }))}
-          selectedChatId={selectedChatId}
-          onSelectChat={setSelectedChatId}
-          onNewChat={() => {
-            setSelectedChatId(null);
-            clearPolling();
-          }}
-          onCollapse={() => setSidebarOpen(false)}
-          onLoadMore={handleLoadMore}
-          onFilterChange={handleFilterChange}
-          selectedAgentType={selectedAgentType}
-          hasMore={hasMore}
-          isLoadingMore={isLoadingMore}
-        />
-      )}
+      {sidebarOpen && isLg ? <OverviewAiChatsSidebar {...chatsSidebarProps} /> : null}
+      {sidebarOpen && !isLg ? (
+        <>
+          <button
+            type="button"
+            className="fixed inset-0 z-[40] bg-black/40 lg:hidden"
+            aria-label="Close chats"
+            onClick={() => setSidebarOpen(false)}
+          />
+          <div className="fixed inset-y-0 left-0 z-[45] flex w-[min(100vw-1rem,18rem)] max-w-[calc(100vw-1rem)] flex-col border-r border-[var(--border)] bg-[var(--sidebar-bg)] shadow-xl lg:hidden">
+            <OverviewAiChatsSidebar {...chatsSidebarProps} className="w-full border-r-0" />
+          </div>
+        </>
+      ) : null}
       <div className="flex min-w-0 flex-1 flex-col min-h-0 overflow-hidden">
         {!sidebarOpen && (
-          <div className="flex items-center px-6 pt-4 shrink-0">
+          <div className="flex items-center px-4 pt-4 sm:px-6 shrink-0">
             <Button
               variant="ghost"
               size="icon"
@@ -381,8 +426,8 @@ export function OverviewPersonalView({
 
         {selectedChat ? (
           <>
-            <header className="shrink-0 px-6 py-5 flex justify-center">
-              <h2 className="text-sm font-semibold text-[var(--foreground)]">
+            <header className="shrink-0 px-4 py-4 sm:px-6 sm:py-5 flex justify-center">
+              <h2 className="text-sm font-semibold text-[var(--foreground)] text-center line-clamp-2">
                 {selectedChat.title}
               </h2>
             </header>
@@ -410,7 +455,7 @@ export function OverviewPersonalView({
         ) : (
           <div className="flex flex-1 flex-col min-h-0 overflow-hidden">
             <OverviewTitle />
-            <div className="flex items-center justify-center px-6 w-full shrink-0">
+            <div className="flex items-center justify-center px-4 sm:px-6 w-full shrink-0">
               <div className="mt-10 h-px w-full max-w-[920px] bg-[var(--border)]" />
             </div>
             <OverviewComposer onSend={handleSend} isSending={isSending} />
