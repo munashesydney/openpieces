@@ -3,7 +3,7 @@ import { z } from "zod";
 export const secretsToolDefinition = {
   name: "manage_secrets",
   description:
-    "Manage encrypted secrets for the current workspace and user. Use to list secrets, get one by id, create, update, or delete a secret. Secret values are always stored encrypted at rest.",
+    "Manage encrypted secrets for the current workspace and user. Use to list secrets, get one by id, create, update, or delete a secret. Secret values are always stored encrypted at rest. The list and get actions return masked values only: the first three characters of each secret value followed by ***.",
   inputSchema: z.object({
     action: z
       .enum(["list", "get", "create", "update", "delete"])

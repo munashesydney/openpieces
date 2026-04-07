@@ -2,6 +2,14 @@ import { getSecrets, getSecretById, createSecret, updateSecret, deleteSecret } f
 import type { ToolContext } from "@/lib/tools/registry";
 import type { SecretsToolInput } from "./definition";
 
+/** Masks secret values returned to the model (first 3 chars + ***). */
+function maskSecretValueForDisplay(value: string): string {
+  if (!value) {
+    return "***";
+  }
+  return `${value.slice(0, 3)}***`;
+}
+
 export async function executeSecrets(input: SecretsToolInput, context: ToolContext) {
   const { action, secretId, page, limit, createDetails, updateDetails } = input;
   const { workspaceId, userId } = context;
@@ -12,7 +20,14 @@ export async function executeSecrets(input: SecretsToolInput, context: ToolConte
 
   switch (action) {
     case "list": {
-      return await getSecrets(workspaceId, userId, page ?? 1, limit ?? 50);
+      const result = await getSecrets(workspaceId, userId, page ?? 1, limit ?? 50);
+      return {
+        ...result,
+        data: result.data.map((secret) => ({
+          ...secret,
+          value: maskSecretValueForDisplay(secret.value),
+        })),
+      };
     }
 
     case "get": {
@@ -23,7 +38,10 @@ export async function executeSecrets(input: SecretsToolInput, context: ToolConte
       if (!secret) {
         throw new Error(`Secret not found: ${secretId}`);
       }
-      return secret;
+      return {
+        ...secret,
+        value: maskSecretValueForDisplay(secret.value),
+      };
     }
 
     case "create": {
