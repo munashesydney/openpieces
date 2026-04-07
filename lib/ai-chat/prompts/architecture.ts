@@ -33,7 +33,7 @@ Return a complete plan with:
 ### Services to Create/Extend
 
 For each service:
-- **Name** and **directory** (e.g., '/pieces/stripe-trigger')
+- **Name** and **directory slug** (on disk: pieces/<userId>/<workspaceId>/<slug>, e.g. slug stripe-trigger)
 - **Type**: 'trigger' | 'action' | 'task'
 - **Status**: 'new' | 'extend'
 - If extending: which existing service and what new endpoints to add

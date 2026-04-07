@@ -5,8 +5,27 @@ import { isValidUuid } from "../utils/uuid";
 import { ValidationError } from "../errors/validation-error";
 import { getBaseUrl, buildServiceUrl } from "../utils/url";
 import { readServiceLogTail } from "./service-log-stream";
+import { getWorkspaceOwnerId } from "./workspace.service";
 
 const VALID_SERVICE_TYPES = ["trigger", "action"] as const;
+
+/** Validates user-provided directory slug (single segment). Returns trimmed slug. */
+function parseDirectorySlug(raw: string): string {
+  const slug = raw.trim();
+  if (!slug) {
+    throw new ValidationError("Directory is required.");
+  }
+  if (slug.includes("/") || slug.includes("\\") || slug.includes(" ")) {
+    throw new ValidationError("Directory must be a single word without slashes or spaces.");
+  }
+  if (slug.startsWith(".") || slug.startsWith("-") || slug.startsWith("_")) {
+    throw new ValidationError("Directory must start with a letter or number.");
+  }
+  if (!/^[a-zA-Z0-9_-]+$/.test(slug)) {
+    throw new ValidationError("Directory can only contain letters, numbers, hyphens, and underscores.");
+  }
+  return slug;
+}
 
 export async function createService(data: NewService): Promise<Service> {
   // ── Validate title ────────────────────────────────────────────────────────
@@ -14,24 +33,17 @@ export async function createService(data: NewService): Promise<Service> {
     throw new ValidationError("Title is required.");
   }
 
-  // ── Validate directory ────────────────────────────────────────────────────
+  // ── Validate directory slug and persist as userId/workspaceId/slug ─────────
   if (!data.directory || data.directory.trim() === "") {
     throw new ValidationError("Directory is required.");
   }
 
-  const directory = data.directory.trim();
-  // Directory must be a single word (no paths, no spaces)
-  if (directory.includes("/") || directory.includes("\\") || directory.includes(" ")) {
-    throw new ValidationError("Directory must be a single word without slashes or spaces.");
+  const slug = parseDirectorySlug(data.directory);
+  const userId = await getWorkspaceOwnerId(data.workspaceId);
+  if (!userId) {
+    throw new ValidationError("Workspace not found.");
   }
-  // Don't allow leading dots or special prefixes
-  if (directory.startsWith(".") || directory.startsWith("-") || directory.startsWith("_")) {
-    throw new ValidationError("Directory must start with a letter or number.");
-  }
-  // Only allow alphanumeric, hyphens, and underscores
-  if (!/^[a-zA-Z0-9_-]+$/.test(directory)) {
-    throw new ValidationError("Directory can only contain letters, numbers, hyphens, and underscores.");
-  }
+  const directoryValue = `${userId}/${data.workspaceId}/${slug}`;
 
   // ── Validate type ─────────────────────────────────────────────────────────
   if (!VALID_SERVICE_TYPES.includes(data.type as typeof VALID_SERVICE_TYPES[number])) {
@@ -76,7 +88,10 @@ export async function createService(data: NewService): Promise<Service> {
     }
   }
 
-  const result = await db.insert(services).values(data).returning();
+  const result = await db
+    .insert(services)
+    .values({ ...data, directory: directoryValue })
+    .returning();
   return result[0];
 }
 
@@ -150,9 +165,24 @@ export async function updateService(
   data: Partial<NewService>,
   updateSource: "user" | "system" = "user"
 ): Promise<Service> {
+  const payload: Partial<NewService> = { ...data };
+
+  if (data.directory !== undefined) {
+    if (data.directory === null || String(data.directory).trim() === "") {
+      payload.directory = null;
+    } else {
+      const slug = parseDirectorySlug(String(data.directory));
+      const userId = await getWorkspaceOwnerId(workspaceId);
+      if (!userId) {
+        throw new ValidationError("Workspace not found.");
+      }
+      payload.directory = `${userId}/${workspaceId}/${slug}`;
+    }
+  }
+
   const result = await db
     .update(services)
-    .set({ ...data, updateSource })
+    .set({ ...payload, updateSource })
     .where(and(eq(services.id, serviceId), eq(services.workspaceId, workspaceId)))
     .returning();
   return result[0];

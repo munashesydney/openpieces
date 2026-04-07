@@ -29,7 +29,7 @@ Action services are **not just workflow machinery**. They are standalone product
 
 OpenPieces **auto-deploys** every service when a coding session goes idle. You don't need to tell the user to deploy — it happens automatically once the OpenCode agent finishes coding and the session is no longer active. The user will be prompted to fill in any required secrets before the service can run.
 
-Every service gets a public URL. After deployment, the user can visit their workspace at the standard OpenPieces service URL, with the service directory as the path.
+Every service gets a public URL. After deployment, the user can visit their workspace at the standard OpenPieces service URL. The service’s code lives under pieces/<userId>/<workspaceId>/<slug> where <slug> is the directory chosen at creation.
 
 ---
 
@@ -144,8 +144,10 @@ Session messages are engineering briefs to the OpenCode agent, not conversationa
 
 **Always start with the cd instruction so the agent knows which service directory to work in.**
 
+On disk, the folder is pieces/<userId>/<workspaceId>/<slug> (OpenCode’s cwd is the pieces root). Session examples below use <userId>/<workspaceId>/<slug> — use the real UUIDs from workspace context and the slug from service creation.
+
 A good session message specifies:
-- The exact directory (\`cd into /pieces/<directory>\`)
+- The exact path from the pieces root (\`cd into <userId>/<workspaceId>/<slug>\`)
 - What to build and how it works
 - All endpoints to register (method + path)
 - Request/response shapes
@@ -156,7 +158,7 @@ A good session message specifies:
 
 **Snake game:**
 \`\`\`
-cd into /pieces/snake-game
+cd into <userId>/<workspaceId>/snake-game
 
 Build a standalone Deno HTTP service with a web UI:
 - Serve an interactive Snake game on GET /
@@ -170,7 +172,7 @@ Return a fun, polished game. No external dependencies beyond Fresh.
 
 **SQLite database tool:**
 \`\`\`
-cd into /pieces/query-db
+cd into <userId>/<workspaceId>/query-db
 
 Build a Deno HTTP service backed by a SQLite database:
 - POST /query — accepts { sql: string, params?: unknown[] }, executes the query, returns { rows: unknown[], duration_ms: number }
@@ -183,7 +185,7 @@ Return structured query results. Handle SQL errors gracefully with { error: stri
 
 **Analytics dashboard:**
 \`\`\`
-cd into /pieces/analytics-dashboard
+cd into <userId>/<workspaceId>/analytics-dashboard
 
 Build a Deno Fresh dashboard showing workspace analytics:
 - GET / — renders a dashboard with charts using a simple charting library (Chart.js via CDN)
@@ -197,7 +199,7 @@ Make it visually clean. No auth needed — it runs inside the user's OpenPieces 
 ### Workflow Trigger Service Example
 
 \`\`\`
-cd into /pieces/stripe-trigger
+cd into <userId>/<workspaceId>/stripe-trigger
 
 Build a Deno HTTP webhook trigger service:
 - POST /webhook — receives Stripe events
@@ -214,7 +216,7 @@ Mark STRIPE_WEBHOOK_SECRET as a required secret.
 ### Workflow Action Service Example
 
 \`\`\`
-cd into /pieces/email-sender
+cd into <userId>/<workspaceId>/email-sender
 
 Build a Deno HTTP action service:
 - POST /send — accepts { to: string, subject: string, body: string }

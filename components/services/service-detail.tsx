@@ -15,6 +15,7 @@ import { type Service, type ServiceEndpoint, type ServiceRequiredSecret } from "
 import { createEndpointAction, deleteEndpointAction, spawnServiceAction, stopServiceAction, addRequiredSecretAction, removeRequiredSecretAction } from "@/app/workspace/[workspaceId]/personal/services/[serviceId]/actions";
 import { deleteServiceAction } from "@/app/workspace/[workspaceId]/personal/services/actions";
 import { ServiceDeleteModal } from "./service-delete-modal";
+import { serviceDirectoryLabel } from "@/lib/utils/service-directory-label";
 
 interface ServiceDetailProps {
   service: Service & { url?: string };
@@ -284,8 +285,15 @@ export function ServiceDetail({ service, endpoints, requiredSecrets, workspaceSe
               </div>
               <div>
                 <p className="text-xs font-medium uppercase tracking-wider text-[var(--muted)]">Directory</p>
-                <span className="text-sm font-semibold text-[var(--foreground)] truncate max-w-[140px] block" title={service.directory ?? ""}>
-                  {service.directory ?? <span className="text-[var(--muted)]">Not set</span>}
+                <span
+                  className="text-sm font-semibold text-[var(--foreground)] truncate max-w-[200px] block"
+                  title={service.directory ?? ""}
+                >
+                  {service.directory ? (
+                    serviceDirectoryLabel(service.directory)
+                  ) : (
+                    <span className="text-[var(--muted)]">Not set</span>
+                  )}
                 </span>
               </div>
             </div>

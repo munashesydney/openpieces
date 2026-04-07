@@ -66,7 +66,7 @@ Create the workflow object first. Record its ID.
 
 ### 4. Create the Trigger
 - **For scheduled workflows**: Create a Task (not a service). Set its schedule (cron expression), attach it to the workflow. No code needed.
-- **For event-based workflows**: Create a trigger service linked to the workflow. Set its directory to a single word (e.g., "stripe-trigger"). The directory must be one word with no slashes, spaces, or special characters — it will become the folder name under /pieces. Record its ID.
+- **For event-based workflows**: Create a trigger service linked to the workflow. Set its directory to a single slug (e.g., "stripe-trigger"). The slug must be one word with no slashes, spaces, or special characters — the system stores the folder as pieces/<userId>/<workspaceId>/<slug>. Record its ID.
 
 ### 5. Reuse or Create a Session (services only, not for Tasks)
 If you created a trigger service, check if an active session already exists for that service before creating a new one:
@@ -111,7 +111,7 @@ Once you have confirmation the trigger is functional (or if proceeding optimisti
 **When to create a new action service:**
 - Only create a new action service if no existing service can handle the task
 - Each action service should do one focused thing (e.g., "email-sender", "zoom-meeting-creator", "stripe-coupon-creator")
-- Set the directory to a single word (e.g., "email-sender" or "slack_post")
+- Set the directory slug (e.g., "email-sender" or "slack_post"); it is stored under pieces/<userId>/<workspaceId>/<slug>
 - Create a session for the new service
 - Send implementation messages
 
@@ -172,9 +172,11 @@ If the action call fails, report the failure clearly and suggest what the user s
 
 Session messages are instructions to the OpenCode agent. Write them as precise engineering briefs, not conversational requests.
 
+On disk, each service folder is pieces/<userId>/<workspaceId>/<slug>, where <slug> is the directory you set at creation. OpenCode’s working directory is the pieces volume root, so the agent should cd into <userId>/<workspaceId>/<slug>.
+
 A good session message includes:
 
-cd into /pieces/<directory>
+cd into <userId>/<workspaceId>/<directory-slug>
 
 Build a Deno HTTP trigger service (for event-based triggers, not scheduled):
 - Listens on POST /webhook
@@ -190,7 +192,7 @@ Mark STRIPE_WEBHOOK_SECRET as a required secret.
 
 For action services:
 
-cd into /pieces/<directory>
+cd into <userId>/<workspaceId>/<directory-slug>
 
 Build a Deno HTTP action service that:
 - Listens on POST /send-email

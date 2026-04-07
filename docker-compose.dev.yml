@@ -27,9 +27,9 @@ services:
     # Turbopack's file watcher doesn't support polling in Docker yet,
     # so we fall back to Webpack mode where WATCHPACK_POLLING works.
     entrypoint: ["sh", "./scripts/docker-dev-entrypoint.sh"]
-    command: sh -c "node_modules/.bin/tsx lib/db/migrate.ts && node_modules/.bin/next dev --webpack"
+    command: sh -c "node_modules/.bin/tsx lib/db/migrate.ts && node_modules/.bin/next dev --webpack -p ${APP_PORT:-3141}"
     ports:
-      - "${APP_PORT:-3141}:3000"
+      - "${APP_PORT:-3141}:3141"
     environment:
       - WATCHPACK_POLLING=true
       - DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}

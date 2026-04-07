@@ -144,6 +144,8 @@ export function getMessagesForAi(messages: OpenCodeMessage[]): { role: string; c
   return result;
 }
 
+// OpenCode runs with working_dir at the pieces volume root (see docker-compose opencode.working_dir).
+// `directory` from the DB is relative to that root (e.g. userId/workspaceId/slug), matching `pieces/<directory>` on the app/worker side — do not prefix "pieces/" here.
 const DIRECTORY_INSTRUCTION_PREFIX =
   "Before doing anything else: ensure the directory '";
 

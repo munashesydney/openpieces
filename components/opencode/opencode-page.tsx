@@ -5,6 +5,7 @@ import { Loader2, Send, Plus, Terminal, FolderOpen, X, Activity } from "lucide-r
 import { Dropdown } from "@/components/basic/input/dropdown";
 import { OpenCodePageSkeleton } from "@/components/opencode/opencode-page-skeleton";
 import type { Service } from "@/lib/db/schema";
+import { serviceDirectoryLabel } from "@/lib/utils/service-directory-label";
 
 type SessionEvent = { type: string; sessionId?: string; [key: string]: unknown };
 
@@ -478,7 +479,7 @@ export function OpenCodePage({
                   options={[
                     { label: "Select a service...", value: "" },
                     ...servicesWithDirectory.map((s) => ({
-                      label: `${s.title} (${s.directory})`,
+                      label: `${s.title} (${serviceDirectoryLabel(s.directory!)})`,
                       value: s.id,
                     })),
                   ]}
