@@ -19,8 +19,8 @@ function getKey(): Buffer {
 }
 
 export function encryptSecret(plaintext: string): string {
-  if (plaintext == null || plaintext === "") {
-    throw new Error("Cannot encrypt empty or null value");
+  if (plaintext == null) {
+    throw new Error("Cannot encrypt null or undefined value");
   }
   const key = getKey();
   const iv = crypto.randomBytes(IV_LENGTH);
@@ -39,8 +39,12 @@ export function encryptSecret(plaintext: string): string {
 
 export function decryptSecret(payload: string): string {
   const key = getKey();
-  const [ivB64, encryptedB64, tagB64] = payload.split(":");
-  if (!ivB64 || !encryptedB64 || !tagB64) {
+  const parts = payload.split(":");
+  if (parts.length !== 3) {
+    throw new Error("Invalid encrypted secret format");
+  }
+  const [ivB64, encryptedB64, tagB64] = parts;
+  if (!ivB64 || tagB64 === undefined || tagB64 === "") {
     throw new Error("Invalid encrypted secret format");
   }
 

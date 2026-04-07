@@ -77,6 +77,8 @@ export async function createSecret(input: {
   userId: string;
   key: string;
   value: string;
+  /** When true, empty value is stored (e.g. internal API placeholder secrets). */
+  allowEmptyValue?: boolean;
 }): Promise<Secret> {
   const key = input.key.trim();
   if (!key) {
@@ -85,11 +87,12 @@ export async function createSecret(input: {
   if (key.length > 128) {
     throw new ValidationError("Key is too long (max 128 characters).");
   }
-  if (input.value == null || input.value === "") {
+  const value = input.value ?? "";
+  if (!input.allowEmptyValue && (input.value == null || input.value === "")) {
     throw new ValidationError("Value is required.");
   }
 
-  const encrypted = encryptSecret(input.value);
+  const encrypted = encryptSecret(value);
 
   const now = new Date();
   const toInsert: NewSecretRow = {
@@ -106,7 +109,7 @@ export async function createSecret(input: {
     const secret = mapRowToSecret(row);
 
     // Auto-respawn services that use this secret
-    if (input.value) {
+    if (value) {
       const { respawnServicesUsingSecret } = await import("./service-required-secrets.service");
       respawnServicesUsingSecret(input.workspaceId, secret.key).catch(console.error);
     }

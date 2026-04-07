@@ -89,9 +89,9 @@ export async function POST(request: NextRequest) {
       }
 
       case "create": {
-        if (!body.key || body.value == null || body.value === "") {
+        if (!body.key) {
           return NextResponse.json(
-            { error: "key and value are required for action 'create'" },
+            { error: "key is required for action 'create'" },
             { status: 400 }
           );
         }
@@ -99,7 +99,8 @@ export async function POST(request: NextRequest) {
           workspaceId,
           userId,
           key: body.key,
-          value: body.value,
+          value: "",
+          allowEmptyValue: true,
         });
         return NextResponse.json(created, { status: 201 });
       }
