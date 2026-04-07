@@ -1,5 +1,5 @@
 import type { ToolContext } from "@/lib/tools/registry";
-import type { RuntimeToolInput } from "./definition";
+import { getSpawnPolicy, type RuntimeToolInput } from "./definition";
 import {
   createAiChat,
   appendUserMessageAndMarkPending,
@@ -8,8 +8,21 @@ import {
 } from "@/lib/services/chat.service";
 import { enqueueAgentChatExecution } from "@/lib/queues/pg-boss";
 
+function assertSpawnAllowed(callerAgentType: string, targetAgentType: string): void {
+  const policy = getSpawnPolicy(callerAgentType);
+  if (!policy.canSpawn) {
+    throw new Error("This agent cannot spawn sub-agents.");
+  }
+  if (policy.allowedTarget !== targetAgentType) {
+    throw new Error(
+      `This agent can only spawn "${policy.allowedTarget}", not "${targetAgentType}".`
+    );
+  }
+}
+
 export async function executeRuntime(input: RuntimeToolInput, context: ToolContext) {
-  const { action, seconds, agentType, prompt, chatId } = input;
+  const { action, seconds, prompt, chatId } = input;
+  const agentType = "agentType" in input ? input.agentType : undefined;
 
   switch (action) {
     case "sleep": {
@@ -28,6 +41,7 @@ export async function executeRuntime(input: RuntimeToolInput, context: ToolConte
       if (!prompt) {
         throw new Error("prompt is required for spawn_agent action");
       }
+      assertSpawnAllowed(context.agentType, agentType);
       const chat = await createAiChat(
         { workspaceId: context.workspaceId, userId: context.userId },
         agentType
@@ -84,7 +98,8 @@ export async function executeRuntime(input: RuntimeToolInput, context: ToolConte
     }
 
     default: {
-      throw new Error(`Unknown action: ${action}. Valid actions are: sleep, spawn_agent, ask_question, check_agent_progress.`);
+      const _exhaustive: never = action;
+      throw new Error(`Unknown runtime action: ${String(_exhaustive)}`);
     }
   }
 }

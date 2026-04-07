@@ -5,6 +5,7 @@ import { and, asc, count, desc, eq } from "drizzle-orm";
 import { OPENPIECES_CHAT_SYSTEM_PROMPT } from "@/lib/ai-chat/prompts/orchestratorV3";
 import { EVENTS_CHAT_SYSTEM_PROMPT } from "@/lib/ai-chat/prompts/events";
 import { ARCHITECTURE_CHAT_SYSTEM_PROMPT } from "@/lib/ai-chat/prompts/architectureV2";
+import { BRAIN_CHAT_SYSTEM_PROMPT } from "@/lib/ai-chat/prompts/brain";
 import { COMPACTOR_PROMPT } from "@/lib/ai-chat/prompts/compactor";
 import { getContextInfo } from "@/lib/ai-chat/context-manager";
 import type {
@@ -412,7 +413,9 @@ export async function executeAiChatJob(
       ? EVENTS_CHAT_SYSTEM_PROMPT
       : chat.agentType === "architecture"
         ? ARCHITECTURE_CHAT_SYSTEM_PROMPT
-        : OPENPIECES_CHAT_SYSTEM_PROMPT;
+        : chat.agentType === "brain"
+          ? BRAIN_CHAT_SYSTEM_PROMPT
+          : OPENPIECES_CHAT_SYSTEM_PROMPT;
 
   try {
     const messages = await getModelMessages(chat.id);
@@ -430,6 +433,7 @@ export async function executeAiChatJob(
         workspaceId: input.workspaceId,
         userId: input.userId,
         chatId: input.chatId,
+        agentType: chat.agentType,
       }),
       abortSignal: signal,
       onAbort: async () => {

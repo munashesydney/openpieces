@@ -5,6 +5,7 @@ import { getContextInfo } from "@/lib/ai-chat/context-manager";
 import { OPENPIECES_CHAT_SYSTEM_PROMPT } from "@/lib/ai-chat/prompts/orchestratorV3";
 import { EVENTS_CHAT_SYSTEM_PROMPT } from "@/lib/ai-chat/prompts/events";
 import { ARCHITECTURE_CHAT_SYSTEM_PROMPT } from "@/lib/ai-chat/prompts/architectureV2";
+import { BRAIN_CHAT_SYSTEM_PROMPT } from "@/lib/ai-chat/prompts/brain";
 
 export const runtime = "nodejs";
 
@@ -32,7 +33,9 @@ export async function GET(
       ? EVENTS_CHAT_SYSTEM_PROMPT
       : chat.agentType === "architecture"
         ? ARCHITECTURE_CHAT_SYSTEM_PROMPT
-        : OPENPIECES_CHAT_SYSTEM_PROMPT;
+        : chat.agentType === "brain"
+          ? BRAIN_CHAT_SYSTEM_PROMPT
+          : OPENPIECES_CHAT_SYSTEM_PROMPT;
 
   const contextInfo = await getContextInfo(
     chat.model ?? "deepseek/deepseek-v3.2",

@@ -277,9 +277,9 @@ After the user answers, their responses will appear as a new user message with t
 
 ## After Spawning Agents Or Creating Sessions
 
-### Spawning Architecture (or any sub-agent)
+### Spawning Architecture
 
-1. Use **runtime** tool → **spawn_agent** (specify agentType and prompt — include relevant brain context in the prompt)
+1. Use **runtime** tool → **spawn_agent** with \`agentType: "architecture"\` only (you cannot spawn another orchestrator). Include a clear prompt with relevant brain context.
 2. Use **runtime** tool → **sleep** (20 seconds is usually enough for Architecture)
 3. Use **runtime** tool → **check_agent_progress** — if still running, sleep and check again
 4. When complete, read the plan and proceed

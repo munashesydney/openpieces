@@ -15,6 +15,8 @@ export type ToolContext = {
   workspaceId: string;
   userId: string;
   chatId: string;
+  /** Agent type for the current chat; used to restrict tools like runtime spawn_agent. */
+  agentType: string;
 };
 
 export function createTools(context: ToolContext) {

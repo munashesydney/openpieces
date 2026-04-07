@@ -4,6 +4,7 @@ import { getAiChatRecordById, compactChat, replaceMessagesWithSummary } from "@/
 import { OPENPIECES_CHAT_SYSTEM_PROMPT } from "@/lib/ai-chat/prompts/orchestratorV3";
 import { EVENTS_CHAT_SYSTEM_PROMPT } from "@/lib/ai-chat/prompts/events";
 import { ARCHITECTURE_CHAT_SYSTEM_PROMPT } from "@/lib/ai-chat/prompts/architectureV2";
+import { BRAIN_CHAT_SYSTEM_PROMPT } from "@/lib/ai-chat/prompts/brain";
 
 export const runtime = "nodejs";
 
@@ -30,7 +31,9 @@ export async function POST(
       ? EVENTS_CHAT_SYSTEM_PROMPT
       : chat.agentType === "architecture"
         ? ARCHITECTURE_CHAT_SYSTEM_PROMPT
-        : OPENPIECES_CHAT_SYSTEM_PROMPT;
+        : chat.agentType === "brain"
+          ? BRAIN_CHAT_SYSTEM_PROMPT
+          : OPENPIECES_CHAT_SYSTEM_PROMPT;
 
   const summary = await compactChat(chatId, systemPrompt);
   await replaceMessagesWithSummary(chatId, summary);
