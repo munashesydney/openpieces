@@ -445,7 +445,7 @@ export async function executeAiChatJob(
         });
         await updateAiChatStatus(chat.id, "stopped");
       },
-      stopWhen: stepCountIs(20),
+      stopWhen: stepCountIs(30),
     });
 
     // Poll DB every 500ms to check if the user requested a stop

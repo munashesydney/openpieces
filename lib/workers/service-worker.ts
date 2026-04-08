@@ -178,7 +178,18 @@ async function executeServiceSpawnJob(job: ServiceSpawnJob) {
 
   const proc = spawn(
     "deno",
-    ["run", "--allow-net", "--allow-read", "--allow-env", entryPoint, String(port)],
+    [
+  "run",
+  "--allow-net",
+  "--allow-read",
+  "--allow-env",
+  "--allow-write",
+  "--allow-run",        // if the piece needs to spawn subprocesses
+  "--allow-sys",        // for OS info: hostname, osRelease, etc.
+  "--allow-ffi",        // if using native/FFI libraries
+  entryPoint,
+  String(port),
+],
     {
       detached: true,
       stdio: ["ignore", "pipe", "pipe"],

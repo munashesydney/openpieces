@@ -249,7 +249,7 @@ export async function notifyOrchestrator(
 
   const enrichedContent = `[serviceId: ${serviceId}]\n[workflowId: ${workflowId}]\n\n${content}`;
 
-  const res = await fetch("http://app:3000/api/internal/chat", {
+  const res = await fetch("http://app:3141/api/internal/chat", {
     method: "POST",
     headers: {
       "content-type": "application/json",
