@@ -8,6 +8,8 @@ import { ARCHITECTURE_CHAT_SYSTEM_PROMPT } from "@/lib/ai-chat/prompts/architect
 import { BRAIN_CHAT_SYSTEM_PROMPT } from "@/lib/ai-chat/prompts/brain";
 import { COMPACTOR_PROMPT } from "@/lib/ai-chat/prompts/compactor";
 import { getContextInfo } from "@/lib/ai-chat/context-manager";
+import { getModelLimits } from "@/lib/ai-chat/model-context";
+import { truncateToolOutput } from "@/lib/ai-chat/tool-truncation";
 import type {
   AiChatListItem,
   AiChatMessage,
@@ -425,6 +427,8 @@ export async function executeAiChatJob(
       await replaceMessagesWithSummary(chat.id, summary);
     }
 
+    const modelLimits = await getModelLimits(chat.model ?? DEFAULT_MODEL);
+
     const result = streamText({
       model: getModel(),
       system: systemPrompt,
@@ -435,6 +439,8 @@ export async function executeAiChatJob(
         chatId: input.chatId,
         agentType: chat.agentType,
       }),
+      maxOutputTokens: modelLimits.output,
+      temperature: 0.7,
       abortSignal: signal,
       onAbort: async () => {
         await updateAiMessage(assistantMessage.id, {
@@ -490,12 +496,18 @@ export async function executeAiChatJob(
       }
 
       if (part.type === "tool-result") {
+        // Truncate large tool outputs to prevent context overflow
+        const rawOutput = part.output ?? null;
+        const truncated = truncateToolOutput(
+          typeof rawOutput === "string" ? rawOutput : JSON.stringify(rawOutput)
+        );
+
         toolResults = [
           ...toolResults.filter((resultItem) => resultItem.toolCallId !== part.toolCallId),
           {
             toolCallId: part.toolCallId,
             toolName: part.toolName,
-            output: sanitizeJson(part.output ?? null),
+            output: sanitizeJson(truncated.content),
           },
         ];
 

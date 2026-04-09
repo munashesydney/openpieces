@@ -18,6 +18,8 @@ type OverviewComposerProps = {
   isRunning?: boolean;
   isCompacting?: boolean;
   contextInfo?: ContextInfo | null;
+  model?: string | null;
+  onModelChange?: (model: string) => void;
 };
 
 export function OverviewComposer({
@@ -29,6 +31,8 @@ export function OverviewComposer({
   isRunning = false,
   isCompacting = false,
   contextInfo,
+  model,
+  onModelChange,
 }: OverviewComposerProps) {
   const [mode, setMode] = useState<ComposerMode>("agent");
   const [value, setValue] = useState("");
@@ -111,7 +115,7 @@ export function OverviewComposer({
 
               {contextInfo ? <ContextProgressRing info={contextInfo} /> : null}
 
-              <ModelPicker />
+              <ModelPicker initialModel={model ?? undefined} onModelChange={onModelChange} />
 
               {canCompact && (
                 <Button

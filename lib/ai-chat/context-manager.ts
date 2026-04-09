@@ -1,6 +1,4 @@
-const CONTEXT_CACHE = new Map<string, { contextLength: number; fetchedAt: number }>();
-const CACHE_TTL_MS = 60 * 60 * 1000; // 1 hour
-const CHAR_TOKEN_RATIO = 4;
+import { getModelLimits, getModelCharTokenRatio } from "./model-context";
 
 export interface ContextInfo {
   usedChars: number;
@@ -8,35 +6,6 @@ export interface ContextInfo {
   percentage: number;
   status: "ok" | "warning" | "critical";
   needsCompaction: boolean;
-}
-
-export async function getModelContextLength(model: string): Promise<number> {
-  const [creator, modelName] = model.split("/");
-
-  const cached = CONTEXT_CACHE.get(model);
-  if (cached && Date.now() - cached.fetchedAt < CACHE_TTL_MS) {
-    return cached.contextLength;
-  }
-
-  const response = await fetch(
-    `https://ai-gateway.vercel.sh/v1/models/${creator}/${modelName}/endpoints`,
-    {
-      headers: {
-        Authorization: `Bearer ${process.env.AI_GATEWAY_API_KEY}`,
-      },
-    }
-  );
-
-  if (!response.ok) {
-    // Fallback to a safe default if the API call fails
-    return 1_000_000;
-  }
-
-  const json = await response.json();
-  const contextLength = json.data.endpoints[0].context_length as number;
-
-  CONTEXT_CACHE.set(model, { contextLength, fetchedAt: Date.now() });
-  return contextLength;
 }
 
 export function extractTextContent(content: unknown): string {
@@ -53,19 +22,20 @@ export function extractTextContent(content: unknown): string {
   return String(content ?? "");
 }
 
-export function estimateTokens(content: string): number {
-  return Math.ceil(content.length / CHAR_TOKEN_RATIO);
+export function estimateTokens(content: string, charTokenRatio: number): number {
+  return Math.ceil(content.length / charTokenRatio);
 }
 
 export function estimateMessagesTokens(
   messages: { content: unknown }[],
-  systemPrompt: string
+  systemPrompt: string,
+  charTokenRatio: number
 ): number {
   const messagesTokens = messages.reduce(
-    (sum, m) => sum + estimateTokens(extractTextContent(m.content)),
+    (sum, m) => sum + estimateTokens(extractTextContent(m.content), charTokenRatio),
     0
   );
-  const systemTokens = estimateTokens(systemPrompt);
+  const systemTokens = estimateTokens(systemPrompt, charTokenRatio);
   return messagesTokens + systemTokens;
 }
 
@@ -74,9 +44,18 @@ export async function getContextInfo(
   messages: { content: unknown }[],
   systemPrompt: string
 ): Promise<ContextInfo> {
-  const contextLength = await getModelContextLength(model);
-  const maxChars = contextLength * CHAR_TOKEN_RATIO;
-  const usedChars = estimateMessagesTokens(messages, systemPrompt) * CHAR_TOKEN_RATIO;
+  const limits = await getModelLimits(model);
+  const ratio = getModelCharTokenRatio(model);
+
+  // maxChars for display: context window in tokens * char/token ratio = chars
+  // e.g., 128000 tokens * 3.5 = ~448000 chars for DeepSeek
+  const maxChars = limits.context * ratio;
+
+  // usedChars: convert message chars to token estimate, then back to chars
+  // This gives us usedChars in the same unit as maxChars
+  const estimatedTokens = estimateMessagesTokens(messages, systemPrompt, ratio);
+  const usedChars = estimatedTokens * ratio;
+
   const percentage = Math.min((usedChars / maxChars) * 100, 100);
 
   let status: ContextInfo["status"] = "ok";
