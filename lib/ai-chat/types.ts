@@ -2,7 +2,7 @@ export type AiChatStatus = "idle" | "pending" | "processing" | "completed" | "fa
 
 export type AiMessageRole = "user" | "assistant";
 
-export type AiMessageStatus = "pending" | "streaming" | "complete" | "error";
+export type AiMessageStatus = "pending" | "streaming" | "complete" | "error" | "compacted";
 
 export type AiToolCall = {
   toolCallId: string;

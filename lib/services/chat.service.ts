@@ -356,7 +356,12 @@ async function getModelMessages(chatId: string): Promise<ModelMessage[]> {
       content: aiMessages.content,
     })
     .from(aiMessages)
-    .where(eq(aiMessages.chatId, chatId))
+    .where(
+      and(
+        eq(aiMessages.chatId, chatId),
+        eq(aiMessages.isCompacted, false)
+      )
+    )
     .orderBy(asc(aiMessages.createdAt), asc(aiMessages.id));
 
   return messages.map((message) => ({
@@ -365,31 +370,80 @@ async function getModelMessages(chatId: string): Promise<ModelMessage[]> {
   })) as ModelMessage[];
 }
 
+/** Public wrapper for context estimation in API routes */
+export async function getModelMessagesForContext(chatId: string) {
+  return getModelMessages(chatId);
+}
+
 export async function compactChat(
   chatId: string,
   _systemPrompt: string
-): Promise<string> {
-  const messages = await getAiMessages(chatId);
+): Promise<{ summary: string; archivedCount: number }> {
+  // Load only non-compacted messages for transcript
+  const messages = await db
+    .select()
+    .from(aiMessages)
+    .where(
+      and(
+        eq(aiMessages.chatId, chatId),
+        eq(aiMessages.isCompacted, false)
+      )
+    )
+    .orderBy(asc(aiMessages.createdAt), asc(aiMessages.id));
 
-  // Build transcript, truncating individual tool results for summary
+  const archivedCount = messages.length;
+
+  // Build transcript with tool activity
   const transcript = messages
     .map((m) => {
+      const parts: string[] = [];
+
+      // Message text content (truncated)
       let content = m.content;
-      // Truncate any individual message content that's too long
       if (content && content.length > 3000) {
-        content = content.slice(0, 3000) + "\n[content truncated for compaction]";
+        content = content.slice(0, 3000) + "\n[content truncated]";
       }
-      return `${m.role}: ${content}`;
+      if (content) parts.push(content);
+
+      // Tool calls: include tool name and action
+      const toolCalls = Array.isArray(m.toolCalls) ? (m.toolCalls as AiToolCall[]) : [];
+      if (toolCalls.length > 0) {
+        const callSummaries = toolCalls.map((tc) => {
+          const action = tc.input && typeof tc.input === 'object' && 'action' in tc.input
+            ? ` (${(tc.input as any).action})`
+            : '';
+          return `  → called ${tc.toolName}${action}`;
+        });
+        parts.push(callSummaries.join("\n"));
+      }
+
+      // Tool results: brief snippet of each output
+      const toolResults = Array.isArray(m.toolResults) ? (m.toolResults as AiToolResult[]) : [];
+      if (toolResults.length > 0) {
+        const resultSummaries = toolResults.map((tr) => {
+          if (tr.error) return `  ← ${tr.toolName}: ERROR: ${tr.error}`;
+          const output = typeof tr.output === 'string'
+            ? tr.output
+            : JSON.stringify(tr.output);
+          const snippet = output.length > 300
+            ? output.slice(0, 300) + '... [truncated]'
+            : output;
+          return `  ← ${tr.toolName}: ${snippet}`;
+        });
+        parts.push(resultSummaries.join("\n"));
+      }
+
+      return `${m.role}: ${parts.join("\n")}`;
     })
     .join("\n\n");
 
-  // Cap the full transcript to ~80k chars (~40k tokens) to fit in context
+  // Cap the full transcript to ~80k chars (~40k tokens)
   const MAX_TRANSCRIPT_CHARS = 80000;
   const truncatedTranscript = transcript.length > MAX_TRANSCRIPT_CHARS
     ? "[Earlier messages truncated]\n\n" + transcript.slice(-MAX_TRANSCRIPT_CHARS)
     : transcript;
 
-  console.log(`[chat.service] Compacting chat: ${messages.length} messages, transcript ${transcript.length} chars, truncated to ${truncatedTranscript.length} chars`);
+  console.log(`[chat.service] Compacting chat: ${archivedCount} messages, transcript ${transcript.length} chars, sent ${truncatedTranscript.length} chars`);
 
   const result = streamText({
     model: getModel(),
@@ -411,27 +465,38 @@ export async function compactChat(
     }
   }
 
-  return summary.trim();
+  return { summary: summary.trim(), archivedCount };
 }
 
 export async function replaceMessagesWithSummary(
   chatId: string,
-  summary: string
+  summary: string,
+  archivedCount: number
 ): Promise<void> {
-  await db.delete(aiMessages).where(eq(aiMessages.chatId, chatId));
+  // Archive old messages instead of deleting
+  await db
+    .update(aiMessages)
+    .set({ isCompacted: true, updatedAt: new Date() })
+    .where(
+      and(
+        eq(aiMessages.chatId, chatId),
+        eq(aiMessages.isCompacted, false)
+      )
+    );
 
-  await createAiMessage({
-    chatId,
-    role: "user",
-    content: `## Prior Conversation Summary\n\n${summary}`,
-    status: "complete",
-  });
-
+  // Create a compaction divider message (shown as UI indicator, not as chat text)
   await createAiMessage({
     chatId,
     role: "assistant",
-    content:
-      "I've compacted our conversation history to get us back on track. What would you like to continue with?",
+    content: `${archivedCount} messages compacted`,
+    status: "compacted",
+  });
+
+  // Create the summary as a system-context message for the model
+  await createAiMessage({
+    chatId,
+    role: "user",
+    content: `## Prior Conversation Summary\n\n${summary}\n\n[System: The conversation was compacted to save context space. Continue where you left off based on the summary above. Do not mention the compaction to the user — just seamlessly continue.]`,
     status: "complete",
   });
 }
@@ -484,8 +549,8 @@ export async function executeAiChatJob(
       const messages = await getModelMessages(chat.id);
       const contextInfo = await getContextInfo(chat.model ?? DEFAULT_MODEL, messages, systemPrompt);
       if (contextInfo.needsCompaction) {
-        const summary = await compactChat(chat.id, systemPrompt);
-        await replaceMessagesWithSummary(chat.id, summary);
+        const { summary, archivedCount } = await compactChat(chat.id, systemPrompt);
+        await replaceMessagesWithSummary(chat.id, summary, archivedCount);
       }
 
       const modelLimits = await getModelLimits(chat.model ?? DEFAULT_MODEL);
@@ -618,8 +683,8 @@ export async function executeAiChatJob(
       if (isContextError && attempt < MAX_ATTEMPTS) {
         console.log("[chat.service] Context window exceeded, compacting and retrying...");
         try {
-          const summary = await compactChat(chat.id, systemPrompt);
-          await replaceMessagesWithSummary(chat.id, summary);
+          const { summary, archivedCount } = await compactChat(chat.id, systemPrompt);
+          await replaceMessagesWithSummary(chat.id, summary, archivedCount);
           // Reset state for retry
           content = "";
           toolCalls = [];
@@ -670,8 +735,8 @@ export async function executeAiChatJob(
 
       if (isContextLengthError && attempt < MAX_ATTEMPTS && !content) {
         try {
-          const summary = await compactChat(chat.id, systemPrompt);
-          await replaceMessagesWithSummary(chat.id, summary);
+          const { summary, archivedCount } = await compactChat(chat.id, systemPrompt);
+          await replaceMessagesWithSummary(chat.id, summary, archivedCount);
           continue; // Retry with compacted context
         } catch {
           // compaction failed, fall through to error handling

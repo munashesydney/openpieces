@@ -1,4 +1,4 @@
-import { getModelLimits, getModelCharTokenRatio } from "./model-context";
+import { getModelLimits } from "./model-context";
 
 export interface ContextInfo {
   usedTokens: number;
@@ -22,21 +22,37 @@ export function extractTextContent(content: unknown): string {
   return String(content ?? "");
 }
 
-export function estimateTokens(content: string, charTokenRatio: number): number {
-  return Math.ceil(content.length / charTokenRatio);
+/**
+ * Estimate token count using split ratios:
+ * - Natural text: ~3 chars per token
+ * - Structured data (JSON, code): ~1.5 chars per token
+ *
+ * We detect structured content by checking for JSON-like patterns.
+ */
+function estimateContentTokens(content: string): number {
+  if (!content) return 0;
+
+  // Heuristic: if the content looks like JSON or code, use a tighter ratio
+  const structuredIndicators = ['{', '[', '":', '\\n  '];
+  const isStructured = structuredIndicators.some((ind) => content.includes(ind));
+
+  const ratio = isStructured ? 1.5 : 3;
+  return Math.ceil(content.length / ratio);
 }
 
 export function estimateMessagesTokens(
   messages: { content: unknown }[],
-  systemPrompt: string,
-  charTokenRatio: number
+  systemPrompt: string
 ): number {
   const messagesTokens = messages.reduce(
-    (sum, m) => sum + estimateTokens(extractTextContent(m.content), charTokenRatio),
+    (sum, m) => sum + estimateContentTokens(extractTextContent(m.content)),
     0
   );
-  const systemTokens = estimateTokens(systemPrompt, charTokenRatio);
-  return messagesTokens + systemTokens;
+  // System prompt is typically natural text
+  const systemTokens = Math.ceil(systemPrompt.length / 3);
+  // Add overhead per message (role, formatting) — ~4 tokens each
+  const overhead = messages.length * 4;
+  return messagesTokens + systemTokens + overhead;
 }
 
 export async function getContextInfo(
@@ -45,21 +61,20 @@ export async function getContextInfo(
   systemPrompt: string
 ): Promise<ContextInfo> {
   const limits = await getModelLimits(model);
-  const ratio = getModelCharTokenRatio(model);
 
   // maxTokens for display: context window in tokens
   const maxTokens = limits.context;
 
   // usedTokens: token estimate from messages
-  const usedTokens = estimateMessagesTokens(messages, systemPrompt, ratio);
+  const usedTokens = estimateMessagesTokens(messages, systemPrompt);
 
   const percentage = Math.min((usedTokens / maxTokens) * 100, 100);
 
   let status: ContextInfo["status"] = "ok";
-  if (percentage >= 90) status = "critical";
-  else if (percentage >= 70) status = "warning";
+  if (percentage >= 80) status = "critical";
+  else if (percentage >= 60) status = "warning";
 
-  const needsCompaction = percentage >= 90;
+  const needsCompaction = percentage >= 80;
 
   return { usedTokens, maxTokens, percentage, status, needsCompaction };
 }

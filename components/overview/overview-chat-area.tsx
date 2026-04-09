@@ -9,7 +9,7 @@ export type ChatMessage = {
   id: string;
   content: string;
   role: "user" | "assistant";
-  status: "pending" | "streaming" | "complete" | "error";
+  status: "pending" | "streaming" | "complete" | "error" | "compacted";
   toolCalls: AiToolCall[];
   toolResults: AiToolResult[];
 };
@@ -141,17 +141,34 @@ export function OverviewChatArea({
                 <div
                   key={msg.id}
                   className={`flex w-full animate-[messageIn_0.3s_ease-out_both] ${
-                    msg.role === "user" ? "justify-end" : "justify-start"
+                    msg.status === "compacted"
+                      ? "justify-center"
+                      : msg.role === "user"
+                        ? "justify-end"
+                        : "justify-start"
                   }`}
                 >
-                  <ChatMessageCard
-                    content={msg.content}
-                    role={msg.role}
-                    toolCalls={msg.toolCalls}
-                    toolResults={msg.toolResults}
-                    onQuestionSubmit={onQuestionSubmit}
-                    isFollowedByUserMessage={isFollowedByUserMessage}
-                  />
+                  {msg.status === "compacted" ? (
+                    <div className="flex items-center gap-3 py-2 w-full max-w-[600px]">
+                      <div className="flex-1 h-px bg-[var(--border)]" />
+                      <span className="text-xs text-[var(--muted)] flex items-center gap-1.5 whitespace-nowrap">
+                        <svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor" opacity="0.5">
+                          <path d="M1 3.5A1.5 1.5 0 0 1 2.5 2h3.879a1.5 1.5 0 0 1 1.06.44l1.122 1.12A1.5 1.5 0 0 0 9.62 4H13.5A1.5 1.5 0 0 1 15 5.5v7a1.5 1.5 0 0 1-1.5 1.5h-11A1.5 1.5 0 0 1 1 12.5v-9Z" />
+                        </svg>
+                        {msg.content}
+                      </span>
+                      <div className="flex-1 h-px bg-[var(--border)]" />
+                    </div>
+                  ) : (
+                    <ChatMessageCard
+                      content={msg.content}
+                      role={msg.role}
+                      toolCalls={msg.toolCalls}
+                      toolResults={msg.toolResults}
+                      onQuestionSubmit={onQuestionSubmit}
+                      isFollowedByUserMessage={isFollowedByUserMessage}
+                    />
+                  )}
                 </div>
               );
             })}

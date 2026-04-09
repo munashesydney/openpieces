@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { auth } from "../../../../../auth";
-import { getAiChatRecordById, getAiMessages } from "@/lib/services/chat.service";
+import { getAiChatRecordById, getModelMessagesForContext } from "@/lib/services/chat.service";
 import { getContextInfo } from "@/lib/ai-chat/context-manager";
 import { OPENPIECES_CHAT_SYSTEM_PROMPT } from "@/lib/ai-chat/prompts/orchestratorV3";
 import { EVENTS_CHAT_SYSTEM_PROMPT } from "@/lib/ai-chat/prompts/events";
@@ -27,7 +27,8 @@ export async function GET(
     return NextResponse.json({ error: "Chat not found." }, { status: 404 });
   }
 
-  const messages = await getAiMessages(chatId);
+  // Use active (non-compacted) messages only for context estimation
+  const messages = await getModelMessagesForContext(chatId);
   const systemPrompt =
     chat.agentType === "events"
       ? EVENTS_CHAT_SYSTEM_PROMPT
