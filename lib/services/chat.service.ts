@@ -34,6 +34,40 @@ import { getChatAbortController } from "@/lib/workers/chat-controller";
 const DEFAULT_CHAT_TITLE = "New chat";
 const DEFAULT_MODEL = process.env.AI_MODEL ?? "deepseek/deepseek-v3.2";
 
+const CONTEXT_ERROR_PHRASES = [
+  "maximum context length",
+  "context length is only",
+  "Input too long",
+  "token count exceeds",
+  "reduce the length of the messages",
+  "reduce the length of the input",
+  "input_tokens",
+  "Please reduce the length",
+];
+
+function isContextWindowError(error: unknown): boolean {
+  const haystack = collectErrorStrings(error);
+  return CONTEXT_ERROR_PHRASES.some((phrase) => haystack.includes(phrase));
+}
+
+function collectErrorStrings(error: unknown, depth = 0): string {
+  if (depth > 4 || error == null) return "";
+  const parts: string[] = [];
+  if (typeof error === "string") return error;
+  if (error instanceof Error) {
+    parts.push(error.message ?? "");
+    parts.push((error as any).responseBody ?? "");
+    parts.push(collectErrorStrings((error as any).cause, depth + 1));
+    // Also check .data which Gateway errors expose
+    if ((error as any).data) {
+      try { parts.push(JSON.stringify((error as any).data)); } catch {}
+    }
+  } else if (typeof error === "object") {
+    try { parts.push(JSON.stringify(error)); } catch {}
+  }
+  return parts.join(" ");
+}
+
 const gateway = createGateway({
   apiKey: process.env.AI_GATEWAY_API_KEY,
 });
@@ -337,9 +371,25 @@ export async function compactChat(
 ): Promise<string> {
   const messages = await getAiMessages(chatId);
 
+  // Build transcript, truncating individual tool results for summary
   const transcript = messages
-    .map((m) => `${m.role}: ${m.content}`)
+    .map((m) => {
+      let content = m.content;
+      // Truncate any individual message content that's too long
+      if (content && content.length > 3000) {
+        content = content.slice(0, 3000) + "\n[content truncated for compaction]";
+      }
+      return `${m.role}: ${content}`;
+    })
     .join("\n\n");
+
+  // Cap the full transcript to ~80k chars (~40k tokens) to fit in context
+  const MAX_TRANSCRIPT_CHARS = 80000;
+  const truncatedTranscript = transcript.length > MAX_TRANSCRIPT_CHARS
+    ? "[Earlier messages truncated]\n\n" + transcript.slice(-MAX_TRANSCRIPT_CHARS)
+    : transcript;
+
+  console.log(`[chat.service] Compacting chat: ${messages.length} messages, transcript ${transcript.length} chars, truncated to ${truncatedTranscript.length} chars`);
 
   const result = streamText({
     model: getModel(),
@@ -347,7 +397,7 @@ export async function compactChat(
     messages: [
       {
         role: "user",
-        content: `Please summarize this conversation:\n\n${transcript}`,
+        content: `Please summarize this conversation:\n\n${truncatedTranscript}`,
       },
     ] as ModelMessage[],
     maxOutputTokens: 4000,
@@ -419,163 +469,232 @@ export async function executeAiChatJob(
           ? BRAIN_CHAT_SYSTEM_PROMPT
           : OPENPIECES_CHAT_SYSTEM_PROMPT;
 
-  try {
-    const messages = await getModelMessages(chat.id);
-    const contextInfo = await getContextInfo(chat.model ?? DEFAULT_MODEL, messages, systemPrompt);
-    if (contextInfo.needsCompaction) {
-      const summary = await compactChat(chat.id, systemPrompt);
-      await replaceMessagesWithSummary(chat.id, summary);
-    }
+  let attempt = 0;
+  const MAX_ATTEMPTS = 3;
 
-    const modelLimits = await getModelLimits(chat.model ?? DEFAULT_MODEL);
+  while (attempt < MAX_ATTEMPTS) {
+    attempt++;
+    let isContextError = false;
+    // Reset per-attempt state
+    content = "";
+    toolCalls = [];
+    toolResults = [];
 
-    const result = streamText({
-      model: getModel(),
-      system: systemPrompt,
-      messages: await getModelMessages(chat.id),
-      tools: createTools({
-        workspaceId: input.workspaceId,
-        userId: input.userId,
-        chatId: input.chatId,
-        agentType: chat.agentType,
-      }),
-      maxOutputTokens: modelLimits.output,
-      temperature: 0.7,
-      abortSignal: signal,
-      onAbort: async () => {
-        await updateAiMessage(assistantMessage.id, {
-          content: content || "Response was stopped.",
-          status: "complete",
-          toolCalls,
-          toolResults,
-        });
-        await updateAiChatStatus(chat.id, "stopped");
-      },
-      stopWhen: stepCountIs(30),
-    });
-
-    // Poll DB every 500ms to check if the user requested a stop
-    const stopPollInterval = setInterval(async () => {
-      if (signal?.aborted) {
-        clearInterval(stopPollInterval);
-        return;
-      }
-      const stopped = await isChatStopped(chat.id);
-      if (stopped) {
-        getChatAbortController(chat.id)?.abort();
-        clearInterval(stopPollInterval);
-      }
-    }, 500);
-
-    for await (const part of result.fullStream) {
-      if (signal?.aborted) break;
-
-      if (part.type === "text-delta") {
-        content += part.text;
-        await updateAiMessage(assistantMessage.id, {
-          content,
-          status: "streaming",
-        });
-        continue;
-      }
-
-      if (part.type === "tool-call") {
-        toolCalls = [
-          ...toolCalls,
-          {
-            toolCallId: part.toolCallId,
-            toolName: part.toolName,
-            input: sanitizeJson(part.input ?? {}),
-          },
-        ];
-
-        await updateAiMessage(assistantMessage.id, {
-          toolCalls,
-        });
-        continue;
-      }
-
-      if (part.type === "tool-result") {
-        // Truncate large tool outputs to prevent context overflow
-        const rawOutput = part.output ?? null;
-        const truncated = truncateToolOutput(
-          typeof rawOutput === "string" ? rawOutput : JSON.stringify(rawOutput)
-        );
-
-        toolResults = [
-          ...toolResults.filter((resultItem) => resultItem.toolCallId !== part.toolCallId),
-          {
-            toolCallId: part.toolCallId,
-            toolName: part.toolName,
-            output: sanitizeJson(truncated.content),
-          },
-        ];
-
-        await updateAiMessage(assistantMessage.id, {
-          toolResults,
-        });
-        continue;
-      }
-
-      if (part.type === "tool-error") {
-        toolResults = [
-          ...toolResults.filter((resultItem) => resultItem.toolCallId !== part.toolCallId),
-          {
-            toolCallId: part.toolCallId,
-            toolName: part.toolName,
-            output: null,
-            error: getToolResultError(part.error),
-          },
-        ];
-
-        await updateAiMessage(assistantMessage.id, {
-          toolResults,
-        });
-      }
-    }
-
-    await updateAiMessage(assistantMessage.id, {
-      content,
-      status: "complete",
-      toolCalls,
-      toolResults,
-    });
-
-    await updateAiChatStatus(chat.id, "completed");
-  } catch (error) {
-    if (signal?.aborted) {
-      return;
-    }
-
-    const isContextLengthError =
-      error instanceof GatewayInternalServerError &&
-      String(error.message).includes("token count exceeds");
-
-    if (isContextLengthError) {
-      try {
+    try {
+      const messages = await getModelMessages(chat.id);
+      const contextInfo = await getContextInfo(chat.model ?? DEFAULT_MODEL, messages, systemPrompt);
+      if (contextInfo.needsCompaction) {
         const summary = await compactChat(chat.id, systemPrompt);
         await replaceMessagesWithSummary(chat.id, summary);
-      } catch {
-        // compaction failed, fall through to error handling
       }
+
+      const modelLimits = await getModelLimits(chat.model ?? DEFAULT_MODEL);
+
+      const result = streamText({
+        model: getModel(),
+        system: systemPrompt,
+        messages: await getModelMessages(chat.id),
+        tools: createTools({
+          workspaceId: input.workspaceId,
+          userId: input.userId,
+          chatId: input.chatId,
+          agentType: chat.agentType,
+        }),
+        maxOutputTokens: modelLimits.output,
+        temperature: 0.7,
+        abortSignal: signal,
+        onAbort: async () => {
+          await updateAiMessage(assistantMessage.id, {
+            content: content || "Response was stopped.",
+            status: "complete",
+            toolCalls,
+            toolResults,
+          });
+          await updateAiChatStatus(chat.id, "stopped");
+        },
+        stopWhen: stepCountIs(30),
+        onError: ({ error }) => {
+          if (isContextWindowError(error)) {
+            isContextError = true;
+            console.log("[chat.service] Context window error detected via onError");
+          }
+          console.error("[chat.service] AI stream error:", (error as any)?.message);
+        },
+      });
+
+      // Poll DB every 500ms to check if the user requested a stop
+      const stopPollInterval = setInterval(async () => {
+        if (signal?.aborted) {
+          clearInterval(stopPollInterval);
+          return;
+        }
+        const stopped = await isChatStopped(chat.id);
+        if (stopped) {
+          getChatAbortController(chat.id)?.abort();
+          clearInterval(stopPollInterval);
+        }
+      }, 500);
+
+      for await (const part of result.fullStream) {
+        if (signal?.aborted) break;
+
+        // Handle stream-level errors (these don't throw — they arrive as parts)
+        if (part.type === "error") {
+          if (isContextWindowError(part.error)) {
+            isContextError = true;
+          }
+          break;
+        }
+
+        if (part.type === "text-delta") {
+          content += part.text;
+          await updateAiMessage(assistantMessage.id, {
+            content,
+            status: "streaming",
+          });
+          continue;
+        }
+
+        if (part.type === "tool-call") {
+          toolCalls = [
+            ...toolCalls,
+            {
+              toolCallId: part.toolCallId,
+              toolName: part.toolName,
+              input: sanitizeJson(part.input ?? {}),
+            },
+          ];
+
+          await updateAiMessage(assistantMessage.id, {
+            toolCalls,
+          });
+          continue;
+        }
+
+        if (part.type === "tool-result") {
+          // Truncate large tool outputs to prevent context overflow
+          const rawOutput = part.output ?? null;
+          const truncated = truncateToolOutput(
+            typeof rawOutput === "string" ? rawOutput : JSON.stringify(rawOutput)
+          );
+
+          toolResults = [
+            ...toolResults.filter((resultItem) => resultItem.toolCallId !== part.toolCallId),
+            {
+              toolCallId: part.toolCallId,
+              toolName: part.toolName,
+              output: sanitizeJson(truncated.content),
+            },
+          ];
+
+          await updateAiMessage(assistantMessage.id, {
+            toolResults,
+          });
+          continue;
+        }
+
+        if (part.type === "tool-error") {
+          toolResults = [
+            ...toolResults.filter((resultItem) => resultItem.toolCallId !== part.toolCallId),
+            {
+              toolCallId: part.toolCallId,
+              toolName: part.toolName,
+              output: null,
+              error: getToolResultError(part.error),
+            },
+          ];
+
+          await updateAiMessage(assistantMessage.id, {
+            toolResults,
+          });
+        }
+      }
+
+      clearInterval(stopPollInterval);
+
+      console.log(`[chat.service] Stream ended: isContextError=${isContextError}, contentLen=${content.length}, attempt=${attempt}/${MAX_ATTEMPTS}`);
+
+      // If a context error was detected (via onError or error part), compact and retry
+      if (isContextError && attempt < MAX_ATTEMPTS) {
+        console.log("[chat.service] Context window exceeded, compacting and retrying...");
+        try {
+          const summary = await compactChat(chat.id, systemPrompt);
+          await replaceMessagesWithSummary(chat.id, summary);
+          // Reset state for retry
+          content = "";
+          toolCalls = [];
+          toolResults = [];
+          await updateAiMessage(assistantMessage.id, {
+            content: "",
+            status: "streaming",
+            toolCalls: [],
+            toolResults: [],
+          });
+          continue; // Retry with compacted context
+        } catch (compactError) {
+          console.error("[chat.service] Compaction failed:", compactError);
+          // Fall through to error handling below
+        }
+      }
+
+      // If there was an error but no retry possible, mark as failed
+      if (isContextError) {
+        await updateAiMessage(assistantMessage.id, {
+          content: "The conversation exceeded the model's context limit and compaction was not sufficient. Please start a new chat.",
+          status: "error",
+          toolCalls,
+          toolResults,
+        });
+        await updateAiChatStatus(chat.id, "failed", {
+          error: "Context window exceeded",
+        });
+        break;
+      }
+
+      await updateAiMessage(assistantMessage.id, {
+        content,
+        status: "complete",
+        toolCalls,
+        toolResults,
+      });
+
+      await updateAiChatStatus(chat.id, "completed");
+      break; // Exit retry loop on success
+    } catch (error) {
+      if (signal?.aborted) {
+        return;
+      }
+
+      const isContextLengthError =
+        isContextError || isContextWindowError(error);
+
+      if (isContextLengthError && attempt < MAX_ATTEMPTS && !content) {
+        try {
+          const summary = await compactChat(chat.id, systemPrompt);
+          await replaceMessagesWithSummary(chat.id, summary);
+          continue; // Retry with compacted context
+        } catch {
+          // compaction failed, fall through to error handling
+        }
+      }
+
+      const errorMessage =
+        error instanceof Error ? error.message : "An unexpected AI error occurred.";
+
+      await updateAiMessage(assistantMessage.id, {
+        content:
+          content ||
+          "I hit an error while generating the response. Please try again.",
+        status: "error",
+        toolCalls,
+        toolResults,
+      });
+
+      await updateAiChatStatus(chat.id, "failed", {
+        error: errorMessage,
+      });
+
+      throw error;
     }
-
-    const errorMessage =
-      error instanceof Error ? error.message : "An unexpected AI error occurred.";
-
-    await updateAiMessage(assistantMessage.id, {
-      content:
-        content ||
-        "I hit an error while generating the response. Please try again.",
-      status: "error",
-      toolCalls,
-      toolResults,
-    });
-
-    await updateAiChatStatus(chat.id, "failed", {
-      error: errorMessage,
-    });
-
-    throw error;
   }
 }

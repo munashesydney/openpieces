@@ -26,7 +26,7 @@ export function ContextProgressRing({ info, className = "" }: ContextProgressRin
   const pct = Math.min(100, Math.max(0, info.percentage));
   const dash = (pct / 100) * circumference;
 
-  const label = `Context ${Math.round(pct)}% used (${info.usedChars.toLocaleString()} / ${info.maxChars.toLocaleString()} characters)`;
+  const label = `Context ${Math.round(pct)}% used (${info.usedTokens.toLocaleString()} / ${info.maxTokens.toLocaleString()} tokens)`;
 
   return (
     <div

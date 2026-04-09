@@ -5,8 +5,11 @@
  * returned to the model suggesting it use pagination or filters.
  */
 
-// Maximum character length for tool outputs before truncation
-const MAX_TOOL_OUTPUT_CHARS = 8000;
+// Maximum character length for tool outputs before truncation.
+// Keep conservative — tool results (JSON lists) are token-dense (~1:1 char:token).
+// With truncation at the tool source (registry.ts), this limits what the AI SDK
+// sees in its internal multi-step context chain.
+const MAX_TOOL_OUTPUT_CHARS = 4000;
 
 export interface TruncationResult {
   content: string;

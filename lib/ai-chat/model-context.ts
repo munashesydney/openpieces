@@ -95,9 +95,10 @@ async function fetchFromGateway(model: string): Promise<ModelLimits | null> {
 
 /**
  * Token-to-character ratio for a given model.
- * Different tokenizers have different ratios (DeepSeek ~3.5, others ~4).
+ * Use conservative ratios — code/JSON content is close to 1:1,
+ * so a lower ratio prevents underestimating token usage.
  */
 export function getModelCharTokenRatio(model: string): number {
-  if (model.startsWith("deepseek/")) return 3.5;
-  return 4;
+  if (model.startsWith("deepseek/")) return 2;
+  return 2.5;
 }

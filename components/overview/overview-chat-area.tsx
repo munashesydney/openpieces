@@ -15,8 +15,8 @@ export type ChatMessage = {
 };
 
 export type ContextInfo = {
-  usedChars: number;
-  maxChars: number;
+  usedTokens: number;
+  maxTokens: number;
   percentage: number;
   status: "ok" | "warning" | "critical";
   needsCompaction: boolean;

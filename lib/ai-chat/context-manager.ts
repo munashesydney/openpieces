@@ -1,8 +1,8 @@
 import { getModelLimits, getModelCharTokenRatio } from "./model-context";
 
 export interface ContextInfo {
-  usedChars: number;
-  maxChars: number;
+  usedTokens: number;
+  maxTokens: number;
   percentage: number;
   status: "ok" | "warning" | "critical";
   needsCompaction: boolean;
@@ -47,16 +47,13 @@ export async function getContextInfo(
   const limits = await getModelLimits(model);
   const ratio = getModelCharTokenRatio(model);
 
-  // maxChars for display: context window in tokens * char/token ratio = chars
-  // e.g., 128000 tokens * 3.5 = ~448000 chars for DeepSeek
-  const maxChars = limits.context * ratio;
+  // maxTokens for display: context window in tokens
+  const maxTokens = limits.context;
 
-  // usedChars: convert message chars to token estimate, then back to chars
-  // This gives us usedChars in the same unit as maxChars
-  const estimatedTokens = estimateMessagesTokens(messages, systemPrompt, ratio);
-  const usedChars = estimatedTokens * ratio;
+  // usedTokens: token estimate from messages
+  const usedTokens = estimateMessagesTokens(messages, systemPrompt, ratio);
 
-  const percentage = Math.min((usedChars / maxChars) * 100, 100);
+  const percentage = Math.min((usedTokens / maxTokens) * 100, 100);
 
   let status: ContextInfo["status"] = "ok";
   if (percentage >= 90) status = "critical";
@@ -64,5 +61,5 @@ export async function getContextInfo(
 
   const needsCompaction = percentage >= 90;
 
-  return { usedChars, maxChars, percentage, status, needsCompaction };
+  return { usedTokens, maxTokens, percentage, status, needsCompaction };
 }
