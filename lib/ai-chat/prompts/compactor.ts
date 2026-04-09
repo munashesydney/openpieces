@@ -11,6 +11,7 @@ Given a conversation transcript (which includes tool calls and their results), p
 4. Remembers the user's stated preferences and requirements
 5. Preserves the current state of any ongoing work
 6. Captures the overall goal or purpose of the conversation
+7. **CRITICAL**: If tool calls were being executed when the conversation was interrupted, note exactly what was in progress and what remains
 
 ## Format
 
@@ -39,6 +40,14 @@ Produce a summary in this format:
 **Current State:**
 [What state the work is currently in, what was being worked on when the conversation was interrupted]
 
+**In-Progress Operations:**
+[If the assistant was in the middle of executing tool calls or a multi-step task, describe exactly:
+- What tool/action was being called repeatedly
+- How many times it was requested vs how many times it completed
+- What the user asked for that hasn't been finished yet
+- Example: "User requested 5 calls to manage_brain(list). Completed 2/5 before interruption. 3 more calls remaining."]
+If no operations were in progress, write "None."
+
 **Pending / Next Steps:**
 - [Something still todo]
 - [Something pending]
@@ -50,6 +59,7 @@ Produce a summary in this format:
 - For tool results, capture the KEY FINDINGS only (e.g. "found 3 workflows: Auth, Billing, Notifications") — do not reproduce raw JSON
 - Preserve decisions about architecture, design choices, or tool selections
 - If something was being built, note what exists and what's left to do
+- **ALWAYS fill in "In-Progress Operations" accurately** — this is critical for the AI to resume work
 - Do NOT add new information not present in the conversation
 - Do NOT speculate about what happened — only summarize what is in the transcript
 `;

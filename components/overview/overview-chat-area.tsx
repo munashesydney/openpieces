@@ -95,9 +95,12 @@ export function OverviewChatArea({
     return last?.role === "assistant" && hasPendingToolCalls(last);
   }, [isChatRunning, messages]);
 
-  /** Omit empty in-flight assistant rows; the thinking strip replaces them. */
+  /** Omit empty in-flight assistant rows; the thinking strip replaces them.
+   *  Also hide compacted user messages (summary context — model-only). */
   const visibleMessages = useMemo(() => {
     return messages.filter((msg) => {
+      // Hide compacted user messages (the summary is model-only context)
+      if (msg.status === "compacted" && msg.role === "user") return false;
       if (msg.role !== "assistant") return true;
       const isPlaceholder =
         !msg.content.trim() &&

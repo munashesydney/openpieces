@@ -52,7 +52,9 @@ export function estimateMessagesTokens(
   const systemTokens = Math.ceil(systemPrompt.length / 3);
   // Add overhead per message (role, formatting) — ~4 tokens each
   const overhead = messages.length * 4;
-  return messagesTokens + systemTokens + overhead;
+  // Tool definitions (12 tools with schemas) add ~4000 tokens per request
+  const TOOL_DEFINITIONS_OVERHEAD = 4000;
+  return messagesTokens + systemTokens + overhead + TOOL_DEFINITIONS_OVERHEAD;
 }
 
 export async function getContextInfo(

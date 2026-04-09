@@ -492,12 +492,12 @@ export async function replaceMessagesWithSummary(
     status: "compacted",
   });
 
-  // Create the summary as a system-context message for the model
+  // Create the summary as a model-only context message (hidden from UI via compacted status)
   await createAiMessage({
     chatId,
     role: "user",
-    content: `## Prior Conversation Summary\n\n${summary}\n\n[System: The conversation was compacted to save context space. Continue where you left off based on the summary above. Do not mention the compaction to the user — just seamlessly continue.]`,
-    status: "complete",
+    content: `## Prior Conversation Summary\n\n${summary}\n\n[System: The conversation was compacted to save context space. Resume exactly where you left off. If you were executing tool calls or a multi-step task, continue from where you stopped — do not start over or ask the user what to do. Do not mention the compaction to the user.]`,
+    status: "compacted",
   });
 }
 
@@ -512,7 +512,7 @@ export async function executeAiChatJob(
 
   await updateAiChatStatus(chat.id, "processing");
 
-  const assistantMessage = await createAiMessage({
+  let assistantMessage = await createAiMessage({
     chatId: chat.id,
     role: "assistant",
     content: "",
@@ -685,11 +685,13 @@ export async function executeAiChatJob(
         try {
           const { summary, archivedCount } = await compactChat(chat.id, systemPrompt);
           await replaceMessagesWithSummary(chat.id, summary, archivedCount);
-          // Reset state for retry
+          // Create a fresh assistant message after the compaction divider
           content = "";
           toolCalls = [];
           toolResults = [];
-          await updateAiMessage(assistantMessage.id, {
+          assistantMessage = await createAiMessage({
+            chatId: chat.id,
+            role: "assistant",
             content: "",
             status: "streaming",
             toolCalls: [],
@@ -737,6 +739,15 @@ export async function executeAiChatJob(
         try {
           const { summary, archivedCount } = await compactChat(chat.id, systemPrompt);
           await replaceMessagesWithSummary(chat.id, summary, archivedCount);
+          // Create a fresh assistant message after the compaction divider
+          assistantMessage = await createAiMessage({
+            chatId: chat.id,
+            role: "assistant",
+            content: "",
+            status: "streaming",
+            toolCalls: [],
+            toolResults: [],
+          });
           continue; // Retry with compacted context
         } catch {
           // compaction failed, fall through to error handling

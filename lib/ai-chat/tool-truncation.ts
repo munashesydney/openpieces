@@ -9,7 +9,7 @@
 // Keep conservative — tool results (JSON lists) are token-dense (~1:1 char:token).
 // With truncation at the tool source (registry.ts), this limits what the AI SDK
 // sees in its internal multi-step context chain.
-const MAX_TOOL_OUTPUT_CHARS = 230000;
+const MAX_TOOL_OUTPUT_CHARS = 10000;
 
 export interface TruncationResult {
   content: string;
