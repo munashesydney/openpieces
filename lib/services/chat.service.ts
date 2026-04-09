@@ -354,6 +354,8 @@ async function getModelMessages(chatId: string): Promise<ModelMessage[]> {
     .select({
       role: aiMessages.role,
       content: aiMessages.content,
+      toolCalls: aiMessages.toolCalls,
+      toolResults: aiMessages.toolResults,
     })
     .from(aiMessages)
     .where(
@@ -367,7 +369,9 @@ async function getModelMessages(chatId: string): Promise<ModelMessage[]> {
   return messages.map((message) => ({
     role: message.role,
     content: message.content,
-  })) as ModelMessage[];
+    toolCalls: message.toolCalls,
+    toolResults: message.toolResults,
+  })) as any[];
 }
 
 /** Public wrapper for context estimation in API routes */

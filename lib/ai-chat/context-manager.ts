@@ -41,25 +41,56 @@ function estimateContentTokens(content: string): number {
 }
 
 export function estimateMessagesTokens(
-  messages: { content: unknown }[],
+  messages: { content: unknown; toolCalls?: { input: unknown }[]; toolResults?: { output: unknown }[] }[],
   systemPrompt: string
 ): number {
-  const messagesTokens = messages.reduce(
-    (sum, m) => sum + estimateContentTokens(extractTextContent(m.content)),
-    0
-  );
+  let textContentTokens = 0;
+  let toolInputTokensSum = 0;
+  let toolOutputTokensSum = 0;
+  let toolTotalCount = 0;
+
+  const messagesTokens = messages.reduce((sum, m) => {
+    let messageTotal = estimateContentTokens(extractTextContent(m.content));
+    textContentTokens += messageTotal;
+
+    // Add tokens for tool inputs
+    if (m.toolCalls && Array.isArray(m.toolCalls)) {
+      messageTotal += m.toolCalls.reduce((tcSum, tc) => {
+        toolTotalCount++;
+        const inputStr = typeof tc.input === 'string' ? tc.input : JSON.stringify(tc.input);
+        const tCost = estimateContentTokens(inputStr);
+        toolInputTokensSum += tCost;
+        return tcSum + tCost;
+      }, 0);
+    }
+
+    // Add tokens for tool outputs
+    if (m.toolResults && Array.isArray(m.toolResults)) {
+      messageTotal += m.toolResults.reduce((trSum, tr) => {
+        const outputStr = typeof tr.output === 'string' ? tr.output : JSON.stringify(tr.output);
+        const tCost = estimateContentTokens(outputStr);
+        toolOutputTokensSum += tCost;
+        return trSum + tCost;
+      }, 0);
+    }
+
+    return sum + messageTotal;
+  }, 0);
+
   // System prompt is typically natural text
   const systemTokens = Math.ceil(systemPrompt.length / 3);
   // Add overhead per message (role, formatting) — ~4 tokens each
   const overhead = messages.length * 4;
   // Tool definitions (12 tools with schemas) add ~4000 tokens per request
   const TOOL_DEFINITIONS_OVERHEAD = 4000;
-  return messagesTokens + systemTokens + overhead + TOOL_DEFINITIONS_OVERHEAD;
+  const finalTotal = messagesTokens + systemTokens + overhead + TOOL_DEFINITIONS_OVERHEAD;
+
+  return finalTotal;
 }
 
 export async function getContextInfo(
   model: string,
-  messages: { content: unknown }[],
+  messages: { content: unknown; toolCalls?: { input: unknown }[]; toolResults?: { output: unknown }[] }[],
   systemPrompt: string
 ): Promise<ContextInfo> {
   const limits = await getModelLimits(model);

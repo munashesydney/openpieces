@@ -113,22 +113,15 @@ export function OverviewComposer({
                 <Paperclip className="h-4 w-4" />
               </Button>
 
-              {contextInfo ? <ContextProgressRing info={contextInfo} /> : null}
+              {contextInfo ? (
+                <ContextProgressRing 
+                  info={contextInfo} 
+                  onClick={canCompact ? onCompact : undefined}
+                  disabled={isCompacting}
+                />
+              ) : null}
 
               <ModelPicker initialModel={model ?? undefined} onModelChange={onModelChange} />
-
-              {canCompact && (
-                <Button
-                  variant="secondary"
-                  size="icon"
-                  aria-label="Compact context"
-                  title={`Context at ${Math.round(contextInfo.percentage)}% — click to compact`}
-                  onClick={onCompact}
-                  disabled={isCompacting}
-                >
-                  <Minimize2 className="h-4 w-4" />
-                </Button>
-              )}
             </div>
 
             <div className="flex shrink-0 items-center gap-2">
