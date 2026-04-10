@@ -82,10 +82,13 @@ export function OverviewChatArea({
     if (last.role === "user") return true;
     if (last.role !== "assistant") return false;
     if (last.status !== "streaming" && last.status !== "pending") return false;
-    const hasText = last.content.trim().length > 0;
-    // Keep visible while tools are still running (no result yet), or before any assistant text.
+    
     if (hasPendingToolCalls(last)) return true;
+    
+    const hasText = last.content.trim().length > 0;
     if (!hasText) return true;
+    if (last.toolCalls.length > 0) return true;
+    
     return false;
   }, [isChatRunning, messages]);
 

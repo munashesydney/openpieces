@@ -42,11 +42,6 @@ export function ChatMessageCard({
 
   return (
     <div className="w-full max-w-[min(100%,680px)] min-w-0" data-role="assistant">
-      {hasBody ? (
-        <div className={assistantMarkdownClass}>
-          <ReactMarkdown remarkPlugins={[remarkGfm]}>{content}</ReactMarkdown>
-        </div>
-      ) : null}
       <ChatToolCalls
         toolCalls={toolCalls}
         toolResults={toolResults}
@@ -54,6 +49,11 @@ export function ChatMessageCard({
         onQuestionSubmit={onQuestionSubmit}
         isFollowedByUserMessage={isFollowedByUserMessage}
       />
+      {hasBody ? (
+        <div className={`${assistantMarkdownClass}${toolCalls.length > 0 ? ' mt-3' : ''}`}>
+          <ReactMarkdown remarkPlugins={[remarkGfm]}>{content}</ReactMarkdown>
+        </div>
+      ) : null}
     </div>
   );
 }
