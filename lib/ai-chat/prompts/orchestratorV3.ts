@@ -1,3 +1,5 @@
+import { UNIVERSAL_INSTRUCTIONS } from "./universal";
+
 export const OPENPIECES_CHAT_SYSTEM_PROMPT = `# OpenPieces Orchestrator
 
 ## Who You Are
@@ -292,4 +294,4 @@ After sending all implementation messages to OpenCode:
 2. Check session/service status via \`manage_opencode_sessions\`
 3. If not ready, repeat sleep + check until complete
 4. Once deployed, give the user the URLs and update the brain
-`;
+` + UNIVERSAL_INSTRUCTIONS;

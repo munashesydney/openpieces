@@ -11,12 +11,14 @@ const STATUS_ARC = {
 type ContextProgressRingProps = {
   info: ContextInfo;
   className?: string;
+  onClick?: () => void;
+  disabled?: boolean;
 };
 
 /**
  * Thin circular track with a glowing arc for context usage (next to model picker).
  */
-export function ContextProgressRing({ info, className = "" }: ContextProgressRingProps) {
+export function ContextProgressRing({ info, className = "", onClick, disabled = false }: ContextProgressRingProps) {
   const size = 22;
   const stroke = 2.25;
   const r = (size - stroke) / 2;
@@ -26,14 +28,29 @@ export function ContextProgressRing({ info, className = "" }: ContextProgressRin
   const pct = Math.min(100, Math.max(0, info.percentage));
   const dash = (pct / 100) * circumference;
 
-  const label = `Context ${Math.round(pct)}% used (${info.usedChars.toLocaleString()} / ${info.maxChars.toLocaleString()} characters)`;
+  const baseLabel = `Context ${Math.round(pct)}% used (${info.usedTokens.toLocaleString()} / ${info.maxTokens.toLocaleString()} tokens)`;
+  const label = onClick && !disabled ? `${baseLabel} — click to compact` : baseLabel;
+
+  const interactiveClasses = onClick && !disabled
+    ? "cursor-pointer hover:scale-110 hover:brightness-110 active:scale-95 transition-all"
+    : disabled
+    ? "opacity-50 cursor-not-allowed"
+    : "";
 
   return (
     <div
-      className={`relative shrink-0 ${className}`}
+      className={`relative shrink-0 ${interactiveClasses} ${className}`}
       title={label}
-      role="img"
+      role={onClick ? "button" : "img"}
       aria-label={label}
+      onClick={!disabled ? onClick : undefined}
+      tabIndex={onClick && !disabled ? 0 : undefined}
+      onKeyDown={(e) => {
+        if (onClick && !disabled && (e.key === "Enter" || e.key === " ")) {
+          e.preventDefault();
+          onClick();
+        }
+      }}
     >
       <svg
         width={size}

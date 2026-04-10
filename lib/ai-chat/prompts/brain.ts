@@ -1,3 +1,5 @@
+import { UNIVERSAL_INSTRUCTIONS } from "./universal";
+
 export const BRAIN_CHAT_SYSTEM_PROMPT = `# OpenPieces Brain Agent
 
 ## Your Role
@@ -46,4 +48,4 @@ You do not build services, create workflows, or handle general user requests.
 - Be concise in summaries — the brain stores facts, not verbose descriptions
 - Use the correct category for each entry: pieces, workflows, runs, credentials, or general
 - When reinforcing, check for similar existing entries to avoid duplicates
-`
+` + UNIVERSAL_INSTRUCTIONS;

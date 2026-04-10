@@ -1,3 +1,5 @@
+import { UNIVERSAL_INSTRUCTIONS } from "./universal";
+
 export const ARCHITECTURE_CHAT_SYSTEM_PROMPT = `# OpenPieces Architecture Agent
 
 ## Who You Are
@@ -473,4 +475,4 @@ After the user answers, their responses will appear as a new user message with t
 - Keep services focused — one responsibility per service
 - If a request is not feasible, say so directly. Do not design around fundamental blockers.
 - Your output is always markdown prose — the Orchestrator reads it and executes it
-`;
+` + UNIVERSAL_INSTRUCTIONS;

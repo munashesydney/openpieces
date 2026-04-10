@@ -211,6 +211,13 @@
       "when": 1775506831513,
       "tag": "0030_workspace_description",
       "breakpoints": true
+    },
+    {
+      "idx": 31,
+      "version": "7",
+      "when": 1775710000000,
+      "tag": "0031_compaction_support",
+      "breakpoints": true
     }
   ]
 }

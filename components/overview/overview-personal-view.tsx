@@ -16,6 +16,7 @@ type Chat = {
   title: string;
   status: AiChatListItem["status"];
   error: string | null;
+  model: string | null;
 };
 
 type OverviewPersonalViewProps = {
@@ -47,6 +48,7 @@ function mapChat(chat: AiChatListItem): Chat {
     title: chat.title,
     status: chat.status,
     error: chat.error,
+    model: chat.model ?? null,
   };
 }
 
@@ -266,6 +268,31 @@ export function OverviewPersonalView({
     await fetch(`/api/chats/${selectedChatId}/stop`, { method: "POST" });
   }, [selectedChatId, clearPolling]);
 
+  const handleModelChange = useCallback(
+    async (model: string) => {
+      if (!selectedChatId) return;
+      try {
+        await fetch(`/api/chats/${selectedChatId}/model`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ model }),
+        });
+        setChats((currentChats) =>
+          currentChats.map((chat) =>
+            chat.id === selectedChatId
+              ? { ...chat, model }
+              : chat
+          )
+        );
+        // Refetch context info with new model
+        await fetchContextInfo(selectedChatId);
+      } catch {
+        // non-critical
+      }
+    },
+    [selectedChatId, fetchContextInfo]
+  );
+
   const handleQuestionSubmit = useCallback(
     async (answers: Record<string, string>) => {
       const answersJson = JSON.stringify(answers, null, 2);
@@ -449,6 +476,8 @@ export function OverviewPersonalView({
                 isRunning={selectedChatIsRunning}
                 isCompacting={isCompacting}
                 contextInfo={contextInfo}
+                model={selectedChat.model}
+                onModelChange={handleModelChange}
               />
             </div>
           </>

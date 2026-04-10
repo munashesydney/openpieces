@@ -1,42 +1,11 @@
-const CONTEXT_CACHE = new Map<string, { contextLength: number; fetchedAt: number }>();
-const CACHE_TTL_MS = 60 * 60 * 1000; // 1 hour
-const CHAR_TOKEN_RATIO = 4;
+import { getModelLimits } from "./model-context";
 
 export interface ContextInfo {
-  usedChars: number;
-  maxChars: number;
+  usedTokens: number;
+  maxTokens: number;
   percentage: number;
   status: "ok" | "warning" | "critical";
   needsCompaction: boolean;
-}
-
-export async function getModelContextLength(model: string): Promise<number> {
-  const [creator, modelName] = model.split("/");
-
-  const cached = CONTEXT_CACHE.get(model);
-  if (cached && Date.now() - cached.fetchedAt < CACHE_TTL_MS) {
-    return cached.contextLength;
-  }
-
-  const response = await fetch(
-    `https://ai-gateway.vercel.sh/v1/models/${creator}/${modelName}/endpoints`,
-    {
-      headers: {
-        Authorization: `Bearer ${process.env.AI_GATEWAY_API_KEY}`,
-      },
-    }
-  );
-
-  if (!response.ok) {
-    // Fallback to a safe default if the API call fails
-    return 1_000_000;
-  }
-
-  const json = await response.json();
-  const contextLength = json.data.endpoints[0].context_length as number;
-
-  CONTEXT_CACHE.set(model, { contextLength, fetchedAt: Date.now() });
-  return contextLength;
 }
 
 export function extractTextContent(content: unknown): string {
@@ -53,37 +22,92 @@ export function extractTextContent(content: unknown): string {
   return String(content ?? "");
 }
 
-export function estimateTokens(content: string): number {
-  return Math.ceil(content.length / CHAR_TOKEN_RATIO);
+/**
+ * Estimate token count using split ratios:
+ * - Natural text: ~3 chars per token
+ * - Structured data (JSON, code): ~1.5 chars per token
+ *
+ * We detect structured content by checking for JSON-like patterns.
+ */
+function estimateContentTokens(content: string): number {
+  if (!content) return 0;
+
+  // Heuristic: if the content looks like JSON or code, use a tighter ratio
+  const structuredIndicators = ['{', '[', '":', '\\n  '];
+  const isStructured = structuredIndicators.some((ind) => content.includes(ind));
+
+  const ratio = isStructured ? 1.5 : 3;
+  return Math.ceil(content.length / ratio);
 }
 
 export function estimateMessagesTokens(
-  messages: { content: unknown }[],
+  messages: { content: unknown; toolCalls?: { input: unknown }[]; toolResults?: { output: unknown }[] }[],
   systemPrompt: string
 ): number {
-  const messagesTokens = messages.reduce(
-    (sum, m) => sum + estimateTokens(extractTextContent(m.content)),
-    0
-  );
-  const systemTokens = estimateTokens(systemPrompt);
-  return messagesTokens + systemTokens;
+  let textContentTokens = 0;
+  let toolInputTokensSum = 0;
+  let toolOutputTokensSum = 0;
+  let toolTotalCount = 0;
+
+  const messagesTokens = messages.reduce((sum, m) => {
+    let messageTotal = estimateContentTokens(extractTextContent(m.content));
+    textContentTokens += messageTotal;
+
+    // Add tokens for tool inputs
+    if (m.toolCalls && Array.isArray(m.toolCalls)) {
+      messageTotal += m.toolCalls.reduce((tcSum, tc) => {
+        toolTotalCount++;
+        const inputStr = typeof tc.input === 'string' ? tc.input : JSON.stringify(tc.input);
+        const tCost = estimateContentTokens(inputStr);
+        toolInputTokensSum += tCost;
+        return tcSum + tCost;
+      }, 0);
+    }
+
+    // Add tokens for tool outputs
+    if (m.toolResults && Array.isArray(m.toolResults)) {
+      messageTotal += m.toolResults.reduce((trSum, tr) => {
+        const outputStr = typeof tr.output === 'string' ? tr.output : JSON.stringify(tr.output);
+        const tCost = estimateContentTokens(outputStr);
+        toolOutputTokensSum += tCost;
+        return trSum + tCost;
+      }, 0);
+    }
+
+    return sum + messageTotal;
+  }, 0);
+
+  // System prompt is typically natural text
+  const systemTokens = Math.ceil(systemPrompt.length / 3);
+  // Add overhead per message (role, formatting) — ~4 tokens each
+  const overhead = messages.length * 4;
+  // Tool definitions (12 tools with schemas) add ~4000 tokens per request
+  const TOOL_DEFINITIONS_OVERHEAD = 4000;
+  const finalTotal = messagesTokens + systemTokens + overhead + TOOL_DEFINITIONS_OVERHEAD;
+
+  return finalTotal;
 }
 
 export async function getContextInfo(
   model: string,
-  messages: { content: unknown }[],
+  messages: { content: unknown; toolCalls?: { input: unknown }[]; toolResults?: { output: unknown }[] }[],
   systemPrompt: string
 ): Promise<ContextInfo> {
-  const contextLength = await getModelContextLength(model);
-  const maxChars = contextLength * CHAR_TOKEN_RATIO;
-  const usedChars = estimateMessagesTokens(messages, systemPrompt) * CHAR_TOKEN_RATIO;
-  const percentage = Math.min((usedChars / maxChars) * 100, 100);
+  const limits = await getModelLimits(model);
+
+  // maxTokens for display: context window in tokens
+  const maxTokens = limits.context;
+
+  // usedTokens: token estimate from messages
+  const usedTokens = estimateMessagesTokens(messages, systemPrompt);
+
+  const percentage = Math.min((usedTokens / maxTokens) * 100, 100);
 
   let status: ContextInfo["status"] = "ok";
-  if (percentage >= 90) status = "critical";
-  else if (percentage >= 70) status = "warning";
+  if (percentage >= 80) status = "critical";
+  else if (percentage >= 60) status = "warning";
 
-  const needsCompaction = percentage >= 90;
+  const needsCompaction = percentage >= 80;
 
-  return { usedChars, maxChars, percentage, status, needsCompaction };
+  return { usedTokens, maxTokens, percentage, status, needsCompaction };
 }

@@ -18,6 +18,8 @@ type OverviewComposerProps = {
   isRunning?: boolean;
   isCompacting?: boolean;
   contextInfo?: ContextInfo | null;
+  model?: string | null;
+  onModelChange?: (model: string) => void;
 };
 
 export function OverviewComposer({
@@ -29,6 +31,8 @@ export function OverviewComposer({
   isRunning = false,
   isCompacting = false,
   contextInfo,
+  model,
+  onModelChange,
 }: OverviewComposerProps) {
   const [mode, setMode] = useState<ComposerMode>("agent");
   const [value, setValue] = useState("");
@@ -109,22 +113,15 @@ export function OverviewComposer({
                 <Paperclip className="h-4 w-4" />
               </Button>
 
-              {contextInfo ? <ContextProgressRing info={contextInfo} /> : null}
-
-              <ModelPicker />
-
-              {canCompact && (
-                <Button
-                  variant="secondary"
-                  size="icon"
-                  aria-label="Compact context"
-                  title={`Context at ${Math.round(contextInfo.percentage)}% — click to compact`}
-                  onClick={onCompact}
+              {contextInfo ? (
+                <ContextProgressRing 
+                  info={contextInfo} 
+                  onClick={canCompact ? onCompact : undefined}
                   disabled={isCompacting}
-                >
-                  <Minimize2 className="h-4 w-4" />
-                </Button>
-              )}
+                />
+              ) : null}
+
+              <ModelPicker initialModel={model ?? undefined} onModelChange={onModelChange} />
             </div>
 
             <div className="flex shrink-0 items-center gap-2">

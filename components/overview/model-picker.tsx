@@ -5,7 +5,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useMediaQuery } from "@/lib/hooks/use-media-query";
 
 type Model = {
-  id: string;
+  id: string; // Full model ID with provider prefix, e.g. "openai/gpt-4o"
   label: string;
   badge?: string;
 };
@@ -18,40 +18,63 @@ type Provider = {
 
 const PROVIDERS: Provider[] = [
   {
+    id: "deepseek",
+    label: "DeepSeek",
+    models: [
+      { id: "deepseek/deepseek-v3.2", label: "DeepSeek V3.2" },
+    ],
+  },
+  {
     id: "openai",
     label: "OpenAI",
     models: [
-      { id: "gpt-4o", label: "GPT-4o" },
-      { id: "gpt-4-turbo", label: "GPT-4 Turbo" },
-      { id: "gpt-5-early", label: "GPT-5 Early Access", badge: "NEW" },
+      { id: "openai/gpt-4o", label: "GPT-4o" },
+      { id: "openai/gpt-4-turbo", label: "GPT-4 Turbo" },
+      { id: "openai/gpt-5-early", label: "GPT-5 Early Access", badge: "NEW" },
     ],
   },
   {
     id: "anthropic",
     label: "Anthropic",
     models: [
-      { id: "claude-3-5-sonnet", label: "Claude 3.5 Sonnet" },
-      { id: "claude-3-opus", label: "Claude 3 Opus" },
-      { id: "claude-3-haiku", label: "Claude 3 Haiku" },
+      { id: "anthropic/claude-3-5-sonnet", label: "Claude 3.5 Sonnet" },
+      { id: "anthropic/claude-3-opus", label: "Claude 3 Opus" },
+      { id: "anthropic/claude-3-haiku", label: "Claude 3 Haiku" },
     ],
   },
   {
     id: "google",
     label: "Google",
     models: [
-      { id: "gemini-1-5-pro", label: "Gemini 1.5 Pro", badge: "BETA" },
-      { id: "gemini-1-5-flash", label: "Gemini 1.5 Flash" },
+      { id: "google/gemini-1-5-pro", label: "Gemini 1.5 Pro", badge: "BETA" },
+      { id: "google/gemini-1-5-flash", label: "Gemini 1.5 Flash" },
     ],
   },
 ];
 
-export function ModelPicker() {
+type ModelPickerProps = {
+  initialModel?: string;
+  onModelChange?: (model: string) => void;
+};
+
+export function ModelPicker({ initialModel, onModelChange }: ModelPickerProps) {
   const isWide = useMediaQuery("(min-width: 640px)");
   const [open, setOpen] = useState(false);
-  const [activeModelId, setActiveModelId] = useState<string>(PROVIDERS[0]!.models[0]!.id);
+  const [activeModelId, setActiveModelId] = useState<string>(
+    initialModel && PROVIDERS.some(p => p.models.some(m => m.id === initialModel))
+      ? initialModel
+      : PROVIDERS[0]!.models[0]!.id
+  );
   const [hoveredProviderId, setHoveredProviderId] = useState<string | null>(null);
   const [mobileProviderFocus, setMobileProviderFocus] = useState<string | null>(null);
   const rootRef = useRef<HTMLDivElement | null>(null);
+
+  // Sync with initialModel changes
+  useEffect(() => {
+    if (initialModel && PROVIDERS.some(p => p.models.some(m => m.id === initialModel))) {
+      setActiveModelId(initialModel);
+    }
+  }, [initialModel]);
 
   const activeModel = useMemo(() => {
     for (const p of PROVIDERS) {
@@ -60,6 +83,14 @@ export function ModelPicker() {
     }
     return PROVIDERS[0]!.models[0]!;
   }, [activeModelId]);
+
+  function handleModelSelect(modelId: string) {
+    setActiveModelId(modelId);
+    onModelChange?.(modelId);
+    setOpen(false);
+    setMobileProviderFocus(null);
+    setHoveredProviderId(null);
+  }
 
   useEffect(() => {
     function onPointerDown(e: PointerEvent) {
@@ -153,11 +184,7 @@ export function ModelPicker() {
                 <button
                   key={m.id}
                   type="button"
-                  onClick={() => {
-                    setActiveModelId(m.id);
-                    setOpen(false);
-                    setMobileProviderFocus(null);
-                  }}
+                  onClick={() => handleModelSelect(m.id)}
                   className={`flex w-full items-center justify-between rounded-xl px-3 py-2 text-left text-sm transition-all ${
                     activeModelId === m.id
                       ? "bg-[var(--accent)] text-white"
@@ -221,11 +248,7 @@ export function ModelPicker() {
                 <button
                   key={m.id}
                   type="button"
-                  onClick={() => {
-                    setActiveModelId(m.id);
-                    setOpen(false);
-                    setHoveredProviderId(null);
-                  }}
+                  onClick={() => handleModelSelect(m.id)}
                   className={`flex w-full items-center justify-between rounded-xl px-3 py-2 text-left text-sm transition-all ${
                     activeModelId === m.id
                       ? "bg-[var(--accent)] text-white"

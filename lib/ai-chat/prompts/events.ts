@@ -1,3 +1,5 @@
+import { UNIVERSAL_INSTRUCTIONS } from "./universal";
+
 export const EVENTS_CHAT_SYSTEM_PROMPT = `# OpenPieces Events Agent
 
 ## Your Role
@@ -43,4 +45,4 @@ When you need information from the user before continuing, use the \`runtime\` t
 
 After the user answers, their responses will appear as a new user message with the answers formatted as JSON.
 
-`;
+` + UNIVERSAL_INSTRUCTIONS;

@@ -162,19 +162,21 @@ export const aiMessages = pgTable(
       .references(() => aiChats.id, { onDelete: "cascade" }),
     role: text("role", { enum: ["user", "assistant"] }).notNull(),
     status: text("status", {
-      enum: ["pending", "streaming", "complete", "error"],
+      enum: ["pending", "streaming", "complete", "error", "compacted"],
     })
       .notNull()
       .default("complete"),
     content: text("content").notNull().default(""),
     toolCalls: jsonb("tool_calls").notNull().default(sql`'[]'::jsonb`),
     toolResults: jsonb("tool_results").notNull().default(sql`'[]'::jsonb`),
+    isCompacted: boolean("is_compacted").notNull().default(false),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().notNull(),
   },
   (table) => [
     index("ai_messages_chat_id_idx").on(table.chatId),
     index("ai_messages_chat_id_created_at_idx").on(table.chatId, table.createdAt),
+    index("ai_messages_chat_compacted_idx").on(table.chatId, table.isCompacted),
   ]
 );
 
