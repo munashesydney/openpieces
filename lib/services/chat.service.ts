@@ -549,6 +549,10 @@ export async function executeAiChatJob(
     toolCalls = [];
     toolResults = [];
 
+    const loopState = {
+      callCounts: new Map<string, number>(),
+    };
+
     try {
       const messages = await getModelMessages(chat.id);
       const contextInfo = await getContextInfo(chat.model ?? DEFAULT_MODEL, messages, systemPrompt);
@@ -568,6 +572,7 @@ export async function executeAiChatJob(
           userId: input.userId,
           chatId: input.chatId,
           agentType: chat.agentType,
+          loopState,
         }),
         maxOutputTokens: modelLimits.output,
         temperature: 0.7,
@@ -701,6 +706,7 @@ export async function executeAiChatJob(
             toolCalls: [],
             toolResults: [],
           });
+          loopState.callCounts.clear(); // Reset loop tracker on compaction retry
           continue; // Retry with compacted context
         } catch (compactError) {
           console.error("[chat.service] Compaction failed:", compactError);

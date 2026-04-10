@@ -19,21 +19,41 @@ export type ToolContext = {
   chatId: string;
   /** Agent type for the current chat; used to restrict tools like runtime spawn_agent. */
   agentType: string;
+  /** Tracks tool calls across the current execution attempt to prevent infinite repetition loops. */
+  loopState?: {
+    callCounts: Map<string, number>;
+  };
 };
 
 /**
- * Wraps a tool so its execute result is automatically truncated before
- * the AI SDK uses it for internal multi-step context accumulation.
- * Without this, large tool results (e.g. vector store dumps) blow up
- * the model's context window across tool-call steps.
+ * Wraps a tool to:
+ * 1. Automatically truncate results to prevent blowing up the model context.
+ * 2. Track tool calls to prevent infinite repeat loops (exact same name + args).
  */
-function withTruncatedOutput<T extends Tool>(t: T): T {
+function withExecutionStrategy<T extends Tool>(toolName: string, t: T, context: ToolContext): T {
   const originalExecute = (t as any).execute;
   if (!originalExecute) return t;
 
   return {
     ...t,
     execute: async (...args: any[]) => {
+      // Prevent exact repeat action loops
+      if (context.loopState) {
+        const inputStr = JSON.stringify(args[0] || {});
+        const callHash = `${toolName}:${inputStr}`;
+        const counts = context.loopState.callCounts;
+        const timesCalled = counts.get(callHash) || 0;
+        
+        counts.set(callHash, timesCalled + 1);
+
+        if (timesCalled === 1) {
+          return "System Warning: You are repeating yourself. You have already called this tool with these exact arguments in this turn. Stop repeating this identical call. Assess your progress, formulate a different strategy, suggest alternative tools, or return partial results to the user.";
+        }
+        if (timesCalled >= 2) {
+          return "System Error: No progress detected. This tool execution has been blocked to prevent an infinite loop. Provide a final text summary immediately and ask the user for instructions on how to proceed.";
+        }
+      }
+
       const result = await originalExecute(...args);
       // Stringify, truncate, then return as a string so the SDK
       // stores the truncated version in its internal message chain
@@ -46,17 +66,17 @@ function withTruncatedOutput<T extends Tool>(t: T): T {
 
 export function createTools(context: ToolContext) {
   return {
-    manage_workflows: withTruncatedOutput(createWorkflowTool(context)),
-    manage_services: withTruncatedOutput(createServiceTool(context)),
-    manage_tasks: withTruncatedOutput(createTaskTool(context)),
-    manage_opencode_sessions: withTruncatedOutput(createSessionsTool(context)),
-    manage_opencode_messages: withTruncatedOutput(createMessagesTool(context)),
-    manage_secrets: withTruncatedOutput(createSecretsTool(context)),
-    manage_service_endpoints: withTruncatedOutput(createEndpointsTool(context)),
-    call_endpoint: withTruncatedOutput(createCallEndpointTool(context)),
-    manage_workflow_action_links: withTruncatedOutput(createWorkflowActionLinksTool(context)),
-    manage_brain: withTruncatedOutput(createBrainTool(context)),
-    runtime: withTruncatedOutput(createRuntimeTool(context)),
-    web_search: withTruncatedOutput(createWebSearchTool(context)),
+    manage_workflows: withExecutionStrategy("manage_workflows", createWorkflowTool(context), context),
+    manage_services: withExecutionStrategy("manage_services", createServiceTool(context), context),
+    manage_tasks: withExecutionStrategy("manage_tasks", createTaskTool(context), context),
+    manage_opencode_sessions: withExecutionStrategy("manage_opencode_sessions", createSessionsTool(context), context),
+    manage_opencode_messages: withExecutionStrategy("manage_opencode_messages", createMessagesTool(context), context),
+    manage_secrets: withExecutionStrategy("manage_secrets", createSecretsTool(context), context),
+    manage_service_endpoints: withExecutionStrategy("manage_service_endpoints", createEndpointsTool(context), context),
+    call_endpoint: withExecutionStrategy("call_endpoint", createCallEndpointTool(context), context),
+    manage_workflow_action_links: withExecutionStrategy("manage_workflow_action_links", createWorkflowActionLinksTool(context), context),
+    manage_brain: withExecutionStrategy("manage_brain", createBrainTool(context), context),
+    runtime: withExecutionStrategy("runtime", createRuntimeTool(context), context),
+    web_search: withExecutionStrategy("web_search", createWebSearchTool(context), context),
   };
 }
