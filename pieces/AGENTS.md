@@ -258,6 +258,8 @@ export async function notifyEventsAi(
     body: JSON.stringify({
       workspaceId,
       userId,
+      workflowId,
+      serviceId,
       chatId: chatId ?? null,
       content: enrichedContent,
     }),

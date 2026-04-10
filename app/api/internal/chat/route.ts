@@ -6,10 +6,15 @@ import {
   getAiChatById,
 } from "@/lib/services/chat.service";
 import { enqueueChatExecution } from "@/lib/queues/pg-boss";
+import { getServicesByWorkflowId } from "@/lib/services/service.service";
+import { getActionServicesForWorkflow } from "@/lib/services/workflow-action.service";
+import { getEndpointsByServiceId } from "@/lib/services/service-endpoint.service";
 
 type InternalChatRequestBody = {
   workspaceId: string;
   userId: string;
+  workflowId: string;
+  serviceId: string;
   chatId?: string | null;
   content: string;
 };
@@ -42,11 +47,13 @@ export async function POST(request: NextRequest) {
 
   const workspaceId = body.workspaceId?.trim();
   const userId = body.userId?.trim();
-  const content = body.content?.trim();
+  const workflowId = body.workflowId?.trim();
+  const serviceId = body.serviceId?.trim();
+  let content = body.content?.trim();
 
-  if (!workspaceId || !userId) {
+  if (!workspaceId || !userId || !workflowId || !serviceId) {
     return NextResponse.json(
-      { error: "workspaceId and userId are required" },
+      { error: "workspaceId, userId, workflowId, and serviceId are required" },
       { status: 400 }
     );
   }
@@ -59,6 +66,38 @@ export async function POST(request: NextRequest) {
   }
 
   try {
+    const triggerServices = await getServicesByWorkflowId(workflowId, workspaceId);
+    const actionServices = await getActionServicesForWorkflow(workflowId, workspaceId);
+    
+    const uniqueServicesMap = new Map();
+    for (const s of [...triggerServices, ...actionServices]) {
+      uniqueServicesMap.set(s.id, s);
+    }
+    const allServices = Array.from(uniqueServicesMap.values());
+    
+    let servicesContext = "\n\n--- AUTO APPENDED WORKFLOW SERVICE CONTEXT ---\n";
+    servicesContext += "The following services and their endpoints are linked to this workflow. You can call these endpoints immediately without needing to look them up.\n\n";
+
+    for (const service of allServices) {
+      servicesContext += `Service: ${service.title} (ID: ${service.id}, Type: ${service.type})\n`;
+      const endpoints = await getEndpointsByServiceId(service.id, workspaceId);
+      if (endpoints.length === 0) {
+        servicesContext += `  (No endpoints registered)\n`;
+      } else {
+        for (const ep of endpoints) {
+          servicesContext += `  - Endpoint [ID: ${ep.id}] | ${ep.method} ${ep.path} | ${ep.description}\n`;
+          if (ep.inputSchema && Object.keys(ep.inputSchema).length > 0) {
+            servicesContext += `      Input Schema: ${JSON.stringify(ep.inputSchema)}\n`;
+          }
+        }
+      }
+      servicesContext += "\n";
+    }
+    
+    if (content) {
+      content += servicesContext;
+    }
+
     let effectiveChatId = body.chatId ?? null;
 
     if (effectiveChatId) {
