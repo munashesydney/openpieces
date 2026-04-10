@@ -218,6 +218,20 @@
       "when": 1775710000000,
       "tag": "0031_compaction_support",
       "breakpoints": true
+    },
+    {
+      "idx": 33,
+      "version": "7",
+      "when": 1775800000000,
+      "tag": "0033_workflows_detailed_steps",
+      "breakpoints": true
+    },
+    {
+      "idx": 34,
+      "version": "7",
+      "when": 1775800000001,
+      "tag": "0034_fix_activity_log_cascade",
+      "breakpoints": true
     }
   ]
 }

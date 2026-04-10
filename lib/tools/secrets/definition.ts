@@ -3,10 +3,10 @@ import { z } from "zod";
 export const secretsToolDefinition = {
   name: "manage_secrets",
   description:
-    "Manage encrypted secrets for the current workspace and user. Use to list secrets, get one by id, create, update, or delete a secret. Secret values are always stored encrypted at rest. The list and get actions return masked values only: the first three characters of each secret value followed by ***.",
+    "Manage encrypted secrets for the current workspace and user. Use to list secrets, get one by id, update, or delete a secret. Secret values are always stored encrypted at rest. The list and get actions return masked values only.\n\n[NOTE: You cannot CREATE secrets. If a secret is missing, you must send a message to Opencode requesting it be created.]",
   inputSchema: z.object({
     action: z
-      .enum(["list", "get", "create", "update", "delete"])
+      .enum(["list", "get", "update", "delete"])
       .describe("The action to perform"),
     secretId: z
       .string()

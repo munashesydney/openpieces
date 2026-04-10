@@ -43,13 +43,17 @@ function withExecutionStrategy<T extends Tool>(toolName: string, t: T, context: 
         const callHash = `${toolName}:${inputStr}`;
         const counts = context.loopState.callCounts;
         const timesCalled = counts.get(callHash) || 0;
-        
+
         counts.set(callHash, timesCalled + 1);
 
-        if (timesCalled === 1) {
+        const isPollingTool = toolName === "runtime" || toolName === "manage_opencode_sessions";
+        const warningThreshold = isPollingTool ? 15 : 2;
+        const errorThreshold = isPollingTool ? 20 : 3;
+
+        if (timesCalled === warningThreshold) {
           return "System Warning: You are repeating yourself. You have already called this tool with these exact arguments in this turn. Stop repeating this identical call. Assess your progress, formulate a different strategy, suggest alternative tools, or return partial results to the user.";
         }
-        if (timesCalled >= 2) {
+        if (timesCalled >= errorThreshold) {
           return "System Error: No progress detected. This tool execution has been blocked to prevent an infinite loop. Provide a final text summary immediately and ask the user for instructions on how to proceed.";
         }
       }

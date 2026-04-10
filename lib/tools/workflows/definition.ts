@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-const workflowStatusEnum = z.enum(["active", "draft", "archived"]);
+const workflowStatusEnum = z.enum(["active", "archived"]);
 
 export const workflowToolDefinition = {
   name: "manage_workflows",
@@ -28,9 +28,10 @@ export const workflowToolDefinition = {
       .object({
         title: z.string().describe("Title of the workflow"),
         description: z.string().optional().describe("Description of the workflow"),
+        detailedSteps: z.string().optional().describe("Detailed guide for the Events AI on how to process this workflow"),
         status: workflowStatusEnum
           .optional()
-          .describe("Status: active, draft, or archived. Defaults to draft."),
+          .describe("Status: active or archived. Defaults to active."),
       })
       .optional()
       .describe("Details for create action"),
@@ -38,7 +39,8 @@ export const workflowToolDefinition = {
       .object({
         title: z.string().optional().describe("New title"),
         description: z.string().optional().describe("New description"),
-        status: workflowStatusEnum.optional().describe("New status: active, draft, or archived"),
+        detailedSteps: z.string().optional().describe("Updated detailed guide for the Events AI"),
+        status: workflowStatusEnum.optional().describe("New status: active or archived"),
       })
       .optional()
       .describe("Details for update action. At least one field required."),

@@ -19,7 +19,11 @@ export async function executeBrainTool(input: BrainToolInput, context: ToolConte
 
   switch (action) {
     case "list": {
-      return await getBrainEntries(workspaceId, page ?? 1, limit ?? 10);
+      const result = await getBrainEntries(workspaceId, page ?? 1, limit ?? 10);
+      return {
+        ...result,
+        data: result.data.map(({ embedding, ...rest }) => rest),
+      };
     }
 
     case "search": {
@@ -27,7 +31,11 @@ export async function executeBrainTool(input: BrainToolInput, context: ToolConte
         throw new Error("query is required for action 'search'");
       }
       const results = await searchBrain(query, workspaceId, limit ?? 10);
-      return { data: results, total: results.length, query };
+      return { 
+        data: results.map(({ embedding, ...rest }) => rest), 
+        total: results.length, 
+        query 
+      };
     }
 
     case "get": {
@@ -38,7 +46,8 @@ export async function executeBrainTool(input: BrainToolInput, context: ToolConte
       if (!entry) {
         throw new Error(`Brain entry not found: ${brainEntryId}`);
       }
-      return entry;
+      const { embedding, ...rest } = entry;
+      return rest;
     }
 
     case "create": {

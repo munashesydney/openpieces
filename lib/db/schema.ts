@@ -34,7 +34,8 @@ export const workflows = pgTable("workflows", {
     .references(() => workspaces.id, { onDelete: "cascade" }),
   title: text("title").notNull(),
   description: text("description").notNull().default(""),
-  status: text("status", { enum: ["active", "draft", "archived"] }).notNull().default("draft"),
+  status: text("status", { enum: ["active", "archived"] }).notNull().default("active"),
+  detailedSteps: text("detailed_steps").notNull().default(""),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });

@@ -43,7 +43,8 @@ export async function executeWorkflow(input: WorkflowToolInput, context: ToolCon
         workspaceId,
         title: createDetails.title,
         description: createDetails.description ?? "",
-        status: createDetails.status ?? "draft",
+        detailedSteps: createDetails.detailedSteps ?? "",
+        status: createDetails.status ?? "active",
       });
     }
 
@@ -57,6 +58,7 @@ export async function executeWorkflow(input: WorkflowToolInput, context: ToolCon
       const updated = await updateWorkflow(workflowId, workspaceId, {
         ...(updateDetails.title !== undefined && { title: updateDetails.title }),
         ...(updateDetails.description !== undefined && { description: updateDetails.description }),
+        ...(updateDetails.detailedSteps !== undefined && { detailedSteps: updateDetails.detailedSteps }),
         ...(updateDetails.status !== undefined && { status: updateDetails.status }),
       });
       if (!updated) {
