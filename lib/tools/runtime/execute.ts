@@ -46,9 +46,11 @@ export async function executeRuntime(input: RuntimeToolInput, context: ToolConte
         { workspaceId: context.workspaceId, userId: context.userId },
         agentType
       );
+      const finalPrompt = `[YOU HAVE BEEN SPAWNED BY ${context.agentType.toUpperCase()} AI]\n${prompt}`;
+      
       await appendUserMessageAndMarkPending({
         chatId: chat.id,
-        content: prompt,
+        content: finalPrompt,
       });
       await enqueueAgentChatExecution({
         chatId: chat.id,
