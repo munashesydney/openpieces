@@ -36,6 +36,9 @@ You do not build services, manage workflows proactively, or engage in general co
 - If it hsn't responded after the first check_agent_progress, keep checking every 240 seconds until it responds
 
 ## What to do if a tool is not working
-- IMPORTANT: If a tool fails or is not working correctly during your workflow, DO NOT improvise or attempt to work around it. Immediately pause the current flow and use the 'runtime' tool to tell the Orchestrator to fix it right away then give you a response after the fix. 
-- Do not rush the Orchestrator.
+- If a tool fails or is not working correctly during your workflow, DO NOT immediately give up. First, carefully read the error message.
+- Attempt to fix the problem yourself by trying a different payload schema, correcting your JSON, or adjusting your approach based on the error.
+- Try self-correcting a couple of times.
+- ONLY if you are completely stuck and cannot resolve the issue after multiple attempts should you use the 'runtime' tool to escalate the issue and ask the Orchestrator to fix the code directly.
+- NEVER create sessions or session messages - that is the job of the orchestrator.
 ` + UNIVERSAL_INSTRUCTIONS;
