@@ -126,7 +126,7 @@ async function executeServiceSpawnJob(job: ServiceSpawnJob) {
     const workspaceOwnerId = (await getWorkspaceOwnerId(workspaceId)) ?? "";
     const { data: secrets } = await getSecrets(workspaceId, workspaceOwnerId, 1, 500);
     const secretKeys = new Set(secrets.map(s => s.key));
-    
+
     const missingSecrets = requiredSecrets
       .filter(req => !secretKeys.has(req.secretKey))
       .map(req => req.secretKey);
@@ -179,17 +179,17 @@ async function executeServiceSpawnJob(job: ServiceSpawnJob) {
   const proc = spawn(
     "deno",
     [
-  "run",
-  "--allow-net",
-  "--allow-read",
-  "--allow-env",
-  "--allow-write",
-  "--allow-run",        // if the piece needs to spawn subprocesses
-  "--allow-sys",        // for OS info: hostname, osRelease, etc.
-  "--allow-ffi",        // if using native/FFI libraries
-  entryPoint,
-  String(port),
-],
+      "run",
+      "--allow-net",
+      "--allow-read",
+      "--allow-env",
+      "--allow-write",
+      "--allow-run",        // if the piece needs to spawn subprocesses
+      "--allow-sys",        // for OS info: hostname, osRelease, etc.
+      "--allow-ffi",        // if using native/FFI libraries
+      entryPoint,
+      String(port),
+    ],
     {
       detached: true,
       stdio: ["ignore", "pipe", "pipe"],
@@ -202,7 +202,8 @@ async function executeServiceSpawnJob(job: ServiceSpawnJob) {
         OPENPIECES_WORKSPACE_ID: service.workspaceId,
         OPENPIECES_SERVICE_ID: serviceId,
         OPENPIECES_WORKFLOW_ID: service.workflowId ?? "",
-        OPENPIECES_SERVICE_PUBLIC_URL: `${process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"}/api/s/${serviceId}`,
+        OPENPIECES_INTERNAL_URL: process.env.OPENPIECES_INTERNAL_URL ?? `http://app:${process.env.APP_PORT ?? 3141}`,
+        OPENPIECES_SERVICE_PUBLIC_URL: `${process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3141"}/api/s/${serviceId}`,
       },
     }
   );

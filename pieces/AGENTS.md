@@ -246,10 +246,11 @@ export async function notifyEventsAi(
   const serviceId = Deno.env.get("OPENPIECES_SERVICE_ID")!;
   const workflowId = Deno.env.get("OPENPIECES_WORKFLOW_ID") ?? "";
   const apiKey = Deno.env.get("INTERNAL_API_KEY")!;
+  const internalUrl = Deno.env.get("OPENPIECES_INTERNAL_URL") ?? "http://app:3141";
 
   const enrichedContent = `[serviceId: ${serviceId}]\n[workflowId: ${workflowId}]\n\n${content}`;
 
-  const res = await fetch("http://app:3141/api/internal/chat", {
+  const res = await fetch(`${internalUrl}/api/internal/chat`, {
     method: "POST",
     headers: {
       "content-type": "application/json",
