@@ -35,8 +35,8 @@ export async function POST(
           ? BRAIN_CHAT_SYSTEM_PROMPT
           : OPENPIECES_CHAT_SYSTEM_PROMPT;
 
-  const summary = await compactChat(chatId, systemPrompt);
-  await replaceMessagesWithSummary(chatId, summary);
+  const { summary, archivedCount } = await compactChat(chatId, systemPrompt);
+  await replaceMessagesWithSummary(chatId, summary, archivedCount);
 
   return NextResponse.json({ success: true, summary });
 }

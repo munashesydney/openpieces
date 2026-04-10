@@ -243,6 +243,29 @@ async function executeServiceSpawnJob(job: ServiceSpawnJob) {
     await updateService(serviceId, workspaceId, { port, pid: proc.pid, status: "running" }, "system");
     await appendServiceLog(directory, "info", `Service is healthy on port ${port}`);
     console.log(`[service-worker] Service "${service.title}" is healthy on port ${port}`);
+
+    // Spawn the QA AI agent to check health asynchronously after 30 seconds
+    setTimeout(async () => {
+      try {
+        const { createAiChat, appendUserMessageAndMarkPending } = await import("@/lib/services/chat.service");
+        const { enqueueChatExecution } = await import("@/lib/queues/pg-boss");
+
+        // We use workspaceOwnerId because userId must be a valid UUID in the ai_chats table.
+        const qaChat = await createAiChat({ workspaceId, userId: workspaceOwnerId }, "qa");
+        await appendUserMessageAndMarkPending({
+          chatId: qaChat.id,
+          content: `Service "${service.title}" (ID: ${service.id}) has just started on port ${port}. Please check its logs using manage_services to ensure everything is running perfectly and there are no immediate crashes or infinite reboot loops.`
+        });
+        await enqueueChatExecution({
+          chatId: qaChat.id,
+          workspaceId,
+          userId: workspaceOwnerId
+        });
+        console.log(`[service-worker] Spawned QA agent for service ${serviceId} after 30s delay`);
+      } catch (err) {
+        console.error("[service-worker] Failed to spawn QA agent:", err);
+      }
+    }, 30000);
   } else {
     await appendServiceLog(directory, "error", `Service did not become healthy on port ${port}`);
     console.error(`[service-worker] Service "${service.title}" did not become healthy on port ${port}`);

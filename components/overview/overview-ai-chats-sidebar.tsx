@@ -12,7 +12,7 @@ export type SidebarChat = {
   status: AiChatStatus;
 };
 
-export const AGENT_TYPES = ["orchestrator", "architecture", "events", "brain"] as const;
+export const AGENT_TYPES = ["orchestrator", "architecture", "events", "brain", "qa"] as const;
 export type AgentType = (typeof AGENT_TYPES)[number];
 
 const AGENT_TYPE_LABELS: Record<AgentType, string> = {
@@ -20,6 +20,7 @@ const AGENT_TYPE_LABELS: Record<AgentType, string> = {
   architecture: "Architecture",
   events: "Events",
   brain: "Brain",
+  qa: "QA",
 };
 
 const AGENT_FILTER_OPTIONS: DropdownOption[] = [
