@@ -231,13 +231,13 @@ The orchestrator depends on this registry to discover what your service can do. 
 
 ---
 
-## Notifying the Orchestrator (Triggers Only)
+## Notifying the Events AI (Triggers Only)
 
-When a trigger service receives an event, it must notify the orchestrator. Place this in a shared `notify.ts` and import it:
+When a trigger service receives an event, it must notify the events ai. Place this in a shared `notify.ts` and import it:
 
 ```ts
 // notify.ts
-export async function notifyOrchestrator(
+export async function notifyEventsAi(
   content: string,
   chatId?: string | null
 ): Promise<void> {
@@ -269,7 +269,7 @@ export async function notifyOrchestrator(
 }
 ```
 
-**Call `notifyOrchestrator` when:**
+**Call `notifyEventsAi` when:**
 - A webhook is received → include event type, key IDs, and relevant payload fields
 - A scheduled/poll job detects a change → include what changed
 - A notable error occurs → include enough context to retry or alert
@@ -289,7 +289,7 @@ payment_intent: pi_xyz789
 Pass `chatId` to continue an existing orchestrator conversation, or `null` to start a new one.
 IMPORTANT: chatId is an OPENPIECES chatId not telegram chatId or any other extenal chatId. Its optional so if you don't have it you don't have to pass it in.
 
-**Action services never call `notifyOrchestrator`** — they respond to the orchestrator, that's it.
+**Action services never call `notifyEventsAi`** — they respond to the orchestrator, that's it.
 
 ---
 
@@ -298,7 +298,7 @@ IMPORTANT: chatId is an OPENPIECES chatId not telegram chatId or any other exten
 ### Trigger Service
 - Exposes an inbound endpoint (webhook, SSE, polling loop, cron, etc.)
 - Validates inbound requests before acting (signatures, auth headers)
-- Calls `notifyOrchestrator` on every meaningful event
+- Calls `notifyEventsAi` on every meaningful event
 - Minimal processing — receive, validate, forward
 
 ### Action Service

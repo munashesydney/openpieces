@@ -63,12 +63,13 @@ A Deno HTTP server. Reusable across workflows. Can stand alone (game, dashboard,
 - ✅ Can use SQLite for persistence
 
 **Trigger Service**
-A Deno HTTP server that receives inbound events (webhooks, polls). Lives inside exactly one workflow. When an event arrives, it calls \`notifyOrchestrator\` — a built-in function in every Deno service sandbox that POSTs the event to an internal OpenPieces endpoint, starting a new conversation with the Events agent, which then executes the linked workflow.
+A Deno HTTP server that receives inbound events (webhooks, polls). Lives inside exactly one workflow. When an event arrives, it calls \`notifyEventsAi\` — a built-in function in every Deno service sandbox that POSTs the event to an internal OpenPieces endpoint, starting a new conversation with the Events agent, which then executes the linked workflow.
 - ❌ Never reuse trigger services — one trigger per workflow, always
 - ✅ Validates events (signatures, auth) before notifying
 
 **Workflow**
-A named declaration linking a trigger (Task or Trigger service) to one or more action services. Not executable code — it is a plan. Execution happens when a Task fires or a Trigger service calls \`notifyOrchestrator\`, which wakes the Events agent. The workflow holds \`detailedSteps\` which strictly govern how the Events agent processes the request. Make sure to define them completely when creating or updating workflows.
+A named declaration linking a trigger (Task or Trigger service) to one or more action services. Not executable code — it is a plan. Execution happens when a Task fires or a Trigger service calls \`notifyEventsAi\`, which wakes the Events agent. The workflow holds \`detailedSteps\` which strictly govern how the Events agent processes the request. Make sure to define them completely when creating or updating workflows.
+**IMPORTANT when writing \`detailedSteps\`**: NEVER include a step that tells the Events AI to spawn the Orchestrator. The Events AI must handle everything itself. It will automatically decide to ask you for help ONLY if it gets completely stuck. At the same time also don't ask it not to spawn you. Just let it do its thing.
 
 **Task**
 A cron-based scheduler. Pure configuration — a cron expression linked to a workflow. When a Task fires, OpenPieces automatically wakes the Events agent to execute the linked workflow. No code needed.
@@ -164,7 +165,7 @@ Build a Deno HTTP service backed by SQLite:
 Build a Deno HTTP webhook trigger service:
 - POST /webhook — receives Stripe events
 - Validate the Stripe webhook signature using STRIPE_WEBHOOK_SECRET
-- On payment_intent.succeeded: call notifyOrchestrator with:
+- On payment_intent.succeeded: call notifyEventsAi with:
   { event: "stripe_payment_succeeded", amount, currency, customer, paymentIntentId }
 - All other event types: return 200 silently
 - Invalid signature: return 400
@@ -198,7 +199,7 @@ Build a Deno HTTP action service:
 \`\`\`
 Build a Deno HTTP trigger service that polls Telegram for new messages:
 - On startup: begin long polling Telegram getUpdates every 2 seconds using TELEGRAM_BOT_TOKEN
-- On new message: call notifyOrchestrator with:
+- On new message: call notifyEventsAi with:
   { event: "telegram_message", chatId, text, userId, username }
 - Track the last update_id to avoid processing duplicates
 - GET /status — returns { polling: true, lastUpdateId: number }
