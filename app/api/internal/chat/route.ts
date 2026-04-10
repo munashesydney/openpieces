@@ -7,6 +7,7 @@ import {
 } from "@/lib/services/chat.service";
 import { enqueueChatExecution } from "@/lib/queues/pg-boss";
 import { getServicesByWorkflowId } from "@/lib/services/service.service";
+import { getWorkflowById } from "@/lib/services/workflow.service";
 import { getActionServicesForWorkflow } from "@/lib/services/workflow-action.service";
 import { getEndpointsByServiceId } from "@/lib/services/service-endpoint.service";
 
@@ -66,6 +67,7 @@ export async function POST(request: NextRequest) {
   }
 
   try {
+    const workflow = await getWorkflowById(workflowId, workspaceId);
     const triggerServices = await getServicesByWorkflowId(workflowId, workspaceId);
     const actionServices = await getActionServicesForWorkflow(workflowId, workspaceId);
     
@@ -76,6 +78,17 @@ export async function POST(request: NextRequest) {
     const allServices = Array.from(uniqueServicesMap.values());
     
     let servicesContext = "\n\n--- AUTO APPENDED WORKFLOW SERVICE CONTEXT ---\n";
+    
+    if (workflow) {
+      servicesContext += `Workflow Title: ${workflow.title}\n`;
+      if (workflow.description) {
+        servicesContext += `Workflow Description: ${workflow.description}\n`;
+      }
+      if (workflow.detailedSteps) {
+        servicesContext += `Workflow Detailed Steps (Instructions):\n${workflow.detailedSteps}\n\n`;
+      }
+    }
+
     servicesContext += "The following services and their endpoints are linked to this workflow. You can call these endpoints immediately without needing to look them up.\n\n";
 
     for (const service of allServices) {
