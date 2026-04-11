@@ -10,7 +10,7 @@ import {
   enqueueServiceSpawn,
   getPgBoss,
 } from "@/lib/queues/pg-boss";
-import { getServiceById, updateService } from "@/lib/services/service.service";
+import { getServiceById, updateService, deleteService } from "@/lib/services/service.service";
 import { getWorkspaceOwnerId } from "@/lib/services/workspace.service";
 import { getSecrets } from "@/lib/services/secret.service";
 import { getRequiredSecrets } from "@/lib/services/service-required-secrets.service";
@@ -77,6 +77,23 @@ async function executeServiceSpawnJob(job: ServiceSpawnJob) {
     throw new Error(`Service ${serviceId} has no directory set`);
   }
 
+  const indexPath = `./pieces/${service.directory.trim()}/index.ts`;
+  if (!fs.existsSync(indexPath)) {
+    const msg = `Service ${serviceId} has no index.ts at ${indexPath} - skipping spawn`;
+    console.error(`[service-worker] ${msg}`);
+    await appendServiceLog(service.directory.trim(), "error", msg);
+
+    if (service.pid) {
+      try {
+        process.kill(service.pid, "SIGKILL");
+      } catch {
+        // Ignore errors if process doesn't exist
+      }
+      await deleteService(serviceId, workspaceId);
+    }
+    return;
+  }
+
   // If service has a PID, check if it's still alive and kill it (force restart)
   if (service.pid) {
     try {
@@ -110,14 +127,6 @@ async function executeServiceSpawnJob(job: ServiceSpawnJob) {
       console.log(`[service-worker] Service ${serviceId} has stale PID ${service.pid}, will reset and restart`);
       await updateService(serviceId, workspaceId, { port: null, pid: null, status: "stopped" }, "system");
     }
-  }
-
-  const indexPath = `./pieces/${service.directory.trim()}/index.ts`;
-  if (!fs.existsSync(indexPath)) {
-    const msg = `Service ${serviceId} has no index.ts at ${indexPath} - skipping spawn`;
-    console.error(`[service-worker] ${msg}`);
-    await appendServiceLog(service.directory.trim(), "error", msg);
-    return;
   }
 
   // Check if all required secrets are set

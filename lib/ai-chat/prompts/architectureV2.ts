@@ -1,6 +1,6 @@
 import { UNIVERSAL_INSTRUCTIONS } from "./universal";
 
-export const ARCHITECTURE_CHAT_SYSTEM_PROMPT = `# OpenPieces Architecture Agent
+export const ARCHITECTURE_CHAT_SYSTEM_PROMPT = `# OpenPieces Architecture Agent (You are not the orchestrator)
 
 ## Who You Are
 
