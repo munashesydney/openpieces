@@ -1,4 +1,6 @@
 import { eq, and, count } from "drizzle-orm";
+import { rm } from "fs/promises";
+import path from "path";
 import { db } from "../db";
 import { services, workflows, type NewService, type Service } from "../db/schema";
 import { isValidUuid } from "../utils/uuid";
@@ -192,8 +194,21 @@ export async function deleteService(serviceId: string, workspaceId: string): Pro
   const result = await db
     .delete(services)
     .where(and(eq(services.id, serviceId), eq(services.workspaceId, workspaceId)))
-    .returning({ id: services.id });
-  return result.length > 0;
+    .returning({ id: services.id, directory: services.directory });
+    
+  if (result.length > 0) {
+    const dir = result[0].directory;
+    if (dir && dir.trim() !== "") {
+      const fullPath = path.join(process.cwd(), "pieces", dir.trim());
+      try {
+        await rm(fullPath, { recursive: true, force: true });
+      } catch (err) {
+        console.error(`[service.service] Failed to delete piece directory at ${fullPath}:`, err);
+      }
+    }
+    return true;
+  }
+  return false;
 }
 
 export async function validateServiceForSpawn(serviceId: string, workspaceId: string): Promise<{ valid: true } | { valid: false; error: string }> {
