@@ -27,13 +27,14 @@ services:
     entrypoint: ["entrypoint.sh"]
     command: sh -c "node_modules/.bin/tsx lib/db/migrate.ts && node_modules/.bin/next dev --webpack -p ${APP_PORT:-3141}"
     ports:
-      - "${APP_PORT:-3141}:3141"
+      - "${APP_PORT:-3141}:${APP_PORT:-3141}"
     environment:
       - WATCHPACK_POLLING=true
       - DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
       - OPENCODE_INTERNAL_URL=http://opencode:${OPENCODE_PORT:-4096}
       - SERVICE_HOST=http://worker
       - NEXT_PUBLIC_APP_URL=${NEXT_PUBLIC_APP_URL}
+      - PORT=${APP_PORT:-3141}
       - OPENPIECES_INTERNAL_URL=${OPENPIECES_INTERNAL_URL:-http://app:${APP_PORT:-3141}}
     env_file:
       - .env

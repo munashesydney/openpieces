@@ -12,6 +12,8 @@ WORKDIR /app
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV DATABASE_URL=postgresql://localhost/openpieces
+ENV PORT=3141
+EXPOSE 3141
 
 # =============================================================================
 # Stage 2: Deps - install all dependencies (cached layer)
@@ -36,7 +38,6 @@ RUN mkdir -p /lib64 && ln -sf /opt/deno-glibc/ld-linux-* /lib64/
 COPY --from=deno-bin /deno /usr/local/bin/deno
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
-EXPOSE 3000
 CMD ["npm", "run", "dev"]
 
 # =============================================================================
@@ -72,7 +73,7 @@ CMD ["npx", "tsx", "scripts/ai-worker.ts"]
 # =============================================================================
 # Stage 7: Runner - lean production image using Next.js standalone output
 # =============================================================================
-FROM node:20-alpine AS runner
+FROM base AS runner
 WORKDIR /app
 
 ENV NODE_ENV=production
@@ -91,8 +92,6 @@ COPY lib/db/schema.ts ./lib/db/schema.ts
 COPY drizzle/ ./drizzle/
 
 USER nextjs
-EXPOSE 3000
-ENV PORT=3141
 ENV HOSTNAME="0.0.0.0"
 
 CMD ["sh", "-c", "npx tsx lib/db/migrate.ts && node server.js"]
