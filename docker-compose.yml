@@ -115,6 +115,7 @@ services:
       - OPENCODE_SERVER_USERNAME=opencode
       - OPENPIECES_WEBHOOK_URL=http://app:${APP_PORT}/api/opencode/webhook
       - OPENPIECES_INTERNAL_URL=${OPENPIECES_INTERNAL_URL:-http://app:${APP_PORT}}
+      - OPENCODE_ENABLE_EXA=1
     restart: always
     logging:
       driver: json-file

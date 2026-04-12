@@ -121,6 +121,7 @@ services:
       - OPENCODE_SERVER_USERNAME=opencode
       - OPENPIECES_WEBHOOK_URL=http://app:${APP_PORT:-3141}/api/opencode/webhook
       - OPENPIECES_INTERNAL_URL=${OPENPIECES_INTERNAL_URL:-http://app:${APP_PORT:-3141}}
+      - OPENCODE_ENABLE_EXA=1
 
 volumes:
   postgres_data:

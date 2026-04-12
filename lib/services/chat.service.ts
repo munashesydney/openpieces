@@ -61,10 +61,10 @@ function collectErrorStrings(error: unknown, depth = 0): string {
     parts.push(collectErrorStrings((error as any).cause, depth + 1));
     // Also check .data which Gateway errors expose
     if ((error as any).data) {
-      try { parts.push(JSON.stringify((error as any).data)); } catch {}
+      try { parts.push(JSON.stringify((error as any).data)); } catch { }
     }
   } else if (typeof error === "object") {
-    try { parts.push(JSON.stringify(error)); } catch {}
+    try { parts.push(JSON.stringify(error)); } catch { }
   }
   return parts.join(" ");
 }
@@ -589,7 +589,7 @@ export async function executeAiChatJob(
           });
           await updateAiChatStatus(chat.id, "stopped");
         },
-        stopWhen: stepCountIs(30),
+        stopWhen: stepCountIs(500),
         onError: ({ error }) => {
           if (isContextWindowError(error)) {
             isContextError = true;
