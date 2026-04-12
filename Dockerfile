@@ -3,6 +3,9 @@
 # =============================================================================
 FROM node:20-alpine AS base
 RUN apk add --no-cache libc6-compat
+COPY scripts/entrypoint.sh /usr/local/bin/
+RUN chmod +x /usr/local/bin/entrypoint.sh
+ENTRYPOINT ["entrypoint.sh"]
 WORKDIR /app
 
 # Defaults for build-time env vars (overridden at runtime by compose env)
@@ -92,5 +95,4 @@ EXPOSE 3000
 ENV PORT=3141
 ENV HOSTNAME="0.0.0.0"
 
-ENTRYPOINT ["sh", "-c"]
-CMD ["npx tsx lib/db/migrate.ts && node server.js"]
+CMD ["sh", "-c", "npx tsx lib/db/migrate.ts && node server.js"]

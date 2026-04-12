@@ -24,16 +24,14 @@ services:
       # Shared pieces volume for OpenCode
       - ./pieces:/app/pieces
     # Run DB migrations then start dev server.
-    # Turbopack's file watcher doesn't support polling in Docker yet,
-    # so we fall back to Webpack mode where WATCHPACK_POLLING works.
-    entrypoint: ["sh", "./scripts/docker-dev-entrypoint.sh"]
+    entrypoint: ["entrypoint.sh"]
     command: sh -c "node_modules/.bin/tsx lib/db/migrate.ts && node_modules/.bin/next dev --webpack -p ${APP_PORT:-3141}"
     ports:
       - "${APP_PORT:-3141}:3141"
     environment:
       - WATCHPACK_POLLING=true
       - DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
-      - OPENCODE_INTERNAL_URL=http://opencode:${OPENCODE_PORT}
+      - OPENCODE_INTERNAL_URL=http://opencode:${OPENCODE_PORT:-4096}
       - SERVICE_HOST=http://worker
       - NEXT_PUBLIC_APP_URL=${NEXT_PUBLIC_APP_URL}
       - OPENPIECES_INTERNAL_URL=${OPENPIECES_INTERNAL_URL:-http://app:${APP_PORT:-3141}}
@@ -61,7 +59,7 @@ services:
       - /app/node_modules
       - /app/.next
       - ./pieces:/app/pieces
-    entrypoint: ["sh", "./scripts/docker-dev-entrypoint.sh"]
+    entrypoint: ["entrypoint.sh"]
     command: sh -c "node_modules/.bin/tsx scripts/ai-worker.ts"
     environment:
       - WATCHPACK_POLLING=true
