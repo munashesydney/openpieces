@@ -11,7 +11,7 @@ function maskSecretValueForDisplay(value: string): string {
 }
 
 export async function executeSecrets(input: SecretsToolInput, context: ToolContext) {
-  const { action, secretId, page, limit, createDetails, updateDetails } = input;
+  const { action, secretId, page, limit, updateDetails } = input;
   const { workspaceId, userId } = context;
 
   if (!workspaceId || !userId) {
@@ -42,25 +42,6 @@ export async function executeSecrets(input: SecretsToolInput, context: ToolConte
         ...secret,
         value: maskSecretValueForDisplay(secret.value),
       };
-    }
-
-    case "create": {
-      if (!createDetails) {
-        throw new Error("createDetails is required for action 'create'");
-      }
-      if (!createDetails.key?.trim()) {
-        throw new Error("createDetails.key is required for action 'create'");
-      }
-      if (!createDetails.value) {
-        throw new Error("createDetails.value is required for action 'create'");
-      }
-
-      return await createSecret({
-        workspaceId,
-        userId,
-        key: createDetails.key.trim(),
-        value: createDetails.value,
-      });
     }
 
     case "update": {

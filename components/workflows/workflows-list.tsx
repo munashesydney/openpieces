@@ -43,7 +43,7 @@ export function WorkflowsList({
   const [isPending, startTransition] = useTransition();
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
-  const [status, setStatus] = useState("draft");
+  const [status, setStatus] = useState("active");
 
   const handleCreate = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -56,7 +56,7 @@ export function WorkflowsList({
         setIsSheetOpen(false);
         setTitle("");
         setDescription("");
-        setStatus("draft");
+        setStatus("active");
       } catch (err) {
         console.error("Failed to create workflow", err);
       }
@@ -110,7 +110,6 @@ export function WorkflowsList({
                 value={status}
                 onChange={setStatus}
                 options={[
-                  { label: "Draft", value: "draft" },
                   { label: "Active", value: "active" },
                   { label: "Archived", value: "archived" },
                 ]}

@@ -22,17 +22,6 @@ export const secretsToolDefinition = {
       .optional()
       .default(50)
       .describe("Number of items per page for list action"),
-    createDetails: z
-      .object({
-        key: z
-          .string()
-          .describe("Name of the secret, e.g. OPENAI_API_KEY."),
-        value: z
-          .string()
-          .describe("Plaintext value of the secret. Will be encrypted at rest."),
-      })
-      .optional()
-      .describe("Details for create action"),
     updateDetails: z
       .object({
         key: z

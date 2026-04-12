@@ -20,7 +20,7 @@ export async function createWorkflowAction(workspaceId: string, formData: FormDa
 
   const title = formData.get("title") as string;
   const description = (formData.get("description") as string) ?? "";
-  const status = (formData.get("status") as "active" | "draft" | "archived") ?? "draft";
+  const status = (formData.get("status") as "active" | "archived") ?? "active";
 
   await createWorkflow({ workspaceId, title, description, status });
   revalidatePath(`/workspace/${workspaceId}/personal/workflows`);
@@ -35,7 +35,7 @@ export async function updateWorkflowAction(
 
   const title = formData.get("title") as string;
   const description = (formData.get("description") as string) ?? "";
-  const status = (formData.get("status") as "active" | "draft" | "archived") ?? "draft";
+  const status = (formData.get("status") as "active" | "archived") ?? "active";
 
   await updateWorkflow(workflowId, workspaceId, { title, description, status });
   revalidatePath(`/workspace/${workspaceId}/personal/workflows`);
