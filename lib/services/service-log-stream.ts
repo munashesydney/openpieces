@@ -32,6 +32,16 @@ export async function appendServiceLog(
   level: "info" | "error",
   message: string
 ): Promise<void> {
+  // Mirror to console for visibility in Docker/Coolify logs if enabled
+  if (process.env.DEBUG_LOGS === "true") {
+    const consoleMsg = `[service:${directory}] ${message}`;
+    if (level === "error") {
+      console.error(consoleMsg);
+    } else {
+      console.log(consoleMsg);
+    }
+  }
+
   await ensureServiceLogDirectory(directory);
   const logPath = getServiceLogPath(directory);
   const timestamp = new Date().toISOString();

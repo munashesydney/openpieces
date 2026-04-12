@@ -80,7 +80,6 @@ async function executeServiceSpawnJob(job: ServiceSpawnJob) {
   const indexPath = `./pieces/${service.directory.trim()}/index.ts`;
   if (!fs.existsSync(indexPath)) {
     const msg = `Service ${serviceId} has no index.ts at ${indexPath} - skipping spawn`;
-    console.error(`[service-worker] ${msg}`);
     await appendServiceLog(service.directory.trim(), "error", msg);
 
     if (service.pid) {
@@ -183,7 +182,6 @@ async function executeServiceSpawnJob(job: ServiceSpawnJob) {
     "info",
     `Spawning service "${service.title}" on port ${port}: ${entryPoint}`
   );
-  console.log(`[service-worker] Spawning service "${service.title}" on port ${port}: ${entryPoint}`);
 
   const proc = spawn(
     "deno",
@@ -220,14 +218,12 @@ async function executeServiceSpawnJob(job: ServiceSpawnJob) {
   proc.stdout?.on("data", (data: Buffer) => {
     const message = data.toString().trim();
     if (message) {
-      console.log(`[service-worker][${service.title}] ${message}`);
       void appendServiceLog(directory, "info", message);
     }
   });
   proc.stderr?.on("data", (data: Buffer) => {
     const message = data.toString().trim();
     if (message) {
-      console.error(`[service-worker][${service.title}] ${message}`);
       void appendServiceLog(directory, "error", message);
     }
   });
@@ -252,7 +248,6 @@ async function executeServiceSpawnJob(job: ServiceSpawnJob) {
   if (healthy) {
     await updateService(serviceId, workspaceId, { port, pid: proc.pid, status: "running" }, "system");
     await appendServiceLog(directory, "info", `Service is healthy on port ${port}`);
-    console.log(`[service-worker] Service "${service.title}" is healthy on port ${port}`);
 
     // Spawn the QA AI agent to check health asynchronously after 30 seconds
     setTimeout(async () => {
@@ -278,7 +273,6 @@ async function executeServiceSpawnJob(job: ServiceSpawnJob) {
     }, 30000);
   } else {
     await appendServiceLog(directory, "error", `Service did not become healthy on port ${port}`);
-    console.error(`[service-worker] Service "${service.title}" did not become healthy on port ${port}`);
     // Send failure message to opencode immediately (pg-boss will retry separately)
     await sendSpawnFailureMessage(service, workspaceId, sessionId, `Service did not become healthy on port ${port}`);
     throw new Error(`Service did not become healthy on port ${port}`);
@@ -340,12 +334,10 @@ async function executeServiceStopJob(job: ServiceStopJob) {
 
   if (!service.pid) {
     await appendServiceLog(directory, "info", "Service is not running (no PID found)");
-    console.log(`[service-worker] Service ${serviceId} has no PID, nothing to stop`);
     return;
   }
 
   await appendServiceLog(directory, "info", `Stopping service (PID: ${service.pid})`);
-  console.log(`[service-worker] Stopping service ${serviceId} (PID: ${service.pid})`);
 
   try {
     process.kill(service.pid, "SIGTERM");
@@ -376,7 +368,6 @@ async function executeServiceStopJob(job: ServiceStopJob) {
 
     await updateService(serviceId, workspaceId, { port: null, pid: null, status: "stopped" });
     await appendServiceLog(directory, "info", "Service stopped successfully");
-    console.log(`[service-worker] Service ${serviceId} stopped successfully`);
   } catch (err) {
     const errorMessage = err instanceof Error ? err.message : "Unknown error";
     await appendServiceLog(directory, "error", `Failed to stop service: ${errorMessage}`);

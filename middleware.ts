@@ -1,4 +1,10 @@
-export { auth as middleware } from "./auth";
+import { auth } from "./auth";
+
+export default auth((req) => {
+  if (process.env.NODE_ENV === "production" && process.env.DEBUG_LOGS === "true") {
+    console.log(`[request] ${req.method} ${req.nextUrl.pathname}`);
+  }
+});
 
 export const config = {
   matcher: [
