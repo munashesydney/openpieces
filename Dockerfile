@@ -68,6 +68,9 @@ FROM base AS worker
 ENV NODE_ENV=production
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
+# Seed staging area: pieces/.opencode baked into image outside the volume mount path
+# so entrypoint.sh can copy it into the shared pieces volume on first start.
+RUN cp -r ./pieces/.opencode ./pieces-seed/.opencode
 CMD ["npx", "tsx", "scripts/ai-worker.ts"]
 
 # =============================================================================
@@ -90,6 +93,8 @@ COPY --from=deps /app/node_modules ./node_modules
 COPY lib/db/migrate.ts ./lib/db/migrate.ts
 COPY lib/db/schema.ts ./lib/db/schema.ts
 COPY drizzle/ ./drizzle/
+# Seed staging area: baked in here so entrypoint.sh can copy into the pieces volume
+COPY pieces/.opencode ./pieces-seed/.opencode
 
 USER nextjs
 ENV HOSTNAME="0.0.0.0"

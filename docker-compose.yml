@@ -34,8 +34,6 @@ services:
     depends_on:
       db:
         condition: service_healthy
-      opencode:
-        condition: service_started
     restart: always
     healthcheck:
       test: ["CMD-SHELL", "wget -qO- http://localhost:${APP_PORT:-3141}/ || exit 1"]
@@ -118,6 +116,11 @@ services:
       - OPENPIECES_INTERNAL_URL=${OPENPIECES_INTERNAL_URL:-http://app:${APP_PORT:-3141}}
       - OPENCODE_ENABLE_EXA=1
     restart: always
+    depends_on:
+      app:
+        condition: service_healthy
+      db:
+        condition: service_healthy
     logging:
       driver: json-file
       options:

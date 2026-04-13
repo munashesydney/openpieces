@@ -32,5 +32,15 @@ if [ "$NODE_ENV" = "development" ]; then
   cd /app && npm install --no-audit --no-fund
 fi
 
+# Seed .opencode plugins into the shared pieces volume if not already present.
+# The plugin files are baked into /app/pieces-seed in the Docker image; the
+# pieces volume mounts over /app/pieces at runtime so we must copy from the
+# staging area rather than relying on the image's /app/pieces directory.
+if [ -d "/app/pieces-seed/.opencode" ] && [ ! -d "/app/pieces/.opencode" ]; then
+  echo "🔌 Seeding .opencode plugins into pieces volume..."
+  cp -r /app/pieces-seed/.opencode /app/pieces/.opencode
+  echo "✅ .opencode plugins seeded successfully"
+fi
+
 # Hand off to the intended command (CMD)
 exec "$@"
