@@ -70,7 +70,7 @@ COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 # Seed staging area: pieces/.opencode baked into image outside the volume mount path
 # so entrypoint.sh can copy it into the shared pieces volume on first start.
-RUN cp -r ./pieces/.opencode ./pieces-seed/.opencode
+RUN mkdir -p ./pieces-seed && cp -r ./pieces/.opencode ./pieces-seed/.opencode
 CMD ["npx", "tsx", "scripts/ai-worker.ts"]
 
 # =============================================================================
