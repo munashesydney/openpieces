@@ -330,3 +330,18 @@ export const brainSettings = pgTable(
 
 export type BrainSettings = typeof brainSettings.$inferSelect;
 export type NewBrainSettings = typeof brainSettings.$inferInsert;
+
+export const workspaceSettings = pgTable(
+  "workspace_settings",
+  {
+    workspaceId: uuid("workspace_id")
+      .primaryKey()
+      .references(() => workspaces.id, { onDelete: "cascade" }),
+    defaultModel: text("default_model").notNull().default("deepseek/deepseek-v3.2"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  }
+);
+
+export type WorkspaceSettings = typeof workspaceSettings.$inferSelect;
+export type NewWorkspaceSettings = typeof workspaceSettings.$inferInsert;

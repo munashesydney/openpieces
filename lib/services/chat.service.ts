@@ -30,6 +30,7 @@ import {
 } from "@/lib/db/schema";
 import { createTools } from "@/lib/tools/registry";
 import { isValidUuid } from "@/lib/utils/uuid";
+import { getWorkspaceSettings } from "@/lib/services/workspace-settings.service";
 import { getChatAbortController } from "@/lib/workers/chat-controller";
 
 const DEFAULT_CHAT_TITLE = "New chat";
@@ -153,6 +154,9 @@ export async function createAiChat(
   data: Pick<NewAiChat, "workspaceId" | "userId">,
   agentType: string = "orchestrator"
 ) {
+  const settings = await getWorkspaceSettings(data.workspaceId);
+  const model = settings?.defaultModel ?? DEFAULT_MODEL;
+
   const [chat] = await db
     .insert(aiChats)
     .values({
@@ -160,7 +164,7 @@ export async function createAiChat(
       userId: data.userId,
       title: DEFAULT_CHAT_TITLE,
       status: "idle",
-      model: DEFAULT_MODEL,
+      model: model,
       agentType,
     })
     .returning();

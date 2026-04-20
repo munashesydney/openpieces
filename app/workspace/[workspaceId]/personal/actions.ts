@@ -9,6 +9,10 @@ import {
   getAiChatById,
   getAiChatRecordById,
 } from "@/lib/services/chat.service";
+import { updateWorkspaceDefaultModel } from "@/lib/services/workspace-settings.service";
+import { db } from "@/lib/db";
+import { aiChats } from "@/lib/db/schema";
+import { eq, and } from "drizzle-orm";
 
 export type SendAiMessageActionResult = {
   chat: AiChatListItem;
@@ -57,4 +61,25 @@ export async function sendAiMessageAction(
   }
 
   return { chat };
+}
+
+export async function updateWorkspaceModelAction(
+  workspaceId: string,
+  model: string
+) {
+  await requireWorkspaceOwner(workspaceId);
+  await updateWorkspaceDefaultModel(workspaceId, model);
+}
+
+export async function updateChatModelAction(
+  workspaceId: string,
+  chatId: string,
+  model: string
+) {
+  const { user } = await requireWorkspaceOwner(workspaceId);
+  
+  await db
+    .update(aiChats)
+    .set({ model, updatedAt: new Date() })
+    .where(and(eq(aiChats.id, chatId), eq(aiChats.userId, user.id)));
 }

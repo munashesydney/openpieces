@@ -3,7 +3,8 @@ import { MainArea } from "../../../../components/layout/main-area";
 import { OverviewPersonalView } from "../../../../components/overview/overview-personal-view";
 import { requireWorkspaceOwner } from "../../../../lib/services/auth.service";
 import { getAiChatsForWorkspace, getAiMessages } from "../../../../lib/services/chat.service";
-import { sendAiMessageAction } from "./actions";
+import { getWorkspaceSettings } from "../../../../lib/services/workspace-settings.service";
+import { sendAiMessageAction, updateWorkspaceModelAction, updateChatModelAction } from "./actions";
 
 export default async function Home(props: {
   params: Promise<{ workspaceId: string }>;
@@ -18,7 +19,12 @@ export default async function Home(props: {
     ? { [initialSelectedChatId]: await getAiMessages(initialSelectedChatId) }
     : {};
 
+  const settings = await getWorkspaceSettings(workspaceId);
+  const initialWorkspaceModel = settings?.defaultModel ?? "deepseek/deepseek-v3.2";
+
   const sendMessage = sendAiMessageAction.bind(null, workspaceId);
+  const updateWorkspaceModel = updateWorkspaceModelAction.bind(null, workspaceId);
+  const updateChatModel = updateChatModelAction.bind(null, workspaceId);
 
   return (
     <DashboardLayout>
@@ -29,7 +35,10 @@ export default async function Home(props: {
           initialSelectedChatId={initialSelectedChatId}
           initialMessages={initialMessages}
           initialTotal={initialTotal}
+          initialWorkspaceModel={initialWorkspaceModel}
           sendMessageAction={sendMessage}
+          updateWorkspaceModelAction={updateWorkspaceModel}
+          updateChatModelAction={updateChatModel}
         />
       </MainArea>
     </DashboardLayout>

@@ -25,10 +25,13 @@ type OverviewPersonalViewProps = {
   initialSelectedChatId: string | null;
   initialMessages: Record<string, AiChatMessage[]>;
   initialTotal: number;
+  initialWorkspaceModel: string;
   sendMessageAction: (
     chatId: string | null,
     content: string
   ) => Promise<SendAiMessageActionResult>;
+  updateWorkspaceModelAction: (model: string) => Promise<void>;
+  updateChatModelAction: (chatId: string, model: string) => Promise<void>;
 };
 
 function mapMessage(message: AiChatMessage): ChatMessage {
@@ -62,7 +65,10 @@ export function OverviewPersonalView({
   initialSelectedChatId,
   initialMessages,
   initialTotal,
+  initialWorkspaceModel,
   sendMessageAction,
+  updateWorkspaceModelAction,
+  updateChatModelAction,
 }: OverviewPersonalViewProps) {
   const isLg = useMediaQuery("(min-width: 1024px)");
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -89,6 +95,7 @@ export function OverviewPersonalView({
   const [isSending, setIsSending] = useState(false);
   const [contextInfo, setContextInfo] = useState<ContextInfo | null>(null);
   const [isCompacting, setIsCompacting] = useState(false);
+  const [workspaceModel, setWorkspaceModel] = useState(initialWorkspaceModel);
   const pollingRef = useRef<number | null>(null);
 
   const selectedChat = useMemo(
@@ -270,27 +277,26 @@ export function OverviewPersonalView({
 
   const handleModelChange = useCallback(
     async (model: string) => {
-      if (!selectedChatId) return;
+      setWorkspaceModel(model);
       try {
-        await fetch(`/api/chats/${selectedChatId}/model`, {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ model }),
-        });
-        setChats((currentChats) =>
-          currentChats.map((chat) =>
-            chat.id === selectedChatId
-              ? { ...chat, model }
-              : chat
-          )
-        );
-        // Refetch context info with new model
-        await fetchContextInfo(selectedChatId);
-      } catch {
-        // non-critical
+        await updateWorkspaceModelAction(model);
+        if (selectedChatId) {
+          await updateChatModelAction(selectedChatId, model);
+          setChats((currentChats) =>
+            currentChats.map((chat) =>
+              chat.id === selectedChatId
+                ? { ...chat, model }
+                : chat
+            )
+          );
+          // Refetch context info with new model
+          await fetchContextInfo(selectedChatId);
+        }
+      } catch (err) {
+        console.error("Failed to update model:", err);
       }
     },
-    [selectedChatId, fetchContextInfo]
+    [selectedChatId, fetchContextInfo, updateWorkspaceModelAction, updateChatModelAction]
   );
 
   const handleQuestionSubmit = useCallback(
@@ -476,7 +482,7 @@ export function OverviewPersonalView({
                 isRunning={selectedChatIsRunning}
                 isCompacting={isCompacting}
                 contextInfo={contextInfo}
-                model={selectedChat.model}
+                model={selectedChat.model ?? workspaceModel}
                 onModelChange={handleModelChange}
               />
             </div>
@@ -487,7 +493,12 @@ export function OverviewPersonalView({
             <div className="flex items-center justify-center px-4 sm:px-6 w-full shrink-0">
               <div className="mt-10 h-px w-full max-w-[920px] bg-[var(--border)]" />
             </div>
-            <OverviewComposer onSend={handleSend} isSending={isSending} />
+            <OverviewComposer 
+              onSend={handleSend} 
+              isSending={isSending} 
+              model={workspaceModel}
+              onModelChange={handleModelChange}
+            />
           </div>
         )}
       </div>

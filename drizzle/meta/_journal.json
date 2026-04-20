@@ -232,6 +232,13 @@
       "when": 1775800000001,
       "tag": "0034_fix_activity_log_cascade",
       "breakpoints": true
+    },
+    {
+      "idx": 35,
+      "version": "7",
+      "when": 1775800000002,
+      "tag": "0035_workspace_settings",
+      "breakpoints": true
     }
   ]
 }

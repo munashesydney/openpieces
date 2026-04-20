@@ -29,8 +29,9 @@ const PROVIDERS: Provider[] = [
     label: "OpenAI",
     models: [
       { id: "openai/gpt-4o", label: "GPT-4o" },
-      { id: "openai/gpt-4-turbo", label: "GPT-4 Turbo" },
-      { id: "openai/gpt-5-early", label: "GPT-5 Early Access", badge: "NEW" },
+      { id: "openai/gpt-5.4-thinking", label: "GPT-5.4 Thinking", badge: "NEW" },
+      { id: "openai/gpt-5.4-pro", label: "GPT-5.4 Pro", badge: "NEW" },
+      { id: "openai/gpt-5.4-mini", label: "GPT-5.4 Mini", badge: "NEW" },
     ],
   },
   {
@@ -38,16 +39,25 @@ const PROVIDERS: Provider[] = [
     label: "Anthropic",
     models: [
       { id: "anthropic/claude-3-5-sonnet", label: "Claude 3.5 Sonnet" },
-      { id: "anthropic/claude-3-opus", label: "Claude 3 Opus" },
-      { id: "anthropic/claude-3-haiku", label: "Claude 3 Haiku" },
+      { id: "anthropic/claude-sonnet-4.6", label: "Claude Sonnet 4.6", badge: "NEW" },
+      { id: "anthropic/claude-opus-4.7", label: "Claude Opus 4.7", badge: "NEW" },
     ],
   },
   {
     id: "google",
     label: "Google",
     models: [
-      { id: "google/gemini-1-5-pro", label: "Gemini 1.5 Pro", badge: "BETA" },
-      { id: "google/gemini-1-5-flash", label: "Gemini 1.5 Flash" },
+      { id: "google/gemini-1-5-pro", label: "Gemini 1.5 Pro" },
+      { id: "google/gemini-3.1-pro", label: "Gemini 3.1 Pro", badge: "NEW" },
+      { id: "google/gemini-3.1-flash-lite", label: "Gemini 3.1 Flash-Lite", badge: "NEW" },
+    ],
+  },
+  {
+    id: "mistral",
+    label: "Mistral",
+    models: [
+      { id: "mistral/mistral-small-4", label: "Mistral Small 4", badge: "NEW" },
+      { id: "mistral/mistral-large-3", label: "Mistral Large 3" },
     ],
   },
 ];
@@ -67,7 +77,21 @@ export function ModelPicker({ initialModel, onModelChange }: ModelPickerProps) {
   );
   const [hoveredProviderId, setHoveredProviderId] = useState<string | null>(null);
   const [mobileProviderFocus, setMobileProviderFocus] = useState<string | null>(null);
+  const [dropdownPosition, setDropdownPosition] = useState<"top" | "bottom">("top");
   const rootRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (open && rootRef.current) {
+      const rect = rootRef.current.getBoundingClientRect();
+      const spaceBelow = window.innerHeight - rect.bottom;
+      // If there's less than 380px below and more space above, drop up (position bottom)
+      if (spaceBelow < 380 && rect.top > spaceBelow) {
+        setDropdownPosition("bottom");
+      } else {
+        setDropdownPosition("top");
+      }
+    }
+  }, [open]);
 
   // Sync with initialModel changes
   useEffect(() => {
@@ -148,7 +172,7 @@ export function ModelPicker({ initialModel, onModelChange }: ModelPickerProps) {
 
       {open && !isWide && (
         <div
-          className={`absolute left-0 top-[calc(100%+12px)] ${panelClass} max-h-[min(24rem,70vh)] w-[min(20rem,calc(100vw-2rem))] overflow-y-auto`}
+          className={`absolute left-0 ${dropdownPosition === "bottom" ? "bottom-[calc(100%+12px)]" : "top-[calc(100%+12px)]"} ${panelClass} max-h-[min(24rem,70vh)] w-[min(20rem,calc(100vw-2rem))] overflow-y-auto`}
         >
           {mobileProviderFocus === null ? (
             <>
@@ -213,7 +237,7 @@ export function ModelPicker({ initialModel, onModelChange }: ModelPickerProps) {
 
       {open && isWide && (
         <div
-          className="absolute left-0 top-[calc(100%+12px)] z-[100] flex max-w-[calc(100vw-2rem)]"
+          className={`absolute left-0 ${dropdownPosition === "bottom" ? "bottom-[calc(100%+12px)]" : "top-[calc(100%+12px)]"} z-[100] flex max-w-[calc(100vw-2rem)]`}
           onMouseLeave={() => setHoveredProviderId(null)}
         >
           <div className={`w-[180px] ${panelClass}`}>
