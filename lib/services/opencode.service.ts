@@ -7,7 +7,7 @@ export interface OpenCodeSession {
   created_at: string;
   status: string;
   // Other fields depend on the exact OpenAPI spec of OpenCode
-  [key: string]: any; 
+  [key: string]: any;
 }
 
 export interface OpenCodeMessage {
@@ -26,13 +26,13 @@ function getBaseUrl() {
 function getAuthHeaders() {
   const username = process.env.OPENCODE_SERVER_USERNAME || "opencode";
   const password = process.env.OPENCODE_SERVER_PASSWORD || "";
-  
+
   if (!password) {
     console.warn("OPENCODE_SERVER_PASSWORD is not set. API calls may fail if auth is required.");
   }
 
   const credentials = Buffer.from(`${username}:${password}`).toString("base64");
-  
+
   return {
     "Authorization": `Basic ${credentials}`,
     "Content-Type": "application/json",
@@ -153,6 +153,24 @@ const DIRECTORY_INSTRUCTION_SUFFIX =
   "' exists (create it if needed), then cd into it. You are only allowed to work inside this directory.\n\n";
 
 export async function sendMessage(sessionId: string, content: string): Promise<OpenCodeMessage> {
+  const { getServiceId } = await import("@/lib/services/opencode-session.service");
+  const { db } = await import("@/lib/db");
+  const { services } = await import("@/lib/db/schema");
+  const { eq } = await import("drizzle-orm");
+  const { getWorkspaceSettings } = await import("@/lib/services/workspace-settings.service");
+
+  let modelID = "deepseek/deepseek-v3.2"; // Fallback to new standard if not set
+  const serviceId = await getServiceId(sessionId);
+  if (serviceId) {
+    const [service] = await db.select().from(services).where(eq(services.id, serviceId)).limit(1);
+    if (service?.workspaceId) {
+      const settings = await getWorkspaceSettings(service.workspaceId);
+      if (settings?.defaultModel) {
+        modelID = settings.defaultModel;
+      }
+    }
+  }
+
   const response = await fetch(`${getBaseUrl()}/session/${sessionId}/message`, {
     method: "POST",
     headers: getAuthHeaders(),
@@ -160,8 +178,8 @@ export async function sendMessage(sessionId: string, content: string): Promise<O
     body: JSON.stringify({
       parts: [{ type: "text", text: content }],
       model: {
-        providerID: "deepseek",
-        modelID: "deepseek-chat"
+        providerID: "vercel",
+        modelID: modelID
       }
     }),
   });

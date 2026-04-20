@@ -48,7 +48,7 @@ const PROVIDERS: Provider[] = [
     label: "Google",
     models: [
       { id: "google/gemini-1-5-pro", label: "Gemini 1.5 Pro" },
-      { id: "google/gemini-3.1-pro", label: "Gemini 3.1 Pro", badge: "NEW" },
+      { id: "google/gemini-3.1-pro-preview", label: "Gemini 3.1 Pro", badge: "NEW" },
       { id: "google/gemini-3.1-flash-lite", label: "Gemini 3.1 Flash-Lite", badge: "NEW" },
     ],
   },
@@ -164,9 +164,8 @@ export function ModelPicker({ initialModel, onModelChange }: ModelPickerProps) {
           </span>
         )}
         <ChevronRight
-          className={`ml-0.5 h-3.5 w-3.5 shrink-0 text-[var(--muted)] transition-transform ${
-            open ? "rotate-90" : ""
-          }`}
+          className={`ml-0.5 h-3.5 w-3.5 shrink-0 text-[var(--muted)] transition-transform ${open ? "rotate-90" : ""
+            }`}
         />
       </button>
 
@@ -209,19 +208,17 @@ export function ModelPicker({ initialModel, onModelChange }: ModelPickerProps) {
                   key={m.id}
                   type="button"
                   onClick={() => handleModelSelect(m.id)}
-                  className={`flex w-full items-center justify-between rounded-xl px-3 py-2 text-left text-sm transition-all ${
-                    activeModelId === m.id
+                  className={`flex w-full items-center justify-between rounded-xl px-3 py-2 text-left text-sm transition-all ${activeModelId === m.id
                       ? "bg-[var(--accent)] text-white"
                       : "text-[var(--muted)] hover:bg-[var(--hover-bg)] hover:text-[var(--foreground)]"
-                  }`}
+                    }`}
                 >
                   <div className="flex min-w-0 items-center gap-2">
                     <span className="truncate">{m.label}</span>
                     {m.badge && (
                       <span
-                        className={`shrink-0 rounded-full px-1.5 py-0.5 text-[9px] font-bold ${
-                          activeModelId === m.id ? "bg-white/20 text-white" : "bg-[var(--hover-bg)] text-[var(--muted)]"
-                        }`}
+                        className={`shrink-0 rounded-full px-1.5 py-0.5 text-[9px] font-bold ${activeModelId === m.id ? "bg-white/20 text-white" : "bg-[var(--hover-bg)] text-[var(--muted)]"
+                          }`}
                       >
                         {m.badge}
                       </span>
@@ -249,11 +246,10 @@ export function ModelPicker({ initialModel, onModelChange }: ModelPickerProps) {
                 key={p.id}
                 type="button"
                 onMouseEnter={() => setHoveredProviderId(p.id)}
-                className={`flex w-full items-center justify-between rounded-xl px-3 py-2 text-left text-sm transition-all ${
-                  hoveredProviderId === p.id
+                className={`flex w-full items-center justify-between rounded-xl px-3 py-2 text-left text-sm transition-all ${hoveredProviderId === p.id
                     ? "bg-[var(--hover-bg)] text-[var(--foreground)]"
                     : "text-[var(--muted)] hover:text-[var(--foreground)]"
-                }`}
+                  }`}
               >
                 {p.label}
                 <ChevronRight className="h-3 w-3 opacity-50" />
@@ -273,19 +269,17 @@ export function ModelPicker({ initialModel, onModelChange }: ModelPickerProps) {
                   key={m.id}
                   type="button"
                   onClick={() => handleModelSelect(m.id)}
-                  className={`flex w-full items-center justify-between rounded-xl px-3 py-2 text-left text-sm transition-all ${
-                    activeModelId === m.id
+                  className={`flex w-full items-center justify-between rounded-xl px-3 py-2 text-left text-sm transition-all ${activeModelId === m.id
                       ? "bg-[var(--accent)] text-white"
                       : "text-[var(--muted)] hover:bg-[var(--hover-bg)] hover:text-[var(--foreground)]"
-                  }`}
+                    }`}
                 >
                   <div className="flex min-w-0 items-center gap-2 overflow-hidden">
                     <span className="truncate">{m.label}</span>
                     {m.badge && (
                       <span
-                        className={`rounded-full px-1.5 py-0.5 text-[9px] font-bold ${
-                          activeModelId === m.id ? "bg-white/20 text-white" : "bg-[var(--hover-bg)] text-[var(--muted)]"
-                        }`}
+                        className={`rounded-full px-1.5 py-0.5 text-[9px] font-bold ${activeModelId === m.id ? "bg-white/20 text-white" : "bg-[var(--hover-bg)] text-[var(--muted)]"
+                          }`}
                       >
                         {m.badge}
                       </span>
