@@ -5,15 +5,15 @@ const serviceTypeEnum = z.enum(["trigger", "action"]);
 export const serviceToolDefinition = {
   name: "manage_services",
   description:
-    "Manage services in the workspace. Use to list services, get one by id, list by workflow, create, update, or delete a service. Services can be type 'trigger' (requires workflowId) or 'action' (standalone, linked to workflows via workflow_action_services). Directory is required when creating a service (used for OpenCode sessions).",
+    "Manage services in the workspace. Use to list services, get one by id, list by workflow, create, update, delete, or redeploy a service. Services can be type 'trigger' (requires workflowId) or 'action' (standalone, linked to workflows via workflow_action_services). Directory is required when creating a service (used for OpenCode sessions).",
   inputSchema: z.object({
     action: z
-      .enum(["list", "get", "create", "update", "delete", "get_logs"])
+      .enum(["list", "get", "create", "update", "delete", "get_logs", "redeploy"])
       .describe("The action to perform"),
     serviceId: z
       .string()
       .optional()
-      .describe("Service ID. Required for get, update, and delete actions."),
+      .describe("Service ID. Required for get, update, delete, get_logs, and redeploy actions."),
     workflowId: z
       .string()
       .optional()

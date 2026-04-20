@@ -6,7 +6,9 @@ import {
   updateService,
   deleteService,
   getServiceLogs,
+  validateServiceForSpawn,
 } from "@/lib/services/service.service";
+import { enqueueServiceSpawn } from "@/lib/queues/pg-boss";
 import type { ToolContext } from "@/lib/tools/registry";
 import type { ServiceToolInput } from "./definition";
 
@@ -102,9 +104,21 @@ export async function executeService(input: ServiceToolInput, context: ToolConte
       return await getServiceLogs(serviceId, workspaceId, maxLines);
     }
 
+    case "redeploy": {
+      if (!serviceId) {
+        throw new Error("serviceId is required for action 'redeploy'");
+      }
+      const validation = await validateServiceForSpawn(serviceId, workspaceId);
+      if (!validation.valid) {
+        throw new Error(`Service cannot be redeployed: ${validation.error}`);
+      }
+      await enqueueServiceSpawn({ serviceId, workspaceId });
+      return { success: true, redeployed: serviceId };
+    }
+
     default: {
       throw new Error(
-        `Unknown action: ${action}. Valid actions are: list, get, create, update, delete.`
+        `Unknown action: ${action}. Valid actions are: list, get, create, update, delete, get_logs, redeploy.`
       );
     }
   }
