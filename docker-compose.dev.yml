@@ -36,6 +36,7 @@ services:
       - NEXT_PUBLIC_APP_URL=${NEXT_PUBLIC_APP_URL}
       - PORT=${APP_PORT:-3141}
       - OPENPIECES_INTERNAL_URL=${OPENPIECES_INTERNAL_URL:-http://app:${APP_PORT:-3141}}
+      - AI_GATEWAY_API_KEY=${AI_GATEWAY_API_KEY}
     env_file:
       - .env
     depends_on:
@@ -67,6 +68,7 @@ services:
       - DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
       - NEXT_PUBLIC_APP_URL=${NEXT_PUBLIC_APP_URL}
       - OPENPIECES_INTERNAL_URL=${OPENPIECES_INTERNAL_URL:-http://app:${APP_PORT:-3141}}
+      - AI_GATEWAY_API_KEY=${AI_GATEWAY_API_KEY}
     env_file:
       - .env
     depends_on:

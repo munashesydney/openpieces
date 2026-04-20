@@ -13,6 +13,7 @@ ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV DATABASE_URL=postgresql://localhost/openpieces
 ENV PORT=3141
+ENV AI_GATEWAY_API_KEY=""
 EXPOSE 3141
 
 # =============================================================================

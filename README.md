@@ -39,7 +39,7 @@ Edit `.env` — at minimum you need to set:
 - `INTERNAL_API_KEY` — internal service auth
 - `OPENCODE_SERVER_PASSWORD` — OpenCode server password
 - `POSTGRES_PASSWORD` — database password
-- `DEEPSEEK_API_KEY` — for AI features
+- `AI_GATEWAY_API_KEY` — for all AI routing via Vercel Gateway
 
 Generate a secret: `node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"`
 
@@ -135,7 +135,7 @@ The bundled Postgres includes `pgvector` for embedding storage — your external
 | `INTERNAL_API_KEY` | Key used by OpenCode to authenticate against the internal API. Generate with the command above. |
 | `OPENCODE_SERVER_PASSWORD` | Password for the OpenCode server. |
 | `POSTGRES_PASSWORD` | Password for the bundled PostgreSQL database. |
-| `DEEPSEEK_API_KEY` | API key for DeepSeek AI models. |
+| `AI_GATEWAY_API_KEY` | Vercel AI Gateway key required to route global AI model calls. |
 
 ### Optional
 
@@ -144,8 +144,6 @@ The bundled Postgres includes `pgvector` for embedding storage — your external
 | `APP_PORT` | `3141` | Internal port for the Next.js app (exposed to host) |
 | `OPENCODE_PORT` | `4096` | Internal port for the OpenCode server |
 | `NEXT_PUBLIC_APP_URL` | `http://localhost:3141` | Public URL — change to your domain in production |
-| `AI_GATEWAY_API_KEY` | — | AI Gateway key (alternative to DeepSeek) |
-| `AI_MODEL` | `deepseek/deepseek-v3.2` | AI model to use |
 | `TAVILY_API_KEY` | — | Tavily web search API key |
 | `DB_POOL_MAX` | `5` | Connection pool size for the app |
 | `PG_BOSS_POOL_SIZE` | `5` | Connection pool size for the worker |
