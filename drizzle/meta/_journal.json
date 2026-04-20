@@ -239,6 +239,13 @@
       "when": 1775800000002,
       "tag": "0035_workspace_settings",
       "breakpoints": true
+    },
+    {
+      "idx": 36,
+      "version": "7",
+      "when": 1776659838557,
+      "tag": "0036_add_deploying_status",
+      "breakpoints": true
     }
   ]
 }

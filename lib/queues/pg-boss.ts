@@ -109,6 +109,8 @@ export type ServiceSpawnJob = {
 
 export async function enqueueServiceSpawn(job: ServiceSpawnJob) {
   const boss = await getPgBoss();
+  const { updateService } = await import("../services/service.service");
+  await updateService(job.serviceId, job.workspaceId, { status: "deploying" }, "system");
   return boss.send(SERVICE_SPAWN_QUEUE, job);
 }
 

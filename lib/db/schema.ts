@@ -84,7 +84,7 @@ export const services = pgTable("services", {
   directory: text("directory"),
   port: integer("port"),
   pid: integer("pid"),
-  status: text("status", { enum: ["stopped", "running", "crashed"] }).notNull().default("stopped"),
+  status: text("status", { enum: ["stopped", "running", "crashed", "deploying"] }).notNull().default("stopped"),
   updateSource: text("update_source").default("user"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),

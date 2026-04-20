@@ -234,8 +234,14 @@ export function ServiceDetail({ service, endpoints, requiredSecrets, workspaceSe
                     </div>
                   ) : (
                     <div className="flex items-center gap-2">
-                      <div className="h-2 w-2 rounded-full bg-[var(--muted)]" />
-                      <span className="text-sm font-semibold text-[var(--muted)]">Stopped</span>
+                      {service.status === "deploying" ? (
+                        <div className="h-2 w-2 rounded-full bg-amber-500 animate-pulse" />
+                      ) : (
+                        <div className="h-2 w-2 rounded-full bg-[var(--muted)]" />
+                      )}
+                      <span className="text-sm font-semibold text-[var(--muted)]">
+                        {service.status === "deploying" ? "Deploying..." : "Stopped"}
+                      </span>
                     </div>
                   )}
                   {spawnError && (
@@ -265,10 +271,10 @@ export function ServiceDetail({ service, endpoints, requiredSecrets, workspaceSe
                   size="sm"
                   variant="ghost"
                   onClick={handleSpawn}
-                  disabled={isSpawning || isPending || !service.directory}
+                  disabled={isSpawning || isPending || !service.directory || service.status === "deploying"}
                   title={!service.directory ? "No directory set" : "Launch service process"}
                 >
-                  {isSpawning || isPending ? (
+                  {isSpawning || isPending || service.status === "deploying" ? (
                     <Loader2 className="h-4 w-4 animate-spin" />
                   ) : (
                     <Play className="h-4 w-4" />
