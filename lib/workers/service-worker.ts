@@ -403,7 +403,18 @@ export async function startServiceWorker() {
   await boss.work(SERVICE_SPAWN_QUEUE, { localConcurrency: 1 }, async (jobs) => {
     const job = jobs[0];
     if (!job) return;
-    await executeServiceSpawnJob(job.data as ServiceSpawnJob);
+    try {
+      await executeServiceSpawnJob(job.data as ServiceSpawnJob);
+    } catch (error) {
+      const { serviceId, workspaceId } = job.data as ServiceSpawnJob;
+      console.error(`[service-worker] Service spawn failed for ${serviceId}:`, error);
+      try {
+        await updateService(serviceId, workspaceId, { port: null, pid: null, status: "crashed" }, "system");
+      } catch (updateError) {
+        console.error(`[service-worker] Failed to update service status to crashed:`, updateError);
+      }
+      throw error;
+    }
   });
 
   await boss.work(SERVICE_STOP_QUEUE, { localConcurrency: 1 }, async (jobs) => {

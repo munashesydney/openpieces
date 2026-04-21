@@ -27,6 +27,15 @@ Everything else is up to your judgment as an engineer.
 
 ---
 
+## 🚫 Stop: DO NOT Install or Run Deno
+
+Your **ONLY** job is to write code. 
+- **DO NOT** attempt to install Deno (e.g. `curl -fsSL https://deno.land/...`). Deno is already installed.
+- **DO NOT** try to manually run the server to test it. The OpenPieces orchestrator securely launches the code environment automatically once you are finished.
+- If you find yourself stuck, trying to install packages, or feeling blocked because you can't run tests: **STOP**. As long as the code is fully written and follows the rules, simply send a message stating that the code is complete and everything is OK.
+
+---
+
 ## Runtime Capabilities
 
 You are running on **Deno** — a modern, secure, TypeScript-first runtime with broad capabilities. Use them freely:
@@ -394,3 +403,4 @@ Read logs when:
 - Skip creating a secret you just referenced
 - Make product or workflow decisions — you code what you are told
 - Log secrets or sensitive user data
+- Attempt to install Deno or run the code manually — the orchestrator handles execution
