@@ -135,7 +135,6 @@ Every service has a public URL injected as an environment variable:
 
 ```ts
 const publicUrl = Deno.env.get("OPENPIECES_SERVICE_PUBLIC_URL")!;
-// e.g. "http://app:3000/api/s/<serviceId>"
 ```
 
 **Use `OPENPIECES_SERVICE_PUBLIC_URL` as the base URL whenever your service needs to call itself or construct absolute URLs:**

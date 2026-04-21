@@ -88,9 +88,8 @@ async function executeServiceSpawnJob(job: ServiceSpawnJob) {
       } catch {
         // Ignore errors if process doesn't exist
       }
-      await deleteService(serviceId, workspaceId);
     }
-    return;
+    throw new Error(msg);
   }
 
   // If service has a PID, check if it's still alive and kill it (force restart)
