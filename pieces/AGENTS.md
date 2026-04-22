@@ -353,8 +353,9 @@ Always include `access-control-allow-origin: "*"` on asset responses. Always han
 
 ---
 
-### API CALLING
-Make sure to also use OPENPIECES_SERVICE_PUBLIC_URL as the base url when calling apis you just made.
+### API CALLING **IMPORTANT**
+- Make sure to also use OPENPIECES_SERVICE_PUBLIC_URL as the base url when calling apis you just made.
+
 
 ## Graceful Shutdown
 

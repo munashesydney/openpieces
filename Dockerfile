@@ -67,6 +67,11 @@ RUN npm run build
 # =============================================================================
 FROM base AS worker
 ENV NODE_ENV=production
+# Glibc libs isolated in /opt/deno-glibc so they don't interfere with musl Node.js
+COPY --from=deno-cc --chown=root:root --chmod=755 /lib/*-linux-gnu/* /opt/deno-glibc/
+COPY --from=deno-cc --chown=root:root --chmod=755 /lib/ld-linux-* /opt/deno-glibc/
+RUN mkdir -p /lib64 && ln -sf /opt/deno-glibc/ld-linux-* /lib64/
+COPY --from=deno-bin /deno /usr/local/bin/deno
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 # Seed staging area: pieces/.opencode baked into image outside the volume mount path
