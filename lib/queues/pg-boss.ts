@@ -52,7 +52,7 @@ export async function getPgBoss(): Promise<PgBoss> {
 
       const existingSpawnQueue = await boss.getQueue(SERVICE_SPAWN_QUEUE);
       if (!existingSpawnQueue) {
-        await boss.createQueue(SERVICE_SPAWN_QUEUE);
+        await boss.createQueue(SERVICE_SPAWN_QUEUE, { retryLimit: 0 });
       }
 
       const existingStopQueue = await boss.getQueue(SERVICE_STOP_QUEUE);
