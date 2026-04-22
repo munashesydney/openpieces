@@ -31,7 +31,8 @@ yarn-error.log*
 .pnpm-debug.log*
 
 # env files (can opt-in for committing if needed)
-.env*
+.env
+!.env.example
 
 # vercel
 .vercel
@@ -47,5 +48,3 @@ opencode-data/
 /pieces/*
 !/pieces/.opencode
 !/pieces/AGENTS.md
-!/pieces/test
-!/pieces/test/**
