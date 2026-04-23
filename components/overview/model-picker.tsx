@@ -60,6 +60,19 @@ const PROVIDERS: Provider[] = [
       { id: "mistral/mistral-large-3", label: "Mistral Large 3" },
     ],
   },
+  {
+    id: "minimax",
+    label: "Minimax",
+    models: [
+      { id: "minimax/minimax-m2.1-lightning", label: "Minimax M2.1 Lightning" },
+      { id: "minimax/minimax-m2", label: "Minimax M2" },
+      { id: "minimax/minimax-m2.1", label: "Minimax M2.1" },
+      { id: "minimax/minimax-m2.5-highspeed", label: "Minimax M2.5 Highspeed" },
+      { id: "minimax/minimax-m2.5", label: "Minimax M2.5" },
+      { id: "minimax/minimax-m2.7-highspeed", label: "Minimax M2.7 Highspeed" },
+      { id: "minimax/minimax-m2.7", label: "Minimax M2.7" },
+    ],
+  },
 ];
 
 type ModelPickerProps = {
