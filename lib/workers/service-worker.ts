@@ -20,6 +20,7 @@ import { services, type Service } from "@/lib/db/schema";
 
 const PORT_START = 8001;
 const PORT_END = 9000;
+const MAX_DEPLOYMENT_TIME_MS = 120 * 1000; // 120 seconds
 
 async function isPortBoundByOS(port: number): Promise<boolean> {
   return new Promise((resolve) => {
@@ -75,6 +76,23 @@ async function executeServiceSpawnJob(job: ServiceSpawnJob) {
   }
   if (!service.directory?.trim()) {
     throw new Error(`Service ${serviceId} has no directory set`);
+  }
+
+  // Check if service is already deploying - block if it is
+  if (service.status === "deploying") {
+    // Check if deployment has been stuck for too long
+    const deploymentStartTime = service.updatedAt;
+    const deploymentDurationMs = Date.now() - deploymentStartTime.getTime();
+
+    if (deploymentDurationMs > MAX_DEPLOYMENT_TIME_MS) {
+      // Deployment has been stuck too long, reset to stopped
+      console.log(`[service-worker] Service ${serviceId} has been deploying for ${deploymentDurationMs}ms (>${MAX_DEPLOYMENT_TIME_MS/1000}s), resetting to stopped`);
+      await updateService(serviceId, workspaceId, { status: "stopped" }, "system");
+      await appendServiceLog(service.directory.trim(), "info", `Deployment timeout after ${Math.round(deploymentDurationMs/1000)}s, reset to stopped`);
+    } else {
+      // Service is still deploying within timeout, block this attempt
+      throw new Error(`Service ${serviceId} is already deploying (started ${Math.round(deploymentDurationMs/1000)}s ago)`);
+    }
   }
 
   const indexPath = `./pieces/${service.directory.trim()}/index.ts`;
@@ -396,6 +414,50 @@ async function recoverAndStartAllServices() {
   console.log("[service-worker] Service recovery complete");
 }
 
+async function cleanupStuckDeployments() {
+  console.log("[service-worker] Checking for stuck deployments...");
+
+  try {
+    // Find services stuck in "deploying" status for too long
+    const stuckServices = await db
+      .select()
+      .from(services)
+      .where(eq(services.status, "deploying"));
+
+    let cleanedCount = 0;
+    
+    for (const service of stuckServices) {
+      const deploymentDurationMs = Date.now() - service.updatedAt.getTime();
+      
+      if (deploymentDurationMs > MAX_DEPLOYMENT_TIME_MS) {
+        console.log(`[service-worker] Cleaning up stuck deployment for service ${service.id} (${service.title}) - stuck for ${Math.round(deploymentDurationMs/1000)}s`);
+        
+        await updateService(service.id, service.workspaceId, { 
+          status: "stopped",
+          port: null,
+          pid: null 
+        }, "system");
+        
+        if (service.directory?.trim()) {
+          await appendServiceLog(
+            service.directory.trim(),
+            "info",
+            `Deployment timeout after ${Math.round(deploymentDurationMs/1000)}s, reset to stopped`
+          );
+        }
+        
+        cleanedCount++;
+      }
+    }
+    
+    if (cleanedCount > 0) {
+      console.log(`[service-worker] Cleaned up ${cleanedCount} stuck deployments`);
+    }
+  } catch (error) {
+    console.error("[service-worker] Error cleaning up stuck deployments:", error);
+  }
+}
+
 export async function startServiceWorker() {
   const boss = await getPgBoss();
 
@@ -424,6 +486,14 @@ export async function startServiceWorker() {
 
   // Recover stale services and start valid ones
   await recoverAndStartAllServices();
+
+  // Start periodic cleanup of stuck deployments (run every 60 seconds)
+  setInterval(async () => {
+    await cleanupStuckDeployments();
+  }, 60 * 1000);
+
+  // Run initial cleanup
+  await cleanupStuckDeployments();
 
   console.log("[service-worker] listening for service spawn and stop jobs");
   return boss;
