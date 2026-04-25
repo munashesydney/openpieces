@@ -110,12 +110,12 @@ services:
     command: serve --hostname 0.0.0.0
     working_dir: /pieces
     expose:
-      - "4096"
+      - "${OPENCODE_PORT:-4096}"
     volumes:
       - pieces:/pieces
       - opencode_data:/root/.local/share/opencode
     environment:
-      - PORT=4096
+      - PORT=${OPENCODE_PORT:-4096}
       - HOSTNAME_OVERRIDE=0.0.0.0
       - AI_GATEWAY_API_KEY=${AI_GATEWAY_API_KEY}
       - OPENCODE_SERVER_PASSWORD=${OPENCODE_SERVER_PASSWORD}
