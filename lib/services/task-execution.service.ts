@@ -4,6 +4,10 @@ import { tasks, type Task } from "@/lib/db/schema";
 import { createAiChat, appendUserMessageAndMarkPending } from "@/lib/services/chat.service";
 import { enqueueChatExecution } from "@/lib/queues/pg-boss";
 import { getWorkspaceOwnerId } from "@/lib/services/workspace.service";
+import { getServicesByWorkflowId } from "@/lib/services/service.service";
+import { getWorkflowById } from "@/lib/services/workflow.service";
+import { getActionServicesForWorkflow } from "@/lib/services/workflow-action.service";
+import { getEndpointsByServiceId } from "@/lib/services/service-endpoint.service";
 
 /**
  * Get all tasks that are due for execution.
@@ -124,19 +128,63 @@ export async function enqueueTaskForExecution(task: Task): Promise<void> {
   const chat = await createAiChat({
     workspaceId: task.workspaceId,
     userId,
-  }, "orchestrator");
+  }, "events");
 
   // Create a detailed message describing the task
   const taskDescription = task.description || "No description provided.";
-  const workflowId = task.workflowId || "not specified";
 
-  const messageContent = `Please execute the following task:
+  let servicesContext = "";
+
+  // If task is linked to a workflow, pre-load all services/endpoints so AI doesn't need to call lookup functions
+  if (task.workflowId) {
+    const workflow = await getWorkflowById(task.workflowId, task.workspaceId);
+    const triggerServices = await getServicesByWorkflowId(task.workflowId, task.workspaceId);
+    const actionServices = await getActionServicesForWorkflow(task.workflowId, task.workspaceId);
+
+    const uniqueServicesMap = new Map();
+    for (const s of [...triggerServices, ...actionServices]) {
+      uniqueServicesMap.set(s.id, s);
+    }
+    const allServices = Array.from(uniqueServicesMap.values());
+
+    servicesContext += "\n\n--- AUTO APPENDED WORKFLOW SERVICE CONTEXT ---\n";
+
+    if (workflow) {
+      servicesContext += `Workflow Title: ${workflow.title}\n`;
+      if (workflow.description) {
+        servicesContext += `Workflow Description: ${workflow.description}\n`;
+      }
+      if (workflow.detailedSteps) {
+        servicesContext += `Workflow Detailed Steps (Instructions):\n${workflow.detailedSteps}\n\n`;
+      }
+    }
+
+    servicesContext += "The following services and their endpoints are linked to this workflow. You can call these endpoints immediately without needing to look them up.\n\n";
+
+    for (const service of allServices) {
+      servicesContext += `Service: ${service.title} (ID: ${service.id}, Type: ${service.type})\n`;
+      const endpoints = await getEndpointsByServiceId(service.id, task.workspaceId);
+      if (endpoints.length === 0) {
+        servicesContext += `  (No endpoints registered)\n`;
+      } else {
+        for (const ep of endpoints) {
+          servicesContext += `  - Endpoint [ID: ${ep.id}] | ${ep.method} ${ep.path} | ${ep.description}\n`;
+          if (ep.inputSchema && Object.keys(ep.inputSchema).length > 0) {
+            servicesContext += `      Input Schema: ${JSON.stringify(ep.inputSchema)}\n`;
+          }
+        }
+      }
+      servicesContext += "\n";
+    }
+  }
+
+  let messageContent = `Please execute the following task:
 
 **Task Title:** ${task.title}
 
 **Task Description:** ${taskDescription}
 
-**Workflow ID:** ${workflowId}
+**Workflow ID:** ${task.workflowId || "not specified"}
 
 **Task Type:** ${task.type === "recurring" ? "Recurring" : "One-time"}
 
@@ -145,6 +193,10 @@ Please process this task by executing the associated workflow. If there are any 
 ${task.type === "recurring" && task.intervalType
     ? `This is a recurring task (${task.intervalType}${task.intervalValue ? ` every ${task.intervalValue}` : ""}).`
     : ""}`;
+
+  if (servicesContext) {
+    messageContent += servicesContext;
+  }
 
   // Append the task message to the chat
   await appendUserMessageAndMarkPending({
