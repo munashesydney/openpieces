@@ -1,5 +1,17 @@
 import { sql } from "drizzle-orm";
-import { boolean, index, integer, jsonb, pgTable, real, text, timestamp, uuid, uniqueIndex, vector } from "drizzle-orm/pg-core";
+import {
+  boolean,
+  index,
+  integer,
+  jsonb,
+  pgTable,
+  real,
+  text,
+  timestamp,
+  uuid,
+  uniqueIndex,
+  vector,
+} from "drizzle-orm/pg-core";
 
 export const users = pgTable("users", {
   id: uuid("id").defaultRandom().primaryKey(),
@@ -34,7 +46,9 @@ export const workflows = pgTable("workflows", {
     .references(() => workspaces.id, { onDelete: "cascade" }),
   title: text("title").notNull(),
   description: text("description").notNull().default(""),
-  status: text("status", { enum: ["active", "archived"] }).notNull().default("active"),
+  status: text("status", { enum: ["active", "archived"] })
+    .notNull()
+    .default("active"),
   detailedSteps: text("detailed_steps").notNull().default(""),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
@@ -48,15 +62,23 @@ export const tasks = pgTable("tasks", {
   workspaceId: uuid("workspace_id")
     .notNull()
     .references(() => workspaces.id, { onDelete: "cascade" }),
-  workflowId: uuid("workflow_id").references(() => workflows.id, { onDelete: "set null" }),
+  workflowId: uuid("workflow_id").references(() => workflows.id, {
+    onDelete: "set null",
+  }),
   title: text("title").notNull(),
   description: text("description").notNull().default(""),
-  type: text("type", { enum: ["one-time", "recurring"] }).notNull().default("one-time"),
-  status: text("status", { enum: ["active", "paused", "completed"] }).notNull().default("active"),
+  type: text("type", { enum: ["one-time", "recurring"] })
+    .notNull()
+    .default("one-time"),
+  status: text("status", { enum: ["active", "paused", "completed"] })
+    .notNull()
+    .default("active"),
   // One-time scheduling
   scheduledAt: timestamp("scheduled_at"),
   // Recurring scheduling
-  intervalType: text("interval_type", { enum: ["minutes", "hours", "daily", "weekly", "monthly"] }),
+  intervalType: text("interval_type", {
+    enum: ["minutes", "hours", "daily", "weekly", "monthly"],
+  }),
   intervalValue: integer("interval_value"),
   dayOfWeek: integer("day_of_week"),
   dayOfMonth: integer("day_of_month"),
@@ -77,14 +99,21 @@ export const services = pgTable("services", {
   workspaceId: uuid("workspace_id")
     .notNull()
     .references(() => workspaces.id, { onDelete: "cascade" }),
-  workflowId: uuid("workflow_id").references(() => workflows.id, { onDelete: "set null" }),
+  workflowId: uuid("workflow_id").references(() => workflows.id, {
+    onDelete: "set null",
+  }),
   title: text("title").notNull(),
   description: text("description").notNull().default(""),
   type: text("type", { enum: ["trigger", "action"] }).notNull(),
   directory: text("directory"),
   port: integer("port"),
   pid: integer("pid"),
-  status: text("status", { enum: ["stopped", "running", "crashed", "deploying"] }).notNull().default("stopped"),
+  status: text("status", {
+    enum: ["stopped", "running", "crashed", "deploying"],
+  })
+    .notNull()
+    .default("stopped"),
+  spawnFailCount: integer("spawn_fail_count").notNull().default(0),
   updateSource: text("update_source").default("user"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
@@ -98,10 +127,14 @@ export const serviceEndpoints = pgTable("service_endpoints", {
   serviceId: uuid("service_id")
     .notNull()
     .references(() => services.id, { onDelete: "cascade" }),
-  method: text("method", { enum: ["GET", "POST", "PUT", "DELETE", "PATCH"] }).notNull(),
+  method: text("method", {
+    enum: ["GET", "POST", "PUT", "DELETE", "PATCH"],
+  }).notNull(),
   path: text("path").notNull(),
   description: text("description").notNull().default(""),
-  inputSchema: jsonb("input_schema").$type<Record<string, unknown>>().default({}),
+  inputSchema: jsonb("input_schema")
+    .$type<Record<string, unknown>>()
+    .default({}),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
@@ -119,7 +152,8 @@ export const serviceRequiredSecrets = pgTable("service_required_secrets", {
 });
 
 export type ServiceRequiredSecret = typeof serviceRequiredSecrets.$inferSelect;
-export type NewServiceRequiredSecret = typeof serviceRequiredSecrets.$inferInsert;
+export type NewServiceRequiredSecret =
+  typeof serviceRequiredSecrets.$inferInsert;
 
 export const aiChats = pgTable(
   "ai_chats",
@@ -148,7 +182,7 @@ export const aiChats = pgTable(
     index("ai_chats_workspace_id_idx").on(table.workspaceId),
     index("ai_chats_user_id_idx").on(table.userId),
     index("ai_chats_updated_at_idx").on(table.updatedAt),
-  ]
+  ],
 );
 
 export type AiChat = typeof aiChats.$inferSelect;
@@ -168,17 +202,24 @@ export const aiMessages = pgTable(
       .notNull()
       .default("complete"),
     content: text("content").notNull().default(""),
-    toolCalls: jsonb("tool_calls").notNull().default(sql`'[]'::jsonb`),
-    toolResults: jsonb("tool_results").notNull().default(sql`'[]'::jsonb`),
+    toolCalls: jsonb("tool_calls")
+      .notNull()
+      .default(sql`'[]'::jsonb`),
+    toolResults: jsonb("tool_results")
+      .notNull()
+      .default(sql`'[]'::jsonb`),
     isCompacted: boolean("is_compacted").notNull().default(false),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().notNull(),
   },
   (table) => [
     index("ai_messages_chat_id_idx").on(table.chatId),
-    index("ai_messages_chat_id_created_at_idx").on(table.chatId, table.createdAt),
+    index("ai_messages_chat_id_created_at_idx").on(
+      table.chatId,
+      table.createdAt,
+    ),
     index("ai_messages_chat_compacted_idx").on(table.chatId, table.isCompacted),
-  ]
+  ],
 );
 
 export type AiMessage = typeof aiMessages.$inferSelect;
@@ -215,10 +256,14 @@ export const secrets = pgTable(
     updatedAt: timestamp("updated_at").defaultNow().notNull(),
   },
   (table) => [
-    uniqueIndex("secrets_workspace_user_key_idx").on(table.workspaceId, table.userId, table.key),
+    uniqueIndex("secrets_workspace_user_key_idx").on(
+      table.workspaceId,
+      table.userId,
+      table.key,
+    ),
     index("secrets_workspace_id_idx").on(table.workspaceId),
     index("secrets_user_id_idx").on(table.userId),
-  ]
+  ],
 );
 
 export type SecretRow = typeof secrets.$inferSelect;
@@ -238,18 +283,21 @@ export const workflowActionServices = pgTable(
     {
       pk: { columns: [table.workflowId, table.actionServiceId] },
     },
-  ]
+  ],
 );
 
 export type WorkflowActionService = typeof workflowActionServices.$inferSelect;
-export type NewWorkflowActionService = typeof workflowActionServices.$inferInsert;
+export type NewWorkflowActionService =
+  typeof workflowActionServices.$inferInsert;
 
 export const activityLog = pgTable(
   "activity_log",
   {
     id: uuid("id").defaultRandom().primaryKey(),
     recordType: text("record_type").notNull(),
-    operation: text("operation", { enum: ["INSERT", "UPDATE", "DELETE"] }).notNull(),
+    operation: text("operation", {
+      enum: ["INSERT", "UPDATE", "DELETE"],
+    }).notNull(),
     recordId: text("record_id"),
     workspaceId: uuid("workspace_id").notNull(),
     oldData: jsonb("old_data"),
@@ -259,7 +307,7 @@ export const activityLog = pgTable(
   },
   (table) => [
     index("activity_log_processed_by_brain_idx").on(table.processedByBrain),
-  ]
+  ],
 );
 
 export type ActivityLog = typeof activityLog.$inferSelect;
@@ -273,7 +321,9 @@ export const brain = pgTable(
     workspaceId: uuid("workspace_id")
       .notNull()
       .references(() => workspaces.id, { onDelete: "cascade" }),
-    type: text("type", { enum: ["fact", "episode"] }).notNull().default("fact"),
+    type: text("type", { enum: ["fact", "episode"] })
+      .notNull()
+      .default("fact"),
     category: text("category", {
       enum: ["pieces", "workflows", "runs", "credentials", "general"],
     })
@@ -297,7 +347,7 @@ export const brain = pgTable(
     index("brain_workspace_id_idx").on(table.workspaceId),
     index("brain_category_idx").on(table.category),
     index("brain_confidence_idx").on(table.confidence),
-  ]
+  ],
 );
 
 export type Brain = typeof brain.$inferSelect;
@@ -313,11 +363,19 @@ export const brainSettings = pgTable(
       .references(() => workspaces.id, { onDelete: "cascade" }),
     // Ingestion settings
     ingestionEnabled: boolean("ingestion_enabled").notNull().default(true),
-    ingestionIntervalMinutes: integer("ingestion_interval_minutes").notNull().default(60),
+    ingestionIntervalMinutes: integer("ingestion_interval_minutes")
+      .notNull()
+      .default(60),
     // Reinforcement settings
-    reinforcementEnabled: boolean("reinforcement_enabled").notNull().default(true),
-    reinforcementIntervalHours: integer("reinforcement_interval_hours").notNull().default(24),
-    reinforcementBatchSize: integer("reinforcement_batch_size").notNull().default(10),
+    reinforcementEnabled: boolean("reinforcement_enabled")
+      .notNull()
+      .default(true),
+    reinforcementIntervalHours: integer("reinforcement_interval_hours")
+      .notNull()
+      .default(24),
+    reinforcementBatchSize: integer("reinforcement_batch_size")
+      .notNull()
+      .default(10),
     lastIngestionRun: timestamp("last_ingestion_run"),
     lastReinforcementRun: timestamp("last_reinforcement_run"),
     createdAt: timestamp("created_at").defaultNow().notNull(),
@@ -325,23 +383,22 @@ export const brainSettings = pgTable(
   },
   (table) => [
     uniqueIndex("brain_settings_workspace_id_idx").on(table.workspaceId),
-  ]
+  ],
 );
 
 export type BrainSettings = typeof brainSettings.$inferSelect;
 export type NewBrainSettings = typeof brainSettings.$inferInsert;
 
-export const workspaceSettings = pgTable(
-  "workspace_settings",
-  {
-    workspaceId: uuid("workspace_id")
-      .primaryKey()
-      .references(() => workspaces.id, { onDelete: "cascade" }),
-    defaultModel: text("default_model").notNull().default("deepseek/deepseek-v3.2"),
-    createdAt: timestamp("created_at").defaultNow().notNull(),
-    updatedAt: timestamp("updated_at").defaultNow().notNull(),
-  }
-);
+export const workspaceSettings = pgTable("workspace_settings", {
+  workspaceId: uuid("workspace_id")
+    .primaryKey()
+    .references(() => workspaces.id, { onDelete: "cascade" }),
+  defaultModel: text("default_model")
+    .notNull()
+    .default("deepseek/deepseek-v3.2"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
 
 export type WorkspaceSettings = typeof workspaceSettings.$inferSelect;
 export type NewWorkspaceSettings = typeof workspaceSettings.$inferInsert;
@@ -354,10 +411,16 @@ export const workflowExecutions = pgTable("workflow_executions", {
   workflowId: uuid("workflow_id")
     .notNull()
     .references(() => workflows.id, { onDelete: "cascade" }),
-  chatId: uuid("chat_id").references(() => aiChats.id, { onDelete: "set null" }),
+  chatId: uuid("chat_id").references(() => aiChats.id, {
+    onDelete: "set null",
+  }),
   taskId: uuid("task_id").references(() => tasks.id, { onDelete: "set null" }),
-  triggerType: text("trigger_type", { enum: ["internal_chat", "task"] }).notNull(),
-  status: text("status", { enum: ["pending", "running", "completed", "failed", "cancelled"] })
+  triggerType: text("trigger_type", {
+    enum: ["internal_chat", "task"],
+  }).notNull(),
+  status: text("status", {
+    enum: ["pending", "running", "completed", "failed", "cancelled"],
+  })
     .notNull()
     .default("pending"),
   result: text("result"),

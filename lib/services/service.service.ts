@@ -2,7 +2,12 @@ import { eq, and, count } from "drizzle-orm";
 import { rm } from "fs/promises";
 import path from "path";
 import { db } from "../db";
-import { services, workflows, type NewService, type Service } from "../db/schema";
+import {
+  services,
+  workflows,
+  type NewService,
+  type Service,
+} from "../db/schema";
 import { isValidUuid } from "../utils/uuid";
 import { ValidationError } from "../errors/validation-error";
 import { getBaseUrl, buildServiceUrl } from "../utils/url";
@@ -18,13 +23,17 @@ function parseDirectorySlug(raw: string): string {
     throw new ValidationError("Directory is required.");
   }
   if (slug.includes("/") || slug.includes("\\") || slug.includes(" ")) {
-    throw new ValidationError("Directory must be a single word without slashes or spaces.");
+    throw new ValidationError(
+      "Directory must be a single word without slashes or spaces.",
+    );
   }
   if (slug.startsWith(".") || slug.startsWith("-") || slug.startsWith("_")) {
     throw new ValidationError("Directory must start with a letter or number.");
   }
   if (!/^[a-zA-Z0-9_-]+$/.test(slug)) {
-    throw new ValidationError("Directory can only contain letters, numbers, hyphens, and underscores.");
+    throw new ValidationError(
+      "Directory can only contain letters, numbers, hyphens, and underscores.",
+    );
   }
   return slug;
 }
@@ -48,26 +57,34 @@ export async function createService(data: NewService): Promise<Service> {
   const directoryValue = `${userId}/${data.workspaceId}/${slug}`;
 
   // ── Validate type ─────────────────────────────────────────────────────────
-  if (!VALID_SERVICE_TYPES.includes(data.type as typeof VALID_SERVICE_TYPES[number])) {
+  if (
+    !VALID_SERVICE_TYPES.includes(
+      data.type as (typeof VALID_SERVICE_TYPES)[number],
+    )
+  ) {
     throw new ValidationError(
-      `Invalid service type "${data.type}". Must be one of: ${VALID_SERVICE_TYPES.join(", ")}.`
+      `Invalid service type "${data.type}". Must be one of: ${VALID_SERVICE_TYPES.join(", ")}.`,
     );
   }
 
   // ── Validate workflowId ───────────────────────────────────────────────────
   // Required for triggers; not allowed for actions (they are standalone)
   if (data.type === "trigger" && !data.workflowId) {
-    throw new ValidationError("A workflow is required when creating a trigger service.");
+    throw new ValidationError(
+      "A workflow is required when creating a trigger service.",
+    );
   }
 
   if (data.type === "action" && data.workflowId) {
-    throw new ValidationError("Action services are standalone and cannot be assigned to a workflow. Use the workflow's action links instead.");
+    throw new ValidationError(
+      "Action services are standalone and cannot be assigned to a workflow. Use the workflow's action links instead.",
+    );
   }
 
   if (data.workflowId) {
     if (!isValidUuid(data.workflowId)) {
       throw new ValidationError(
-        `The provided workflow ID "${data.workflowId}" is not a valid ID.`
+        `The provided workflow ID "${data.workflowId}" is not a valid ID.`,
       );
     }
 
@@ -78,14 +95,14 @@ export async function createService(data: NewService): Promise<Service> {
       .where(
         and(
           eq(workflows.id, data.workflowId),
-          eq(workflows.workspaceId, data.workspaceId)
-        )
+          eq(workflows.workspaceId, data.workspaceId),
+        ),
       )
       .limit(1);
 
     if (workflow.length === 0) {
       throw new ValidationError(
-        "The selected workflow does not exist in this workspace."
+        "The selected workflow does not exist in this workspace.",
       );
     }
   }
@@ -97,22 +114,27 @@ export async function createService(data: NewService): Promise<Service> {
   return result[0];
 }
 
-
-export async function getServices(workspaceId: string, page: number = 1, pageSize: number = 10): Promise<{ data: (Service & { url: string })[], total: number }> {
+export async function getServices(
+  workspaceId: string,
+  page: number = 1,
+  pageSize: number = 10,
+): Promise<{ data: (Service & { url: string })[]; total: number }> {
   if (!isValidUuid(workspaceId)) return { data: [], total: 0 };
 
   const offset = (page - 1) * pageSize;
   const baseUrl = getBaseUrl();
 
   const [data, totalResult] = await Promise.all([
-    db.select()
+    db
+      .select()
       .from(services)
       .where(eq(services.workspaceId, workspaceId))
       .limit(pageSize)
       .offset(offset),
-    db.select({ count: count() })
+    db
+      .select({ count: count() })
       .from(services)
-      .where(eq(services.workspaceId, workspaceId))
+      .where(eq(services.workspaceId, workspaceId)),
   ]);
 
   return {
@@ -124,33 +146,52 @@ export async function getServices(workspaceId: string, page: number = 1, pageSiz
   };
 }
 
-export async function getServicesByWorkflowId(workflowId: string, workspaceId: string): Promise<(Service & { url: string })[]> {
+export async function getServicesByWorkflowId(
+  workflowId: string,
+  workspaceId: string,
+): Promise<(Service & { url: string })[]> {
   if (!isValidUuid(workflowId) || !isValidUuid(workspaceId)) return [];
   const baseUrl = getBaseUrl();
   const data = await db
     .select()
     .from(services)
-    .where(and(eq(services.workflowId, workflowId), eq(services.workspaceId, workspaceId)));
+    .where(
+      and(
+        eq(services.workflowId, workflowId),
+        eq(services.workspaceId, workspaceId),
+      ),
+    );
   return data.map((service) => ({
     ...service,
     url: buildServiceUrl(baseUrl, service.id),
   }));
 }
 
-export async function getServiceByIdOnly(serviceId: string): Promise<Service | null> {
+export async function getServiceByIdOnly(
+  serviceId: string,
+): Promise<Service | null> {
   if (!isValidUuid(serviceId)) return null;
-  const result = await db.select().from(services).where(eq(services.id, serviceId)).limit(1);
+  const result = await db
+    .select()
+    .from(services)
+    .where(eq(services.id, serviceId))
+    .limit(1);
   return result[0] ?? null;
 }
 
-export async function getServiceById(serviceId: string, workspaceId: string): Promise<(Service & { url: string }) | null> {
+export async function getServiceById(
+  serviceId: string,
+  workspaceId: string,
+): Promise<(Service & { url: string }) | null> {
   if (!isValidUuid(serviceId) || !isValidUuid(workspaceId)) return null;
 
   const baseUrl = getBaseUrl();
   const result = await db
     .select()
     .from(services)
-    .where(and(eq(services.id, serviceId), eq(services.workspaceId, workspaceId)))
+    .where(
+      and(eq(services.id, serviceId), eq(services.workspaceId, workspaceId)),
+    )
     .limit(1);
   if (!result[0]) return null;
   return {
@@ -159,13 +200,11 @@ export async function getServiceById(serviceId: string, workspaceId: string): Pr
   };
 }
 
-
-
 export async function updateService(
   serviceId: string,
   workspaceId: string,
   data: Partial<NewService>,
-  updateSource: "user" | "system" = "user"
+  updateSource: "user" | "system" = "user",
 ): Promise<Service> {
   const payload: Partial<NewService> = { ...data };
 
@@ -184,18 +223,25 @@ export async function updateService(
 
   const result = await db
     .update(services)
-    .set({ ...payload, updateSource })
-    .where(and(eq(services.id, serviceId), eq(services.workspaceId, workspaceId)))
+    .set({ ...payload, updateSource, updatedAt: new Date() })
+    .where(
+      and(eq(services.id, serviceId), eq(services.workspaceId, workspaceId)),
+    )
     .returning();
   return result[0];
 }
 
-export async function deleteService(serviceId: string, workspaceId: string): Promise<boolean> {
+export async function deleteService(
+  serviceId: string,
+  workspaceId: string,
+): Promise<boolean> {
   const result = await db
     .delete(services)
-    .where(and(eq(services.id, serviceId), eq(services.workspaceId, workspaceId)))
+    .where(
+      and(eq(services.id, serviceId), eq(services.workspaceId, workspaceId)),
+    )
     .returning({ id: services.id, directory: services.directory });
-    
+
   if (result.length > 0) {
     const dir = result[0].directory;
     if (dir && dir.trim() !== "") {
@@ -203,7 +249,10 @@ export async function deleteService(serviceId: string, workspaceId: string): Pro
       try {
         await rm(fullPath, { recursive: true, force: true });
       } catch (err) {
-        console.error(`[service.service] Failed to delete piece directory at ${fullPath}:`, err);
+        console.error(
+          `[service.service] Failed to delete piece directory at ${fullPath}:`,
+          err,
+        );
       }
     }
     return true;
@@ -211,19 +260,38 @@ export async function deleteService(serviceId: string, workspaceId: string): Pro
   return false;
 }
 
-export async function validateServiceForSpawn(serviceId: string, workspaceId: string): Promise<{ valid: true } | { valid: false; error: string }> {
+export async function validateServiceForSpawn(
+  serviceId: string,
+  workspaceId: string,
+): Promise<{ valid: true } | { valid: false; error: string }> {
   const service = await getServiceById(serviceId, workspaceId);
   if (!service) return { valid: false, error: "Service not found" };
-  if (!service.directory?.trim()) return { valid: false, error: "Service has no directory set" };
+  if (!service.directory?.trim())
+    return { valid: false, error: "Service has no directory set" };
 
-  const { getRequiredSecrets } = await import("./service-required-secrets.service");
+  // Block spawn if the service has exhausted its retries
+  // (MAX_SPAWN_FAIL_RETRIES = 3 in service-worker.ts)
+  if ((service.spawnFailCount ?? 0) >= 3) {
+    return {
+      valid: false,
+      error: `Service has failed to spawn ${service.spawnFailCount} times (max ${3}). Reset the service to try again.`,
+    };
+  }
+
+  const { getRequiredSecrets } =
+    await import("./service-required-secrets.service");
   const { getSecrets } = await import("./secret.service");
   const { getWorkspaceOwnerId } = await import("./workspace.service");
 
   const requiredSecrets = await getRequiredSecrets(serviceId);
   if (requiredSecrets.length > 0) {
     const workspaceOwnerId = (await getWorkspaceOwnerId(workspaceId)) ?? "";
-    const { data: secrets } = await getSecrets(workspaceId, workspaceOwnerId, 1, 500);
+    const { data: secrets } = await getSecrets(
+      workspaceId,
+      workspaceOwnerId,
+      1,
+      500,
+    );
     const secretKeys = new Set(secrets.map((s) => s.key));
 
     const missingSecrets = requiredSecrets
@@ -231,7 +299,10 @@ export async function validateServiceForSpawn(serviceId: string, workspaceId: st
       .map((req) => req.secretKey);
 
     if (missingSecrets.length > 0) {
-      return { valid: false, error: `Missing required secrets: ${missingSecrets.join(", ")}` };
+      return {
+        valid: false,
+        error: `Missing required secrets: ${missingSecrets.join(", ")}`,
+      };
     }
   }
 
@@ -241,7 +312,7 @@ export async function validateServiceForSpawn(serviceId: string, workspaceId: st
 export async function getServiceLogs(
   serviceId: string,
   workspaceId: string,
-  maxLines = 50
+  maxLines = 50,
 ): Promise<{ logs: string[]; totalLines: number }> {
   const service = await getServiceById(serviceId, workspaceId);
   if (!service) {
