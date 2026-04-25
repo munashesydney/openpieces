@@ -37,7 +37,8 @@ services:
         condition: service_healthy
     restart: always
     healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://localhost:${APP_PORT:-3141}/ || exit 1"]
+      test:
+        ["CMD-SHELL", "wget -qO- http://localhost:${APP_PORT:-3141}/ || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 5
@@ -64,6 +65,8 @@ services:
       - OPENPIECES_INTERNAL_URL=${OPENPIECES_INTERNAL_URL:-http://app:${APP_PORT:-3141}}
       - AI_GATEWAY_API_KEY=${AI_GATEWAY_API_KEY}
     depends_on:
+      app:
+        condition: service_healthy
       db:
         condition: service_healthy
     restart: always
