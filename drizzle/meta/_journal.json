@@ -253,6 +253,13 @@
       "when": 1776800000000,
       "tag": "0038_workflow_executions",
       "breakpoints": true
+    },
+    {
+      "idx": 39,
+      "version": "7",
+      "when": 1776900000000,
+      "tag": "0039_add_spawn_fail_count",
+      "breakpoints": true
     }
   ]
 }
