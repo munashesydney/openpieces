@@ -6,6 +6,7 @@ import {
   getAiChatById,
 } from "@/lib/services/chat.service";
 import { enqueueChatExecution } from "@/lib/queues/pg-boss";
+import { createWorkflowExecution } from "@/lib/services/workflow-execution.service";
 import { getServicesByWorkflowId } from "@/lib/services/service.service";
 import { getWorkflowById } from "@/lib/services/workflow.service";
 import { getActionServicesForWorkflow } from "@/lib/services/workflow-action.service";
@@ -137,6 +138,14 @@ export async function POST(request: NextRequest) {
       chatId: effectiveChatId,
       workspaceId,
       userId,
+    });
+
+    await createWorkflowExecution({
+      workspaceId,
+      workflowId,
+      chatId: effectiveChatId,
+      triggerType: "internal_chat",
+      status: "pending",
     });
 
     const chat = await getAiChatById(effectiveChatId, userId);

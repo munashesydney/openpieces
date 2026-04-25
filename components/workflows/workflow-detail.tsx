@@ -11,6 +11,7 @@ import {
   Plus,
   Unlink,
   ClipboardList,
+  Play,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { Card } from "../ui/card";
@@ -66,7 +67,7 @@ export function WorkflowDetail({
       const result = await linkActionServiceToWorkflowAction(
         workspaceId,
         workflow.id,
-        selectedActionServiceId
+        selectedActionServiceId,
       );
       if ("error" in result) {
         setLinkError(result.error);
@@ -80,7 +81,11 @@ export function WorkflowDetail({
 
   const handleUnlinkActionService = (actionServiceId: string) => {
     startTransition(async () => {
-      await unlinkActionServiceFromWorkflowAction(workspaceId, workflow.id, actionServiceId);
+      await unlinkActionServiceFromWorkflowAction(
+        workspaceId,
+        workflow.id,
+        actionServiceId,
+      );
     });
   };
 
@@ -100,24 +105,36 @@ export function WorkflowDetail({
           <div className="flex items-start justify-between gap-4">
             <div className="space-y-1 flex-1">
               <div className="flex items-center gap-3">
-                <h1 className="text-2xl font-semibold text-[var(--foreground)]">{workflow.title}</h1>
+                <h1 className="text-2xl font-semibold text-[var(--foreground)]">
+                  {workflow.title}
+                </h1>
                 <span
                   className={`rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider ${
                     workflow.status === "active"
                       ? "bg-emerald-500/10 text-emerald-500"
                       : workflow.status === "archived"
-                      ? "bg-red-500/10 text-red-500"
-                      : "bg-[var(--border)] text-[var(--muted)]"
+                        ? "bg-red-500/10 text-red-500"
+                        : "bg-[var(--border)] text-[var(--muted)]"
                   }`}
                 >
                   {workflow.status}
                 </span>
               </div>
               {workflow.description && (
-                <p className="text-sm text-[var(--muted)]">{workflow.description}</p>
+                <p className="text-sm text-[var(--muted)]">
+                  {workflow.description}
+                </p>
               )}
             </div>
             <div className="flex items-center gap-2 shrink-0">
+              <Link
+                href={`/workspace/${workspaceId}/personal/workflows/${workflow.id}/executions`}
+              >
+                <Button variant="outline" size="sm" className="gap-1.5">
+                  <Play className="h-3.5 w-3.5" />
+                  Executions
+                </Button>
+              </Link>
               <ActionMenu
                 onSelect={(val) => {
                   if (val === "delete") setIsDeleteModalOpen(true);
@@ -148,7 +165,9 @@ export function WorkflowDetail({
             <div className="flex items-center justify-between px-1">
               <div className="flex items-center gap-2">
                 <ClipboardList className="h-4 w-4 text-emerald-500" />
-                <h2 className="text-sm font-bold uppercase tracking-wider text-[var(--muted)]">Execution Plan</h2>
+                <h2 className="text-sm font-bold uppercase tracking-wider text-[var(--muted)]">
+                  Execution Plan
+                </h2>
               </div>
             </div>
             <Card className="relative overflow-hidden flex flex-col">
@@ -159,11 +178,12 @@ export function WorkflowDetail({
               >
                 {workflow.detailedSteps}
               </div>
-              
-              {!showAllSteps && workflow.detailedSteps.split('\n').length > 6 && (
-                <div className="absolute bottom-10 left-0 right-0 h-16 bg-gradient-to-t from-[var(--card)] to-transparent pointer-events-none" />
-              )}
-              
+
+              {!showAllSteps &&
+                workflow.detailedSteps.split("\n").length > 6 && (
+                  <div className="absolute bottom-10 left-0 right-0 h-16 bg-gradient-to-t from-[var(--card)] to-transparent pointer-events-none" />
+                )}
+
               <div className="flex justify-center border-t border-[var(--border)] bg-[var(--card)]/50 p-1.5">
                 <Button
                   variant="ghost"
@@ -182,7 +202,9 @@ export function WorkflowDetail({
         <div className="space-y-4">
           <div className="flex items-center gap-2 px-1">
             <Zap className="h-4 w-4 text-amber-500" />
-            <h2 className="text-sm font-bold uppercase tracking-wider text-[var(--muted)]">Triggers</h2>
+            <h2 className="text-sm font-bold uppercase tracking-wider text-[var(--muted)]">
+              Triggers
+            </h2>
           </div>
 
           {triggerServices.length === 0 && tasks.length === 0 ? (
@@ -199,7 +221,11 @@ export function WorkflowDetail({
                 ) : (
                   <div className="flex flex-col gap-4">
                     {triggerServices.map((s) => (
-                      <ServiceRow key={s.id} service={s} workspaceId={workspaceId} />
+                      <ServiceRow
+                        key={s.id}
+                        service={s}
+                        workspaceId={workspaceId}
+                      />
                     ))}
                   </div>
                 )}
@@ -229,7 +255,9 @@ export function WorkflowDetail({
           <div className="flex items-center justify-between px-1">
             <div className="flex items-center gap-2">
               <Terminal className="h-4 w-4 text-[var(--accent)]" />
-              <h2 className="text-sm font-bold uppercase tracking-wider text-[var(--muted)]">Actions</h2>
+              <h2 className="text-sm font-bold uppercase tracking-wider text-[var(--muted)]">
+                Actions
+              </h2>
             </div>
             <Button
               variant="outline"
@@ -262,7 +290,12 @@ export function WorkflowDetail({
                 options={[
                   { label: "Select an action service...", value: "" },
                   ...availableActionServices
-                    .filter((s) => !linkedActionServices.some((linked) => linked.id === s.id))
+                    .filter(
+                      (s) =>
+                        !linkedActionServices.some(
+                          (linked) => linked.id === s.id,
+                        ),
+                    )
                     .map((s) => ({ label: s.title, value: s.id })),
                 ]}
               />
@@ -307,7 +340,6 @@ export function WorkflowDetail({
             </div>
           )}
         </div>
-
       </div>
     </div>
   );
@@ -389,8 +421,8 @@ function TaskRow({ task }: { task: Task }) {
               task.status === "active"
                 ? "text-emerald-500"
                 : task.status === "paused"
-                ? "text-amber-500"
-                : "text-[var(--muted)]"
+                  ? "text-amber-500"
+                  : "text-[var(--muted)]"
             }`}
           >
             {task.status}
@@ -413,12 +445,18 @@ function LinkedActionRow({
   const [isPending, startTransition] = useTransition();
 
   return (
-    <Card hoverable className={`p-4 ${isPending ? "opacity-50 pointer-events-none" : ""}`}>
+    <Card
+      hoverable
+      className={`p-4 ${isPending ? "opacity-50 pointer-events-none" : ""}`}
+    >
       <div className="flex items-center gap-4">
         <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[var(--accent-glow)]/10 text-[var(--accent)]">
           <Terminal className="h-4 w-4" />
         </div>
-        <Link href={`/workspace/${workspaceId}/personal/services/${service.id}`} className="flex-1 min-w-0">
+        <Link
+          href={`/workspace/${workspaceId}/personal/services/${service.id}`}
+          className="flex-1 min-w-0"
+        >
           <p className="text-sm font-medium text-[var(--foreground)] truncate">
             {service.title}
           </p>

@@ -8,12 +8,7 @@ import {
 } from "@/lib/services/secret.service";
 import { ValidationError } from "@/lib/errors/validation-error";
 
-type SecretsAction =
-  | "list"
-  | "get"
-  | "create"
-  | "update"
-  | "delete";
+type SecretsAction = "list" | "get" | "create" | "update" | "delete";
 
 type SecretsRequestBody = {
   action: SecretsAction;
@@ -36,20 +31,14 @@ function isAuthorized(request: NextRequest): boolean {
 
 export async function POST(request: NextRequest) {
   if (!isAuthorized(request)) {
-    return NextResponse.json(
-      { error: "Unauthorized" },
-      { status: 401 }
-    );
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   let body: SecretsRequestBody;
   try {
     body = (await request.json()) as SecretsRequestBody;
   } catch {
-    return NextResponse.json(
-      { error: "Invalid JSON body" },
-      { status: 400 }
-    );
+    return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
   }
 
   const { action, workspaceId, userId } = body;
@@ -57,7 +46,7 @@ export async function POST(request: NextRequest) {
   if (!action || !workspaceId || !userId) {
     return NextResponse.json(
       { error: "action, workspaceId, and userId are required" },
-      { status: 400 }
+      { status: 400 },
     );
   }
 
@@ -75,14 +64,14 @@ export async function POST(request: NextRequest) {
         if (!body.secretId) {
           return NextResponse.json(
             { error: "secretId is required for action 'get'" },
-            { status: 400 }
+            { status: 400 },
           );
         }
         const secret = await getSecretById(body.secretId, workspaceId, userId);
         if (!secret) {
           return NextResponse.json(
             { error: "Secret not found" },
-            { status: 404 }
+            { status: 404 },
           );
         }
         return NextResponse.json(secret);
@@ -92,7 +81,7 @@ export async function POST(request: NextRequest) {
         if (!body.key) {
           return NextResponse.json(
             { error: "key is required for action 'create'" },
-            { status: 400 }
+            { status: 400 },
           );
         }
         const created = await createSecret({
@@ -109,21 +98,25 @@ export async function POST(request: NextRequest) {
         if (!body.secretId) {
           return NextResponse.json(
             { error: "secretId is required for action 'update'" },
-            { status: 400 }
+            { status: 400 },
           );
         }
         if (!body.key && (body.value == null || body.value === "")) {
           return NextResponse.json(
             { error: "key or value is required for action 'update'" },
-            { status: 400 }
+            { status: 400 },
           );
         }
 
-        const existing = await getSecretById(body.secretId, workspaceId, userId);
+        const existing = await getSecretById(
+          body.secretId,
+          workspaceId,
+          userId,
+        );
         if (!existing) {
           return NextResponse.json(
             { error: "Secret not found" },
-            { status: 404 }
+            { status: 404 },
           );
         }
 
@@ -141,14 +134,14 @@ export async function POST(request: NextRequest) {
         if (!body.secretId) {
           return NextResponse.json(
             { error: "secretId is required for action 'delete'" },
-            { status: 400 }
+            { status: 400 },
           );
         }
         const ok = await deleteSecret(body.secretId, workspaceId, userId);
         if (!ok) {
           return NextResponse.json(
             { error: "Secret not found or delete failed" },
-            { status: 404 }
+            { status: 404 },
           );
         }
         return NextResponse.json({ success: true, deleted: body.secretId });
@@ -160,22 +153,18 @@ export async function POST(request: NextRequest) {
             error:
               "Unknown action. Valid actions are: list, get, create, update, delete.",
           },
-          { status: 400 }
+          { status: 400 },
         );
       }
     }
   } catch (err: any) {
     if (err instanceof ValidationError) {
-      return NextResponse.json(
-        { error: err.message },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: err.message }, { status: 400 });
     }
     console.error("POST /api/internal/secrets error:", err);
     return NextResponse.json(
       { error: "Internal server error" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
-

@@ -4,6 +4,7 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import type { AiToolCall, AiToolResult } from "@/lib/ai-chat/types";
 import { ChatToolCalls } from "./chat-tool-calls";
+import { QuestionInputCard } from "./question-input-card";
 
 type ChatMessageCardProps = {
   content: string;
@@ -40,20 +41,58 @@ export function ChatMessageCard({
 
   const hasBody = content.trim().length > 0;
 
+  // Separate question tool calls so they render after content instead of with other tool calls
+  const questionToolCalls = toolCalls.filter(
+    (tc) => (tc.input as { action?: string })?.action === "ask_question",
+  );
+
   return (
-    <div className="w-full max-w-[min(100%,680px)] min-w-0" data-role="assistant">
+    <div
+      className="w-full max-w-[min(100%,680px)] min-w-0"
+      data-role="assistant"
+    >
       <ChatToolCalls
         toolCalls={toolCalls}
         toolResults={toolResults}
         standalone={!hasBody}
         onQuestionSubmit={onQuestionSubmit}
         isFollowedByUserMessage={isFollowedByUserMessage}
+        skipQuestions={hasBody}
       />
       {hasBody ? (
-        <div className={`${assistantMarkdownClass}${toolCalls.length > 0 ? ' mt-3' : ''}`}>
+        <div
+          className={`${assistantMarkdownClass}${toolCalls.length > 0 ? " mt-3" : ""}`}
+        >
           <ReactMarkdown remarkPlugins={[remarkGfm]}>{content}</ReactMarkdown>
         </div>
       ) : null}
+      {/* Render question cards after content (bottom of message) when there is body text */}
+      {hasBody &&
+        !isFollowedByUserMessage &&
+        questionToolCalls.map((tc) => {
+          const result = toolResults.find(
+            (r) => r.toolCallId === tc.toolCallId,
+          );
+          const questions =
+            (
+              tc.input as {
+                questions?: Array<{
+                  question: string;
+                  suggestedAnswers?: string[];
+                }>;
+              }
+            ).questions ?? [];
+          return (
+            <div key={tc.toolCallId} className="w-full mt-3">
+              <QuestionInputCard
+                toolCallId={tc.toolCallId}
+                questions={questions}
+                isPending={!result}
+                onSubmit={onQuestionSubmit ?? (() => {})}
+              />
+            </div>
+          );
+        })}
     </div>
   );
 }

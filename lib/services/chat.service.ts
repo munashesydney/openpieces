@@ -31,6 +31,7 @@ import {
 import { createTools } from "@/lib/tools/registry";
 import { isValidUuid } from "@/lib/utils/uuid";
 import { getWorkspaceSettings } from "@/lib/services/workspace-settings.service";
+import { updateWorkflowExecutionByChatId } from "@/lib/services/workflow-execution.service";
 import { getChatAbortController } from "@/lib/workers/chat-controller";
 
 const DEFAULT_CHAT_TITLE = "New chat";
@@ -592,6 +593,7 @@ export async function executeAiChatJob(
             toolResults,
           });
           await updateAiChatStatus(chat.id, "stopped");
+          void updateWorkflowExecutionByChatId(chat.id, "cancelled", content || null);
         },
         stopWhen: stepCountIs(500),
         onError: ({ error }) => {
@@ -743,6 +745,7 @@ export async function executeAiChatJob(
       });
 
       await updateAiChatStatus(chat.id, "completed");
+      void updateWorkflowExecutionByChatId(chat.id, "completed", content || null);
       break; // Exit retry loop on success
     } catch (error) {
       if (signal?.aborted) {
@@ -786,6 +789,8 @@ export async function executeAiChatJob(
       await updateAiChatStatus(chat.id, "failed", {
         error: errorMessage,
       });
+
+      void updateWorkflowExecutionByChatId(chat.id, "failed", errorMessage);
 
       throw error;
     }

@@ -345,3 +345,25 @@ export const workspaceSettings = pgTable(
 
 export type WorkspaceSettings = typeof workspaceSettings.$inferSelect;
 export type NewWorkspaceSettings = typeof workspaceSettings.$inferInsert;
+
+export const workflowExecutions = pgTable("workflow_executions", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  workspaceId: uuid("workspace_id")
+    .notNull()
+    .references(() => workspaces.id, { onDelete: "cascade" }),
+  workflowId: uuid("workflow_id")
+    .notNull()
+    .references(() => workflows.id, { onDelete: "cascade" }),
+  chatId: uuid("chat_id").references(() => aiChats.id, { onDelete: "set null" }),
+  taskId: uuid("task_id").references(() => tasks.id, { onDelete: "set null" }),
+  triggerType: text("trigger_type", { enum: ["internal_chat", "task"] }).notNull(),
+  status: text("status", { enum: ["pending", "running", "completed", "failed", "cancelled"] })
+    .notNull()
+    .default("pending"),
+  result: text("result"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export type WorkflowExecution = typeof workflowExecutions.$inferSelect;
+export type NewWorkflowExecution = typeof workflowExecutions.$inferInsert;

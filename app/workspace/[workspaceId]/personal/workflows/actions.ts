@@ -11,11 +11,15 @@ import {
   linkActionServiceToWorkflow,
   unlinkActionServiceFromWorkflow,
 } from "../../../../../lib/services/workflow-action.service";
+import { getWorkflowExecutions } from "../../../../../lib/services/workflow-execution.service";
 import { ValidationError } from "../../../../../lib/errors/validation-error";
 
 export type ActionResult = { error: string } | { success: true };
 
-export async function createWorkflowAction(workspaceId: string, formData: FormData) {
+export async function createWorkflowAction(
+  workspaceId: string,
+  formData: FormData,
+) {
   await requireWorkspaceOwner(workspaceId);
 
   const title = formData.get("title") as string;
@@ -29,7 +33,7 @@ export async function createWorkflowAction(workspaceId: string, formData: FormDa
 export async function updateWorkflowAction(
   workspaceId: string,
   workflowId: string,
-  formData: FormData
+  formData: FormData,
 ) {
   await requireWorkspaceOwner(workspaceId);
 
@@ -42,7 +46,10 @@ export async function updateWorkflowAction(
   revalidatePath(`/workspace/${workspaceId}/personal/workflows/${workflowId}`);
 }
 
-export async function deleteWorkflowAction(workspaceId: string, workflowId: string) {
+export async function deleteWorkflowAction(
+  workspaceId: string,
+  workflowId: string,
+) {
   await requireWorkspaceOwner(workspaceId);
 
   await deleteWorkflow(workflowId, workspaceId);
@@ -52,7 +59,7 @@ export async function deleteWorkflowAction(workspaceId: string, workflowId: stri
 export async function linkActionServiceToWorkflowAction(
   workspaceId: string,
   workflowId: string,
-  actionServiceId: string
+  actionServiceId: string,
 ): Promise<ActionResult> {
   await requireWorkspaceOwner(workspaceId);
 
@@ -68,10 +75,18 @@ export async function linkActionServiceToWorkflowAction(
   return { success: true };
 }
 
+export async function getWorkflowExecutionsAction(
+  workspaceId: string,
+  workflowId: string,
+) {
+  await requireWorkspaceOwner(workspaceId);
+  return getWorkflowExecutions(workflowId, workspaceId);
+}
+
 export async function unlinkActionServiceFromWorkflowAction(
   workspaceId: string,
   workflowId: string,
-  actionServiceId: string
+  actionServiceId: string,
 ): Promise<ActionResult> {
   await requireWorkspaceOwner(workspaceId);
 

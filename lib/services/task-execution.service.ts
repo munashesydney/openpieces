@@ -8,6 +8,7 @@ import { getServicesByWorkflowId } from "@/lib/services/service.service";
 import { getWorkflowById } from "@/lib/services/workflow.service";
 import { getActionServicesForWorkflow } from "@/lib/services/workflow-action.service";
 import { getEndpointsByServiceId } from "@/lib/services/service-endpoint.service";
+import { createWorkflowExecution } from "@/lib/services/workflow-execution.service";
 
 /**
  * Get all tasks that are due for execution.
@@ -129,6 +130,18 @@ export async function enqueueTaskForExecution(task: Task): Promise<void> {
     workspaceId: task.workspaceId,
     userId,
   }, "events");
+
+  // Create a workflow execution record to track this run
+  if (task.workflowId) {
+    await createWorkflowExecution({
+      workspaceId: task.workspaceId,
+      workflowId: task.workflowId,
+      chatId: chat.id,
+      taskId: task.id,
+      triggerType: "task",
+      status: "pending",
+    });
+  }
 
   // Create a detailed message describing the task
   const taskDescription = task.description || "No description provided.";
