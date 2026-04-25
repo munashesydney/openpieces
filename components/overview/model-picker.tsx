@@ -21,7 +21,22 @@ const PROVIDERS: Provider[] = [
     id: "deepseek",
     label: "DeepSeek",
     models: [
+      {
+        id: "deepseek/deepseek-v4-pro",
+        label: "DeepSeek V4 Pro",
+        badge: "NEW",
+      },
+      {
+        id: "deepseek/deepseek-v4-flash",
+        label: "DeepSeek V4 Flash",
+        badge: "NEW",
+      },
       { id: "deepseek/deepseek-v3.2", label: "DeepSeek V3.2" },
+      {
+        id: "deepseek/deepseek-v3.2-thinking",
+        label: "DeepSeek V3.2 Thinking",
+        badge: "NEW",
+      },
     ],
   },
   {
@@ -29,7 +44,11 @@ const PROVIDERS: Provider[] = [
     label: "OpenAI",
     models: [
       { id: "openai/gpt-4o", label: "GPT-4o" },
-      { id: "openai/gpt-5.4-thinking", label: "GPT-5.4 Thinking", badge: "NEW" },
+      {
+        id: "openai/gpt-5.4-thinking",
+        label: "GPT-5.4 Thinking",
+        badge: "NEW",
+      },
       { id: "openai/gpt-5.4-pro", label: "GPT-5.4 Pro", badge: "NEW" },
       { id: "openai/gpt-5.4-mini", label: "GPT-5.4 Mini", badge: "NEW" },
     ],
@@ -39,8 +58,16 @@ const PROVIDERS: Provider[] = [
     label: "Anthropic",
     models: [
       { id: "anthropic/claude-3-5-sonnet", label: "Claude 3.5 Sonnet" },
-      { id: "anthropic/claude-sonnet-4.6", label: "Claude Sonnet 4.6", badge: "NEW" },
-      { id: "anthropic/claude-opus-4.7", label: "Claude Opus 4.7", badge: "NEW" },
+      {
+        id: "anthropic/claude-sonnet-4.6",
+        label: "Claude Sonnet 4.6",
+        badge: "NEW",
+      },
+      {
+        id: "anthropic/claude-opus-4.7",
+        label: "Claude Opus 4.7",
+        badge: "NEW",
+      },
     ],
   },
   {
@@ -48,8 +75,16 @@ const PROVIDERS: Provider[] = [
     label: "Google",
     models: [
       { id: "google/gemini-1-5-pro", label: "Gemini 1.5 Pro" },
-      { id: "google/gemini-3.1-pro-preview", label: "Gemini 3.1 Pro", badge: "NEW" },
-      { id: "google/gemini-3.1-flash-lite", label: "Gemini 3.1 Flash-Lite", badge: "NEW" },
+      {
+        id: "google/gemini-3.1-pro-preview",
+        label: "Gemini 3.1 Pro",
+        badge: "NEW",
+      },
+      {
+        id: "google/gemini-3.1-flash-lite",
+        label: "Gemini 3.1 Flash-Lite",
+        badge: "NEW",
+      },
     ],
   },
   {
@@ -84,13 +119,20 @@ export function ModelPicker({ initialModel, onModelChange }: ModelPickerProps) {
   const isWide = useMediaQuery("(min-width: 640px)");
   const [open, setOpen] = useState(false);
   const [activeModelId, setActiveModelId] = useState<string>(
-    initialModel && PROVIDERS.some(p => p.models.some(m => m.id === initialModel))
+    initialModel &&
+      PROVIDERS.some((p) => p.models.some((m) => m.id === initialModel))
       ? initialModel
-      : PROVIDERS[0]!.models[0]!.id
+      : PROVIDERS[0]!.models[0]!.id,
   );
-  const [hoveredProviderId, setHoveredProviderId] = useState<string | null>(null);
-  const [mobileProviderFocus, setMobileProviderFocus] = useState<string | null>(null);
-  const [dropdownPosition, setDropdownPosition] = useState<"top" | "bottom">("top");
+  const [hoveredProviderId, setHoveredProviderId] = useState<string | null>(
+    null,
+  );
+  const [mobileProviderFocus, setMobileProviderFocus] = useState<string | null>(
+    null,
+  );
+  const [dropdownPosition, setDropdownPosition] = useState<"top" | "bottom">(
+    "top",
+  );
   const rootRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -108,7 +150,10 @@ export function ModelPicker({ initialModel, onModelChange }: ModelPickerProps) {
 
   // Sync with initialModel changes
   useEffect(() => {
-    if (initialModel && PROVIDERS.some(p => p.models.some(m => m.id === initialModel))) {
+    if (
+      initialModel &&
+      PROVIDERS.some((p) => p.models.some((m) => m.id === initialModel))
+    ) {
       setActiveModelId(initialModel);
     }
   }, [initialModel]);
@@ -177,8 +222,9 @@ export function ModelPicker({ initialModel, onModelChange }: ModelPickerProps) {
           </span>
         )}
         <ChevronRight
-          className={`ml-0.5 h-3.5 w-3.5 shrink-0 text-[var(--muted)] transition-transform ${open ? "rotate-90" : ""
-            }`}
+          className={`ml-0.5 h-3.5 w-3.5 shrink-0 text-[var(--muted)] transition-transform ${
+            open ? "rotate-90" : ""
+          }`}
         />
       </button>
 
@@ -216,30 +262,38 @@ export function ModelPicker({ initialModel, onModelChange }: ModelPickerProps) {
               <p className="px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-[var(--muted)]">
                 Models
               </p>
-              {PROVIDERS.find((p) => p.id === mobileProviderFocus)?.models.map((m) => (
-                <button
-                  key={m.id}
-                  type="button"
-                  onClick={() => handleModelSelect(m.id)}
-                  className={`flex w-full items-center justify-between rounded-xl px-3 py-2 text-left text-sm transition-all ${activeModelId === m.id
-                      ? "bg-[var(--accent)] text-white"
-                      : "text-[var(--muted)] hover:bg-[var(--hover-bg)] hover:text-[var(--foreground)]"
+              {PROVIDERS.find((p) => p.id === mobileProviderFocus)?.models.map(
+                (m) => (
+                  <button
+                    key={m.id}
+                    type="button"
+                    onClick={() => handleModelSelect(m.id)}
+                    className={`flex w-full items-center justify-between rounded-xl px-3 py-2 text-left text-sm transition-all ${
+                      activeModelId === m.id
+                        ? "bg-[var(--accent)] text-white"
+                        : "text-[var(--muted)] hover:bg-[var(--hover-bg)] hover:text-[var(--foreground)]"
                     }`}
-                >
-                  <div className="flex min-w-0 items-center gap-2">
-                    <span className="truncate">{m.label}</span>
-                    {m.badge && (
-                      <span
-                        className={`shrink-0 rounded-full px-1.5 py-0.5 text-[9px] font-bold ${activeModelId === m.id ? "bg-white/20 text-white" : "bg-[var(--hover-bg)] text-[var(--muted)]"
+                  >
+                    <div className="flex min-w-0 items-center gap-2">
+                      <span className="truncate">{m.label}</span>
+                      {m.badge && (
+                        <span
+                          className={`shrink-0 rounded-full px-1.5 py-0.5 text-[9px] font-bold ${
+                            activeModelId === m.id
+                              ? "bg-white/20 text-white"
+                              : "bg-[var(--hover-bg)] text-[var(--muted)]"
                           }`}
-                      >
-                        {m.badge}
-                      </span>
+                        >
+                          {m.badge}
+                        </span>
+                      )}
+                    </div>
+                    {activeModelId === m.id && (
+                      <Check className="h-3.5 w-3.5 shrink-0" />
                     )}
-                  </div>
-                  {activeModelId === m.id && <Check className="h-3.5 w-3.5 shrink-0" />}
-                </button>
-              ))}
+                  </button>
+                ),
+              )}
             </>
           )}
         </div>
@@ -259,10 +313,11 @@ export function ModelPicker({ initialModel, onModelChange }: ModelPickerProps) {
                 key={p.id}
                 type="button"
                 onMouseEnter={() => setHoveredProviderId(p.id)}
-                className={`flex w-full items-center justify-between rounded-xl px-3 py-2 text-left text-sm transition-all ${hoveredProviderId === p.id
+                className={`flex w-full items-center justify-between rounded-xl px-3 py-2 text-left text-sm transition-all ${
+                  hoveredProviderId === p.id
                     ? "bg-[var(--hover-bg)] text-[var(--foreground)]"
                     : "text-[var(--muted)] hover:text-[var(--foreground)]"
-                  }`}
+                }`}
               >
                 {p.label}
                 <ChevronRight className="h-3 w-3 opacity-50" />
@@ -277,30 +332,38 @@ export function ModelPicker({ initialModel, onModelChange }: ModelPickerProps) {
               <p className="px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-[var(--muted)]">
                 Models
               </p>
-              {PROVIDERS.find((p) => p.id === hoveredProviderId)?.models.map((m) => (
-                <button
-                  key={m.id}
-                  type="button"
-                  onClick={() => handleModelSelect(m.id)}
-                  className={`flex w-full items-center justify-between rounded-xl px-3 py-2 text-left text-sm transition-all ${activeModelId === m.id
-                      ? "bg-[var(--accent)] text-white"
-                      : "text-[var(--muted)] hover:bg-[var(--hover-bg)] hover:text-[var(--foreground)]"
+              {PROVIDERS.find((p) => p.id === hoveredProviderId)?.models.map(
+                (m) => (
+                  <button
+                    key={m.id}
+                    type="button"
+                    onClick={() => handleModelSelect(m.id)}
+                    className={`flex w-full items-center justify-between rounded-xl px-3 py-2 text-left text-sm transition-all ${
+                      activeModelId === m.id
+                        ? "bg-[var(--accent)] text-white"
+                        : "text-[var(--muted)] hover:bg-[var(--hover-bg)] hover:text-[var(--foreground)]"
                     }`}
-                >
-                  <div className="flex min-w-0 items-center gap-2 overflow-hidden">
-                    <span className="truncate">{m.label}</span>
-                    {m.badge && (
-                      <span
-                        className={`rounded-full px-1.5 py-0.5 text-[9px] font-bold ${activeModelId === m.id ? "bg-white/20 text-white" : "bg-[var(--hover-bg)] text-[var(--muted)]"
+                  >
+                    <div className="flex min-w-0 items-center gap-2 overflow-hidden">
+                      <span className="truncate">{m.label}</span>
+                      {m.badge && (
+                        <span
+                          className={`rounded-full px-1.5 py-0.5 text-[9px] font-bold ${
+                            activeModelId === m.id
+                              ? "bg-white/20 text-white"
+                              : "bg-[var(--hover-bg)] text-[var(--muted)]"
                           }`}
-                      >
-                        {m.badge}
-                      </span>
+                        >
+                          {m.badge}
+                        </span>
+                      )}
+                    </div>
+                    {activeModelId === m.id && (
+                      <Check className="h-3.5 w-3.5 shrink-0" />
                     )}
-                  </div>
-                  {activeModelId === m.id && <Check className="h-3.5 w-3.5 shrink-0" />}
-                </button>
-              ))}
+                  </button>
+                ),
+              )}
             </div>
           )}
         </div>
