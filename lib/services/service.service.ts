@@ -223,7 +223,7 @@ export async function updateService(
 
   const result = await db
     .update(services)
-    .set({ ...payload, updateSource })
+    .set({ ...payload, updateSource, updatedAt: new Date() })
     .where(
       and(eq(services.id, serviceId), eq(services.workspaceId, workspaceId)),
     )

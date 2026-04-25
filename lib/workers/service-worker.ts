@@ -39,6 +39,9 @@ const _reservedPorts = new Set<number>();
 // Maps serviceId -> port so the catch block in startServiceWorker can also
 // clean up the in-memory reservation on unexpected failures.
 const _reservedServicePorts = new Map<string, number>();
+// Tracks services currently being spawned (in-memory) to prevent the same
+// service from being spawned concurrently by multiple queue consumers.
+const _spawningServices = new Set<string>();
 
 async function isPortBoundByOS(port: number): Promise<boolean> {
   return new Promise((resolve) => {
@@ -113,16 +116,24 @@ async function executeServiceSpawnJob(job: ServiceSpawnJob) {
     throw new Error(`Service ${serviceId} has no directory set`);
   }
 
-  // Check if service is already deploying - block if it is
-  if (service.status === "deploying") {
-    // Check if deployment has been stuck for too long
-    const deploymentStartTime = service.updatedAt;
-    const deploymentDurationMs = Date.now() - deploymentStartTime.getTime();
+  // Prevent concurrent spawns of the same service via in-memory lock.
+  // (The DB "deploying" status alone is not reliable because enqueueServiceSpawn
+  // sets it before the job is picked up, and with localConcurrency > 1 multiple
+  // jobs for the same service can run in parallel.)
+  if (_spawningServices.has(serviceId)) {
+    throw new Error(
+      `Service ${serviceId} is already being spawned by another worker`,
+    );
+  }
+  _spawningServices.add(serviceId);
 
+  // If the service was stuck in "deploying" status (e.g. orphaned after a
+  // worker crash), reset it so the spawn can proceed.
+  if (service.status === "deploying") {
+    const deploymentDurationMs = Date.now() - service.updatedAt.getTime();
     if (deploymentDurationMs > MAX_DEPLOYMENT_TIME_MS) {
-      // Deployment has been stuck too long, reset to stopped
       console.log(
-        `[service-worker] Service ${serviceId} has been deploying for ${deploymentDurationMs}ms (>${MAX_DEPLOYMENT_TIME_MS / 1000}s), resetting to stopped`,
+        `[service-worker] Service ${serviceId} was stuck deploying for ${Math.round(deploymentDurationMs / 1000)}s, resetting to stopped`,
       );
       await updateService(
         serviceId,
@@ -134,11 +145,6 @@ async function executeServiceSpawnJob(job: ServiceSpawnJob) {
         service.directory.trim(),
         "info",
         `Deployment timeout after ${Math.round(deploymentDurationMs / 1000)}s, reset to stopped`,
-      );
-    } else {
-      // Service is still deploying within timeout, block this attempt
-      throw new Error(
-        `Service ${serviceId} is already deploying (started ${Math.round(deploymentDurationMs / 1000)}s ago)`,
       );
     }
   }
@@ -357,6 +363,7 @@ async function executeServiceSpawnJob(job: ServiceSpawnJob) {
     // Release port from in-memory reservation
     _reservedPorts.delete(port);
     _reservedServicePorts.delete(serviceId);
+    _spawningServices.delete(serviceId);
 
     await updateService(
       serviceId,
@@ -414,6 +421,7 @@ async function executeServiceSpawnJob(job: ServiceSpawnJob) {
     // Release port from in-memory reservation
     _reservedPorts.delete(port);
     _reservedServicePorts.delete(serviceId);
+    _spawningServices.delete(serviceId);
     throw new Error(`Service did not become healthy on port ${port}`);
   }
 }
@@ -695,20 +703,12 @@ export async function startServiceWorker() {
             _reservedPorts.delete(reservedPort);
             _reservedServicePorts.delete(serviceId);
           }
+          _spawningServices.delete(serviceId);
 
-          const currentService = await getServiceById(serviceId, workspaceId);
-          const failCount = (currentService?.spawnFailCount ?? 0) + 1;
-
-          await updateService(
-            serviceId,
-            workspaceId,
-            {
-              port: null,
-              pid: null,
-              status: "crashed",
-              spawnFailCount: failCount,
-            },
-            "system",
+          // Atomically increment spawnFailCount so concurrent failures
+          // don't race on read-then-write and all see the same value.
+          await db.execute(
+            sql`UPDATE ${services} SET spawn_fail_count = spawn_fail_count + 1, port = NULL, pid = NULL, status = 'crashed' WHERE id = ${serviceId}`,
           );
         } catch (updateError) {
           console.error(
