@@ -16,6 +16,8 @@ services:
       context: .
       dockerfile: Dockerfile
       target: runner
+      args:
+        APP_PORT: ${APP_PORT:-3141}
     ports:
       - "${APP_PORT:-3141}:${APP_PORT:-3141}"
     volumes:
@@ -54,6 +56,8 @@ services:
       context: .
       dockerfile: Dockerfile
       target: worker
+      args:
+        APP_PORT: ${APP_PORT:-3141}
     env_file:
       - .env
     volumes:

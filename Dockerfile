@@ -9,12 +9,13 @@ ENTRYPOINT ["entrypoint.sh"]
 WORKDIR /app
 
 # Defaults for build-time env vars (overridden at runtime by compose env)
+ARG APP_PORT=3141
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV DATABASE_URL=postgresql://localhost/openpieces
-ENV PORT=3141
+ENV PORT=${APP_PORT}
 ENV AI_GATEWAY_API_KEY=""
-EXPOSE 3141
+EXPOSE ${APP_PORT}
 
 # =============================================================================
 # Stage 2: Deps - install all dependencies (cached layer)
