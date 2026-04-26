@@ -459,7 +459,7 @@ export async function appendUserMessageAndMarkPending(input: {
 }
 
 async function getModelMessages(chatId: string): Promise<ModelMessage[]> {
-  const messages = await db
+  const rows = await db
     .select({
       role: aiMessages.role,
       content: aiMessages.content,
@@ -472,12 +472,60 @@ async function getModelMessages(chatId: string): Promise<ModelMessage[]> {
     )
     .orderBy(asc(aiMessages.createdAt), asc(aiMessages.id));
 
-  return messages.map((message) => ({
-    role: message.role,
-    content: message.content,
-    toolCalls: message.toolCalls,
-    toolResults: message.toolResults,
-  })) as any[];
+  const result: ModelMessage[] = [];
+
+  for (const message of rows) {
+    const toolCalls = Array.isArray(message.toolCalls)
+      ? (message.toolCalls as AiToolCall[])
+      : [];
+    const toolResults = Array.isArray(message.toolResults)
+      ? (message.toolResults as AiToolResult[])
+      : [];
+
+    if (message.role === "assistant") {
+      const content: any[] = [];
+      if (message.content?.trim()) {
+        content.push({ type: "text", text: message.content });
+      }
+      for (const tc of toolCalls) {
+        content.push({
+          type: "tool-call",
+          toolCallId: tc.toolCallId,
+          toolName: tc.toolName,
+          input: tc.input ?? {},
+        });
+      }
+      if (content.length > 0) {
+        result.push({ role: "assistant", content } as ModelMessage);
+      }
+
+      // Tool results go in a separate "tool" message right after
+      if (toolResults.length > 0) {
+        const toolContent = toolResults.map((tr) => ({
+          type: "tool-result" as const,
+          toolCallId: tr.toolCallId,
+          toolName: tr.toolName,
+          ...(tr.error
+            ? { output: { type: "error-text" as const, value: tr.error } }
+            : {
+                output: {
+                  type: "json" as const,
+                  value: (tr.output ?? null) as any,
+                },
+              }),
+        }));
+        result.push({ role: "tool", content: toolContent } as ModelMessage);
+      }
+    } else {
+      // User messages keep string content as-is
+      result.push({
+        role: message.role as "user",
+        content: message.content ?? "",
+      } as ModelMessage);
+    }
+  }
+
+  return result;
 }
 
 /** Public wrapper for context estimation in API routes */

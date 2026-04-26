@@ -14,7 +14,8 @@ export function extractTextContent(content: unknown): string {
     return content
       .map((part) => {
         if (typeof part === "string") return part;
-        if (part && typeof part === "object" && "text" in part) return String((part as { text: unknown }).text);
+        if (part && typeof part === "object" && "text" in part)
+          return String((part as { text: unknown }).text);
         return "";
       })
       .join("");
@@ -33,16 +34,18 @@ function estimateContentTokens(content: string): number {
   if (!content) return 0;
 
   // Heuristic: if the content looks like JSON or code, use a tighter ratio
-  const structuredIndicators = ['{', '[', '":', '\\n  '];
-  const isStructured = structuredIndicators.some((ind) => content.includes(ind));
+  const structuredIndicators = ["{", "[", '":', "\\n  "];
+  const isStructured = structuredIndicators.some((ind) =>
+    content.includes(ind),
+  );
 
   const ratio = isStructured ? 1.5 : 3;
   return Math.ceil(content.length / ratio);
 }
 
 export function estimateMessagesTokens(
-  messages: { content: unknown; toolCalls?: { input: unknown }[]; toolResults?: { output: unknown }[] }[],
-  systemPrompt: string
+  messages: { content: unknown }[],
+  systemPrompt: string,
 ): number {
   let textContentTokens = 0;
   let toolInputTokensSum = 0;
@@ -50,28 +53,49 @@ export function estimateMessagesTokens(
   let toolTotalCount = 0;
 
   const messagesTokens = messages.reduce((sum, m) => {
-    let messageTotal = estimateContentTokens(extractTextContent(m.content));
-    textContentTokens += messageTotal;
+    let messageTotal = 0;
 
-    // Add tokens for tool inputs
-    if (m.toolCalls && Array.isArray(m.toolCalls)) {
-      messageTotal += m.toolCalls.reduce((tcSum, tc) => {
-        toolTotalCount++;
-        const inputStr = typeof tc.input === 'string' ? tc.input : JSON.stringify(tc.input);
-        const tCost = estimateContentTokens(inputStr);
-        toolInputTokensSum += tCost;
-        return tcSum + tCost;
-      }, 0);
-    }
-
-    // Add tokens for tool outputs
-    if (m.toolResults && Array.isArray(m.toolResults)) {
-      messageTotal += m.toolResults.reduce((trSum, tr) => {
-        const outputStr = typeof tr.output === 'string' ? tr.output : JSON.stringify(tr.output);
-        const tCost = estimateContentTokens(outputStr);
-        toolOutputTokensSum += tCost;
-        return trSum + tCost;
-      }, 0);
+    const content = m.content;
+    if (Array.isArray(content)) {
+      // Content-block format: tool calls/results embedded in content array
+      for (const block of content) {
+        if (typeof block === "object" && block !== null) {
+          if (block.type === "text") {
+            const t = estimateContentTokens(block.text ?? "");
+            textContentTokens += t;
+            messageTotal += t;
+          } else if (block.type === "tool-call") {
+            toolTotalCount++;
+            const inputStr =
+              typeof block.input === "string"
+                ? block.input
+                : JSON.stringify(block.input ?? {});
+            const tCost = estimateContentTokens(inputStr);
+            toolInputTokensSum += tCost;
+            messageTotal += tCost;
+          } else if (block.type === "tool-result") {
+            const output = block.output ?? {};
+            let outputStr = "";
+            if (output.type === "text" || output.type === "error-text") {
+              outputStr = output.value ?? "";
+            } else if (output.type === "json" || output.type === "error-json") {
+              outputStr = JSON.stringify(output.value ?? null);
+            } else if (typeof output === "object") {
+              outputStr = JSON.stringify(output);
+            } else {
+              outputStr = String(output);
+            }
+            const tCost = estimateContentTokens(outputStr);
+            toolOutputTokensSum += tCost;
+            messageTotal += tCost;
+          }
+        }
+      }
+    } else if (typeof content === "string") {
+      // Plain string content (user messages)
+      const t = estimateContentTokens(content);
+      textContentTokens += t;
+      messageTotal += t;
     }
 
     return sum + messageTotal;
@@ -83,15 +107,16 @@ export function estimateMessagesTokens(
   const overhead = messages.length * 4;
   // Tool definitions (12 tools with schemas) add ~4000 tokens per request
   const TOOL_DEFINITIONS_OVERHEAD = 4000;
-  const finalTotal = messagesTokens + systemTokens + overhead + TOOL_DEFINITIONS_OVERHEAD;
+  const finalTotal =
+    messagesTokens + systemTokens + overhead + TOOL_DEFINITIONS_OVERHEAD;
 
   return finalTotal;
 }
 
 export async function getContextInfo(
   model: string,
-  messages: { content: unknown; toolCalls?: { input: unknown }[]; toolResults?: { output: unknown }[] }[],
-  systemPrompt: string
+  messages: { content: unknown }[],
+  systemPrompt: string,
 ): Promise<ContextInfo> {
   const limits = await getModelLimits(model);
 
