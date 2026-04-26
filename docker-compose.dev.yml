@@ -122,7 +122,7 @@ services:
 
   opencode:
     image: ghcr.io/anomalyco/opencode:latest
-    command: serve --hostname 0.0.0.0
+    command: serve --hostname 0.0.0.0 --port ${OPENCODE_PORT:-4096}
     working_dir: /pieces
     ports:
       - "${OPENCODE_PORT:-4096}:${OPENCODE_PORT:-4096}"
