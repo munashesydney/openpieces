@@ -268,6 +268,21 @@ async function executeServiceSpawnJob(job: ServiceSpawnJob) {
     );
   }
 
+  // ── Cross-process guard ─────────────────────────────────────────
+  // Re-read the service from DB to check if another worker already
+  // spawned it while we were doing validation above.  This catches
+  // races that the in-memory _spawningServices set cannot see.
+  const refreshed = await getServiceById(serviceId, workspaceId);
+  if (refreshed && refreshed.status === "running" && refreshed.port) {
+    const portInUse = await isPortBoundByOS(refreshed.port);
+    if (portInUse) {
+      _spawningServices.delete(serviceId);
+      throw new Error(
+        `Service ${serviceId} is already running on port ${refreshed.port} (cross-process guard)`,
+      );
+    }
+  }
+
   const port = await findFreePort();
   _reservedServicePorts.set(serviceId, port);
   const entryPoint = "index.ts";
@@ -365,12 +380,25 @@ async function executeServiceSpawnJob(job: ServiceSpawnJob) {
     _reservedServicePorts.delete(serviceId);
     _spawningServices.delete(serviceId);
 
-    await updateService(
-      serviceId,
-      workspaceId,
-      { port, pid: proc.pid, status: "running", spawnFailCount: 0 },
-      "system",
-    );
+    try {
+      await updateService(
+        serviceId,
+        workspaceId,
+        { port, pid: proc.pid, status: "running", spawnFailCount: 0 },
+        "system",
+      );
+    } catch (err) {
+      // DB update failed after a successful spawn — kill the orphaned
+      // child process so it doesn't become a zombie.
+      if (proc.pid) {
+        try {
+          process.kill(proc.pid, "SIGKILL");
+        } catch {
+          /* already dead */
+        }
+      }
+      throw err;
+    }
     await appendServiceLog(
       directory,
       "info",
@@ -411,6 +439,14 @@ async function executeServiceSpawnJob(job: ServiceSpawnJob) {
       "error",
       `Service did not become healthy on port ${port}`,
     );
+    // Kill the unresponsive child process so it doesn't linger as a zombie
+    if (proc.pid) {
+      try {
+        process.kill(proc.pid, "SIGKILL");
+      } catch {
+        /* already dead */
+      }
+    }
     // Send failure message to opencode immediately (pg-boss will retry separately)
     await sendSpawnFailureMessage(
       service,
@@ -680,6 +716,20 @@ async function cleanupStuckDeployments() {
 export async function startServiceWorker() {
   const boss = await getPgBoss();
 
+  // ── Purge any stale spawn jobs left over from a previous worker ──────────
+  // This prevents pre-existing queue entries from colliding with the fresh
+  // enqueues that recoverAndStartAllServices() is about to issue.
+  await boss.deleteQueue(SERVICE_SPAWN_QUEUE);
+  await boss.createQueue(SERVICE_SPAWN_QUEUE, { retryLimit: 0 });
+
+  // ── Enqueue ALL services for spawn BEFORE the worker starts listening ────
+  // Critical: if the worker were already running when we enqueue, pre-existing
+  // jobs could be processed *concurrently* with our enqueues, and a job that
+  // completes early would leave _spawningServices empty — making it impossible
+  // for the in-memory guard to catch a second enqueue for the same service.
+  await recoverAndStartAllServices();
+
+  // ── Start the spawn queue worker ─────────────────────────────────────────
   await boss.work(
     SERVICE_SPAWN_QUEUE,
     { localConcurrency: 10 },
@@ -746,9 +796,6 @@ export async function startServiceWorker() {
     if (!job) return;
     await executeServiceStopJob(job.data as ServiceStopJob);
   });
-
-  // Recover stale services and start valid ones
-  await recoverAndStartAllServices();
 
   // Start periodic cleanup of stuck deployments (run every 60 seconds)
   setInterval(async () => {
