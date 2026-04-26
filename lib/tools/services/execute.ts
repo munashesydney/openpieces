@@ -8,6 +8,7 @@ import {
   getServiceLogs,
   validateServiceForSpawn,
   resetSpawnFailCount,
+  decrementQaSpawnCount,
 } from "@/lib/services/service.service";
 import { enqueueServiceSpawn } from "@/lib/queues/pg-boss";
 import type { ToolContext } from "@/lib/tools/registry";
@@ -142,6 +143,10 @@ export async function executeService(
         throw new Error(`Service cannot be redeployed: ${validation.error}`);
       }
       await enqueueServiceSpawn({ serviceId, workspaceId });
+
+      // Decrement qa_spawn_count — user/AI explicitly redeployed, so free one slot
+      await decrementQaSpawnCount(serviceId);
+
       return { success: true, redeployed: serviceId };
     }
 

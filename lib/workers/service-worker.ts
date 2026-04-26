@@ -30,6 +30,7 @@ const PORT_START = 8001;
 const PORT_END = 9000;
 const MAX_DEPLOYMENT_TIME_MS = 120 * 1000; // 120 seconds
 const MAX_SPAWN_FAIL_RETRIES = 3;
+const QA_SPAWN_MAX_RETRIES = 1;
 
 // In-memory set to prevent double-booking ports across concurrent spawn attempts.
 // Lock is held by the pg advisory lock inside findFreePort, but we also track
@@ -414,6 +415,18 @@ async function executeServiceSpawnJob(job: ServiceSpawnJob) {
         if (hasWorking) {
           console.log(
             `[service-worker] Skipping QA agent for service ${serviceId} — an opencode session is already working on it`,
+          );
+          return;
+        }
+
+        // Atomically increment qa_spawn_count; skip if already at the cap.
+        // This prevents infinite QA agent accumulation across crash loops.
+        const [updated] = await db.execute(
+          sql`UPDATE ${services} SET qa_spawn_count = qa_spawn_count + 1 WHERE id = ${serviceId} AND qa_spawn_count < ${QA_SPAWN_MAX_RETRIES} RETURNING id`,
+        );
+        if (!updated) {
+          console.log(
+            `[service-worker] Skipping QA agent for service ${serviceId} — qa_spawn_count already at cap (${QA_SPAWN_MAX_RETRIES})`,
           );
           return;
         }

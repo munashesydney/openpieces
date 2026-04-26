@@ -114,6 +114,7 @@ export const services = pgTable("services", {
     .notNull()
     .default("stopped"),
   spawnFailCount: integer("spawn_fail_count").notNull().default(0),
+  qaSpawnCount: integer("qa_spawn_count").notNull().default(0),
   updateSource: text("update_source").default("user"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),

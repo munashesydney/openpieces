@@ -11,6 +11,7 @@ import {
   getServiceById,
   validateServiceForSpawn,
   resetSpawnFailCount,
+  decrementQaSpawnCount,
 } from "../../../../../../lib/services/service.service";
 import {
   enqueueServiceSpawn,
@@ -34,6 +35,10 @@ export async function spawnServiceAction(
   if (!validation.valid) return { error: validation.error };
 
   await enqueueServiceSpawn({ serviceId, workspaceId });
+
+  // Decrement qa_spawn_count — user-triggered deploy frees one QA slot
+  await decrementQaSpawnCount(serviceId);
+
   revalidatePath(`/workspace/${workspaceId}/personal/services/${serviceId}`);
   return { success: true };
 }

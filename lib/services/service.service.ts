@@ -1,4 +1,4 @@
-import { eq, and, count } from "drizzle-orm";
+import { eq, and, count, sql } from "drizzle-orm";
 import { rm } from "fs/promises";
 import path from "path";
 import { db } from "../db";
@@ -348,4 +348,14 @@ export async function resetSpawnFailCount(
     throw new ValidationError(`Service not found: ${serviceId}`);
   }
   return result[0];
+}
+
+/**
+ * Atomically decrement qa_spawn_count (floor at 0).
+ * Called when a user or AI explicitly triggers a redeploy, freeing one QA slot.
+ */
+export async function decrementQaSpawnCount(serviceId: string): Promise<void> {
+  await db.execute(
+    sql`UPDATE ${services} SET qa_spawn_count = GREATEST(0, qa_spawn_count - 1) WHERE id = ${serviceId}`,
+  );
 }
