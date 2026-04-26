@@ -470,13 +470,16 @@ async function executeServiceSpawnJob(job: ServiceSpawnJob) {
         /* already dead */
       }
     }
-    // Send failure message to opencode immediately (pg-boss will retry separately)
-    await sendSpawnFailureMessage(
-      service,
-      workspaceId,
-      sessionId,
-      `Service did not become healthy on port ${port}`,
-    );
+    // Notify OpenCode only within the configured retry limit to avoid spam when
+    // the spawn_fail_count keeps being reset by cleanupStuckDeployments.
+    if ((service.spawnFailCount ?? 0) < MAX_SPAWN_FAIL_RETRIES) {
+      await sendSpawnFailureMessage(
+        service,
+        workspaceId,
+        sessionId,
+        `Service did not become healthy on port ${port}`,
+      );
+    }
     // Release port from in-memory reservation
     _reservedPorts.delete(port);
     _reservedServicePorts.delete(serviceId);
