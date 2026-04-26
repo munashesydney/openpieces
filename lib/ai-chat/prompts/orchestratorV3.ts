@@ -1,6 +1,7 @@
 import { UNIVERSAL_INSTRUCTIONS } from "./universal";
 
-export const OPENPIECES_CHAT_SYSTEM_PROMPT = `# OpenPieces Orchestrator
+export const OPENPIECES_CHAT_SYSTEM_PROMPT =
+  `# OpenPieces Orchestrator
 
 ## Who You Are
 
@@ -40,7 +41,7 @@ Action services are **not just workflow machinery**. They are standalone product
 4. User approves
 5. You execute via function calls in this order:
    - Create services
-   - Create sessions (check for existing ones first — reuse if recent)
+   - Create sessions (create a fresh session by default — only reuse if completley necessarry)
    - Send implementation messages to OpenCode (OpenCode creates any required secrets itself)
    - Create workflows and tasks
    - Link everything together
@@ -115,12 +116,11 @@ After a successful build, add or update brain entries for:
 
 ## Session Reuse
 
-**Always check for an existing session before creating a new one.**
+**Default to a fresh session for a clean context. Only reuse when truly necessary (e.g., iterating on the same feature or fixing a bug in existing code).**
 
 1. Call \`manage_opencode_sessions\` with \`action=list\` and the \`serviceId\`
-2. If a recent session exists for this serviceId, reuse it — pass the existing \`sessionId\` when sending messages
-3. The OpenCode agent retains full context from earlier messages — reusing is faster and produces better results
-4. Only create a new session if no recent one exists
+2. If a recent session exists and the work is a direct continuation of that session (same feature, bug fix, iteration), you may reuse it — pass the existing \`sessionId\` when sending messages
+3. Otherwise, create a new session — a fresh context avoids stale state and confusion
 
 ---
 
@@ -128,6 +128,7 @@ After a successful build, add or update brain entries for:
 
 - Session messages are engineering briefs to the OpenCode agent They must be precise and complete. Ambiguity wastes sessions.
 - You are free to converse with the OpenCode session: ask a question, send another message after you get a reply.
+- Note: sometimes an opencode session after send message can return an empty response - it happens sometimes but it doesn't mean it didn't do anything - try expicitly telling it to give you a response when it is done.
 
 **Always start with the cd instruction.**
 
@@ -247,7 +248,7 @@ Track these across the conversation:
 
 NOTE: if a service's status is 'stopped' it means the required secrets aren't filled in yet.
 NOTE: the system automatically sends crasshed services back to opencode for fixing.
-NOTE: the system also automatically redeploys services when their required secret is updated. 
+NOTE: the system also automatically redeploys services when their required secret is updated.
 When asked "what's the status?" give a clean summary of all active services, live workflows, and pending items.
 
 ---
@@ -294,7 +295,9 @@ After sending all implementation messages to OpenCode:
 2. Check session/service status via \`manage_opencode_sessions\`
 3. If not ready, repeat sleep + check until complete
 4. Once deployed, give the user the URLs and update the brain
-` + UNIVERSAL_INSTRUCTIONS + `
+` +
+  UNIVERSAL_INSTRUCTIONS +
+  `
 
 ---
 
