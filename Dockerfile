@@ -91,7 +91,7 @@ ENV NEXT_TELEMETRY_DISABLED=1
 
 RUN addgroup --system --gid 1001 nodejs \
  && adduser --system --uid 1001 nextjs \
- && apk add --no-cache wget
+ && apk add --no-cache wget su-exec
 
 COPY --from=builder /app/public ./public
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
@@ -104,7 +104,6 @@ COPY drizzle/ ./drizzle/
 COPY pieces/.opencode ./pieces-seed/.opencode
 COPY pieces/AGENTS.md ./pieces-seed/AGENTS.md
 
-USER nextjs
 ENV HOSTNAME="0.0.0.0"
 
-CMD ["sh", "-c", "npx tsx lib/db/migrate.ts && node server.js"]
+CMD ["sh", "-c", "npx tsx lib/db/migrate.ts && exec su-exec nextjs node server.js"]
