@@ -20,7 +20,7 @@ export interface OpenCodeMessage {
 }
 
 function getBaseUrl() {
-  return process.env.OPENCODE_INTERNAL_URL || "http://localhost:4096";
+  return process.env.OPENCODE_INTERNAL_URL || "http://opencode:4096";
 }
 
 function getAuthHeaders() {
@@ -28,13 +28,15 @@ function getAuthHeaders() {
   const password = process.env.OPENCODE_SERVER_PASSWORD || "";
 
   if (!password) {
-    console.warn("OPENCODE_SERVER_PASSWORD is not set. API calls may fail if auth is required.");
+    console.warn(
+      "OPENCODE_SERVER_PASSWORD is not set. API calls may fail if auth is required.",
+    );
   }
 
   const credentials = Buffer.from(`${username}:${password}`).toString("base64");
 
   return {
-    "Authorization": `Basic ${credentials}`,
+    Authorization: `Basic ${credentials}`,
     "Content-Type": "application/json",
   };
 }
@@ -49,7 +51,9 @@ export async function listSessions(): Promise<OpenCodeSession[]> {
   if (!response.ok) {
     const text = await response.text();
     console.error("Failed to list sessions:", text);
-    throw new Error(`OpenCode API error: ${response.status} ${response.statusText}`);
+    throw new Error(
+      `OpenCode API error: ${response.status} ${response.statusText}`,
+    );
   }
 
   const text = await response.text();
@@ -72,7 +76,9 @@ export async function createSession(): Promise<OpenCodeSession> {
   if (!response.ok) {
     const text = await response.text();
     console.error("Failed to create session:", text);
-    throw new Error(`OpenCode API error: ${response.status} ${response.statusText}`);
+    throw new Error(
+      `OpenCode API error: ${response.status} ${response.statusText}`,
+    );
   }
 
   return response.json();
@@ -88,7 +94,9 @@ export async function getMessages(sessionId: string): Promise<any[]> {
   if (!response.ok) {
     const text = await response.text();
     console.error(`Failed to get messages for session ${sessionId}:`, text);
-    throw new Error(`OpenCode API error: ${response.status} ${response.statusText}`);
+    throw new Error(
+      `OpenCode API error: ${response.status} ${response.statusText}`,
+    );
   }
 
   const text = await response.text();
@@ -114,7 +122,9 @@ function extractContentFromParts(parts: MessagePart[]): string {
  * - Keeps all user messages
  * - Only keeps the last assistant message (filters out intermediate streaming parts)
  */
-export function getMessagesForAi(messages: OpenCodeMessage[]): { role: string; content: string }[] {
+export function getMessagesForAi(
+  messages: OpenCodeMessage[],
+): { role: string; content: string }[] {
   const result: { role: string; content: string }[] = [];
   let lastAssistantMessage: { role: string; content: string } | null = null;
 
@@ -152,17 +162,26 @@ const DIRECTORY_INSTRUCTION_PREFIX =
 const DIRECTORY_INSTRUCTION_SUFFIX =
   "' exists (create it if needed), then cd into it. You are only allowed to work inside this directory.\n\n";
 
-export async function sendMessage(sessionId: string, content: string): Promise<OpenCodeMessage> {
-  const { getServiceId } = await import("@/lib/services/opencode-session.service");
+export async function sendMessage(
+  sessionId: string,
+  content: string,
+): Promise<OpenCodeMessage> {
+  const { getServiceId } =
+    await import("@/lib/services/opencode-session.service");
   const { db } = await import("@/lib/db");
   const { services } = await import("@/lib/db/schema");
   const { eq } = await import("drizzle-orm");
-  const { getWorkspaceSettings } = await import("@/lib/services/workspace-settings.service");
+  const { getWorkspaceSettings } =
+    await import("@/lib/services/workspace-settings.service");
 
   let modelID = "deepseek/deepseek-v3.2"; // Fallback to new standard if not set
   const serviceId = await getServiceId(sessionId);
   if (serviceId) {
-    const [service] = await db.select().from(services).where(eq(services.id, serviceId)).limit(1);
+    const [service] = await db
+      .select()
+      .from(services)
+      .where(eq(services.id, serviceId))
+      .limit(1);
     if (service?.workspaceId) {
       const settings = await getWorkspaceSettings(service.workspaceId);
       if (settings?.defaultModel) {
@@ -179,15 +198,17 @@ export async function sendMessage(sessionId: string, content: string): Promise<O
       parts: [{ type: "text", text: content }],
       model: {
         providerID: "vercel",
-        modelID: modelID
-      }
+        modelID: modelID,
+      },
     }),
   });
 
   if (!response.ok) {
     const text = await response.text();
     console.error(`Failed to send message to session ${sessionId}:`, text);
-    throw new Error(`OpenCode API error: ${response.status} ${response.statusText}`);
+    throw new Error(
+      `OpenCode API error: ${response.status} ${response.statusText}`,
+    );
   }
 
   const text = await response.text();
@@ -200,27 +221,62 @@ export async function sendMessage(sessionId: string, content: string): Promise<O
 }
 
 // Business logic for sending a message with context - used by the API route
-export async function sendMessageWithContext(sessionId: string, content: string, userId?: string): Promise<void> {
-  // IMPORTANT: Check if the session's service has another working session before anything else
-  const { getServiceId, serviceHasWorkingSession } = await import("@/lib/services/opencode-session.service");
+export async function sendMessageWithContext(
+  sessionId: string,
+  content: string,
+  userId?: string,
+): Promise<void> {
+  // IMPORTANT: Check if the session's service has another working session before anything else.
+  // Uses an advisory lock so two concurrent requests don't both pass the check.
+  const { getServiceId } =
+    await import("@/lib/services/opencode-session.service");
+  const { db } = await import("@/lib/db");
+  const { sql, eq, and, ne } = await import("drizzle-orm");
+  const { opencodeSessions } = await import("@/lib/db/schema");
   const serviceId = await getServiceId(sessionId);
   if (serviceId) {
-    const hasWorking = await serviceHasWorkingSession(serviceId, sessionId);
-    if (hasWorking) {
-      throw new Error("Cannot send message: service is already processing another request");
-    }
+    await db.transaction(async (tx) => {
+      // Transaction-scoped advisory lock – blocks until any other tx holding
+      // the same lock finishes, then auto-releases when this tx commits.
+      await tx.execute(
+        sql`SELECT pg_advisory_xact_lock(hashtext(${serviceId}))`,
+      );
+
+      const rows = await tx
+        .select({ sessionId: opencodeSessions.sessionId })
+        .from(opencodeSessions)
+        .where(
+          and(
+            eq(opencodeSessions.serviceId, serviceId),
+            eq(opencodeSessions.status, "working"),
+            ne(opencodeSessions.sessionId, sessionId),
+          ),
+        )
+        .limit(1);
+
+      if (rows.length > 0) {
+        throw new Error(
+          "Cannot send message: service is already processing another request",
+        );
+      }
+    });
   }
 
-  const { getDirectory } = await import("@/lib/services/opencode-session.service");
-  const { getDefaultWorkspace } = await import("@/lib/services/workspace.service");
+  const { getDirectory } =
+    await import("@/lib/services/opencode-session.service");
+  const { getDefaultWorkspace } =
+    await import("@/lib/services/workspace.service");
 
   const directory = await getDirectory(sessionId);
   if (!directory) {
-    throw new Error("No directory set for this session. Create the session with a working directory.");
+    throw new Error(
+      "No directory set for this session. Create the session with a working directory.",
+    );
   }
 
   const existingMessages = await getMessages(sessionId);
-  const isFirstMessage = !Array.isArray(existingMessages) || existingMessages.length === 0;
+  const isFirstMessage =
+    !Array.isArray(existingMessages) || existingMessages.length === 0;
 
   let fullContent = content;
 
