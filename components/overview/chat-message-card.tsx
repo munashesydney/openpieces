@@ -99,19 +99,14 @@ export function ChatMessageCard({
           >
             {isStreaming ? (
               <>
-                {/* Smooth breathing dot */}
-                <span className="relative h-2.5 w-2.5 shrink-0">
-                  <span className="absolute inset-0 rounded-full bg-[var(--foreground)]/30 animate-[thinkingPulse_2s_ease-in-out_infinite]" />
-                  <span className="absolute inset-[2px] rounded-full bg-[var(--foreground)]/80" />
-                </span>
+                <span className="inline-block h-2 w-2 shrink-0 rounded-full bg-[var(--foreground)]/50" />
                 <span className="text-xs font-medium text-[var(--muted)] shrink-0 tracking-wide">
                   {sectionLabel}
                 </span>
-                {/* Typing indicator */}
                 <span className="flex gap-0.5">
-                  <span className="h-1 w-1 rounded-full bg-[var(--muted)] animate-[thinkingDot_1.4s_ease-in-out_infinite]" />
-                  <span className="h-1 w-1 rounded-full bg-[var(--muted)] animate-[thinkingDot_1.4s_ease-in-out_infinite] [animation-delay:0.2s]" />
-                  <span className="h-1 w-1 rounded-full bg-[var(--muted)] animate-[thinkingDot_1.4s_ease-in-out_infinite] [animation-delay:0.4s]" />
+                  <span className="h-1 w-1 animate-[thinkingDot_1.4s_ease-in-out_infinite] rounded-full bg-[var(--muted)]" />
+                  <span className="h-1 w-1 animate-[thinkingDot_1.4s_ease-in-out_infinite] rounded-full bg-[var(--muted)] [animation-delay:0.2s]" />
+                  <span className="h-1 w-1 animate-[thinkingDot_1.4s_ease-in-out_infinite] rounded-full bg-[var(--muted)] [animation-delay:0.4s]" />
                 </span>
                 {/* Chevron right next to label */}
                 {expanded ? (

@@ -279,9 +279,10 @@ export function OverviewPersonalView({
       setSelectedChatId(chat.id);
 
       if (!currentChatId) {
+        // Add the optimistic message immediately so the thinking UI shows right away
         setMessages((currentMessages) => ({
           ...currentMessages,
-          [chat.id]: [],
+          [chat.id]: [optimisticMessage],
         }));
       }
 

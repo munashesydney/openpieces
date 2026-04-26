@@ -84,18 +84,6 @@ body {
   }
 }
 
-/* Smooth breathing pulse for the thinking dot */
-@keyframes thinkingPulse {
-  0%, 100% {
-    opacity: 0.35;
-    transform: scale(1);
-  }
-  50% {
-    opacity: 0.8;
-    transform: scale(1.5);
-  }
-}
-
 /* Typing indicator dots — sequential fade in/out */
 @keyframes thinkingDot {
   0%, 20% {
@@ -111,5 +99,3 @@ body {
     transform: translateY(0);
   }
 }
-
-
