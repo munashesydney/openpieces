@@ -408,6 +408,16 @@ async function executeServiceSpawnJob(job: ServiceSpawnJob) {
     // Spawn the QA AI agent to check health asynchronously after 30 seconds
     setTimeout(async () => {
       try {
+        const { serviceHasWorkingSession } =
+          await import("@/lib/services/opencode-session.service");
+        const hasWorking = await serviceHasWorkingSession(serviceId);
+        if (hasWorking) {
+          console.log(
+            `[service-worker] Skipping QA agent for service ${serviceId} — an opencode session is already working on it`,
+          );
+          return;
+        }
+
         const { createAiChat, appendUserMessageAndMarkPending } =
           await import("@/lib/services/chat.service");
         const { enqueueChatExecution } = await import("@/lib/queues/pg-boss");
