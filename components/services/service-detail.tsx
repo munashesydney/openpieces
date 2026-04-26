@@ -1,9 +1,32 @@
 "use client";
 
 import { useState, useTransition, useEffect, useCallback } from "react";
-import { ChevronLeft, Activity, Code, Clock, ShieldCheck, Zap, Plus, Trash2, Play, Loader2, Square, KeyRound, Link } from "lucide-react";
+import {
+  AlertCircle,
+  ChevronLeft,
+  Activity,
+  Code,
+  Clock,
+  ShieldCheck,
+  Zap,
+  Plus,
+  Trash2,
+  Play,
+  Loader2,
+  Square,
+  KeyRound,
+  Link,
+  RotateCcw,
+  RefreshCw,
+} from "lucide-react";
 import { useRouter } from "next/navigation";
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "../ui/card";
+import {
+  Card,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+  CardContent,
+} from "../ui/card";
 import { Button } from "@/components/basic/buttons/button";
 import { Sheet } from "../ui/sheet";
 import { Input } from "@/components/basic/input/input";
@@ -11,8 +34,20 @@ import { Textarea } from "@/components/basic/input/textarea";
 import { Dropdown } from "@/components/basic/input/dropdown";
 import { ActionMenu } from "@/components/basic/input/action-menu";
 import { ServiceLogsPanel } from "./service-logs-panel";
-import { type Service, type ServiceEndpoint, type ServiceRequiredSecret } from "@/lib/db/schema";
-import { createEndpointAction, deleteEndpointAction, spawnServiceAction, stopServiceAction, addRequiredSecretAction, removeRequiredSecretAction } from "@/app/workspace/[workspaceId]/personal/services/[serviceId]/actions";
+import {
+  type Service,
+  type ServiceEndpoint,
+  type ServiceRequiredSecret,
+} from "@/lib/db/schema";
+import {
+  createEndpointAction,
+  deleteEndpointAction,
+  spawnServiceAction,
+  stopServiceAction,
+  addRequiredSecretAction,
+  removeRequiredSecretAction,
+  resetSpawnCountAction,
+} from "@/app/workspace/[workspaceId]/personal/services/[serviceId]/actions";
 import { deleteServiceAction } from "@/app/workspace/[workspaceId]/personal/services/actions";
 import { ServiceDeleteModal } from "./service-delete-modal";
 import { serviceDirectoryLabel } from "@/lib/utils/service-directory-label";
@@ -25,9 +60,19 @@ interface ServiceDetailProps {
   workspaceId: string;
 }
 
-type HealthStatus = { healthy: boolean; port: number | null; reason?: string } | null;
+type HealthStatus = {
+  healthy: boolean;
+  port: number | null;
+  reason?: string;
+} | null;
 
-export function ServiceDetail({ service, endpoints, requiredSecrets, workspaceSecrets, workspaceId }: ServiceDetailProps) {
+export function ServiceDetail({
+  service,
+  endpoints,
+  requiredSecrets,
+  workspaceSecrets,
+  workspaceId,
+}: ServiceDetailProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [isSpawning, setIsSpawning] = useState(false);
@@ -37,9 +82,11 @@ export function ServiceDetail({ service, endpoints, requiredSecrets, workspaceSe
   const [health, setHealth] = useState<HealthStatus>(null);
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const [isSecretsSheetOpen, setIsSecretsSheetOpen] = useState(false);
-  const [localRequiredSecrets, setLocalRequiredSecrets] = useState(requiredSecrets);
+  const [localRequiredSecrets, setLocalRequiredSecrets] =
+    useState(requiredSecrets);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
-  
+  const [isResettingSpawn, setIsResettingSpawn] = useState(false);
+
   const [method, setMethod] = useState("GET");
   const [path, setPath] = useState("");
   const [description, setDescription] = useState("");
@@ -48,7 +95,7 @@ export function ServiceDetail({ service, endpoints, requiredSecrets, workspaceSe
   const checkHealth = useCallback(async () => {
     try {
       const res = await fetch(
-        `/api/services/${service.id}/health?workspaceId=${encodeURIComponent(workspaceId)}`
+        `/api/services/${service.id}/health?workspaceId=${encodeURIComponent(workspaceId)}`,
       );
       if (res.ok) {
         const data = await res.json();
@@ -99,6 +146,16 @@ export function ServiceDetail({ service, endpoints, requiredSecrets, workspaceSe
     });
   };
 
+  const handleResetSpawnCount = () => {
+    startTransition(async () => {
+      try {
+        await resetSpawnCountAction(workspaceId, service.id);
+      } catch (err: any) {
+        console.error("Failed to reset spawn count", err);
+      }
+    });
+  };
+
   const handleCreateEndpoint = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!path) return;
@@ -135,10 +192,16 @@ export function ServiceDetail({ service, endpoints, requiredSecrets, workspaceSe
 
     startTransition(async () => {
       try {
-        await addRequiredSecretAction(workspaceId, service.id, selectedSecretKey);
-        const updated = await fetch(`/api/services/${service.id}/required-secrets?workspaceId=${encodeURIComponent(workspaceId)}`)
-          .then(r => r.json())
-          .then(d => d.data);
+        await addRequiredSecretAction(
+          workspaceId,
+          service.id,
+          selectedSecretKey,
+        );
+        const updated = await fetch(
+          `/api/services/${service.id}/required-secrets?workspaceId=${encodeURIComponent(workspaceId)}`,
+        )
+          .then((r) => r.json())
+          .then((d) => d.data);
         setLocalRequiredSecrets(updated);
         setIsSecretsSheetOpen(false);
         setSelectedSecretKey("");
@@ -152,7 +215,7 @@ export function ServiceDetail({ service, endpoints, requiredSecrets, workspaceSe
     startTransition(async () => {
       try {
         await removeRequiredSecretAction(workspaceId, service.id, id);
-        setLocalRequiredSecrets(prev => prev.filter(s => s.id !== id));
+        setLocalRequiredSecrets((prev) => prev.filter((s) => s.id !== id));
       } catch (err) {
         console.error("Failed to remove required secret", err);
       }
@@ -179,7 +242,7 @@ export function ServiceDetail({ service, endpoints, requiredSecrets, workspaceSe
             <ChevronLeft className="h-4 w-4 transition-transform group-hover:-translate-x-1" />
             Back to Services
           </button>
-          
+
           <div className="flex items-start justify-between">
             <div className="space-y-1">
               <h1 className="text-2xl font-semibold text-[var(--foreground)]">
@@ -197,7 +260,12 @@ export function ServiceDetail({ service, endpoints, requiredSecrets, workspaceSe
                   }
                 }}
                 options={[
-                  { label: "Delete Service", value: "delete", icon: <Trash2 className="h-4 w-4" />, destructive: true },
+                  {
+                    label: "Delete Service",
+                    value: "delete",
+                    icon: <Trash2 className="h-4 w-4" />,
+                    destructive: true,
+                  },
                 ]}
               />
             </div>
@@ -212,6 +280,34 @@ export function ServiceDetail({ service, endpoints, requiredSecrets, workspaceSe
           isPending={isPending}
         />
 
+        {service.spawnFailCount > 0 && (
+          <div className="flex items-center justify-between rounded-lg border border-amber-500/30 bg-amber-500/10 px-5 py-3">
+            <div className="flex items-center gap-3">
+              <AlertCircle className="h-5 w-5 text-amber-500" />
+              <div>
+                <p className="text-sm font-medium text-amber-500">
+                  Spawn failed {service.spawnFailCount} time
+                  {service.spawnFailCount !== 1 ? "s" : ""}
+                </p>
+                <p className="text-xs text-amber-500/70">
+                  The service may need attention before it can start. Reset the
+                  counter to allow retries.
+                </p>
+              </div>
+            </div>
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={handleResetSpawnCount}
+              disabled={isPending}
+              className="shrink-0 text-amber-500 hover:text-amber-400"
+            >
+              <RotateCcw className="mr-1.5 h-3.5 w-3.5" />
+              Reset
+            </Button>
+          </div>
+        )}
+
         {/* Top Stats/Status */}
         <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
           {/* Health / Launch card */}
@@ -222,9 +318,13 @@ export function ServiceDetail({ service, endpoints, requiredSecrets, workspaceSe
                   <Activity className="h-5 w-5" />
                 </div>
                 <div>
-                  <p className="text-xs font-medium uppercase tracking-wider text-[var(--muted)]">Status</p>
+                  <p className="text-xs font-medium uppercase tracking-wider text-[var(--muted)]">
+                    Status
+                  </p>
                   {health === null ? (
-                    <span className="text-sm text-[var(--muted)]">Checking…</span>
+                    <span className="text-sm text-[var(--muted)]">
+                      Checking…
+                    </span>
                   ) : health.healthy ? (
                     <div className="flex items-center gap-2">
                       <div className="h-2 w-2 rounded-full bg-emerald-500" />
@@ -240,7 +340,9 @@ export function ServiceDetail({ service, endpoints, requiredSecrets, workspaceSe
                         <div className="h-2 w-2 rounded-full bg-[var(--muted)]" />
                       )}
                       <span className="text-sm font-semibold text-[var(--muted)]">
-                        {service.status === "deploying" ? "Deploying..." : "Stopped"}
+                        {service.status === "deploying"
+                          ? "Deploying..."
+                          : "Stopped"}
                       </span>
                     </div>
                   )}
@@ -271,8 +373,17 @@ export function ServiceDetail({ service, endpoints, requiredSecrets, workspaceSe
                   size="sm"
                   variant="ghost"
                   onClick={handleSpawn}
-                  disabled={isSpawning || isPending || !service.directory || service.status === "deploying"}
-                  title={!service.directory ? "No directory set" : "Launch service process"}
+                  disabled={
+                    isSpawning ||
+                    isPending ||
+                    !service.directory ||
+                    service.status === "deploying"
+                  }
+                  title={
+                    !service.directory
+                      ? "No directory set"
+                      : "Launch service process"
+                  }
                 >
                   {isSpawning || isPending || service.status === "deploying" ? (
                     <Loader2 className="h-4 w-4 animate-spin" />
@@ -290,7 +401,9 @@ export function ServiceDetail({ service, endpoints, requiredSecrets, workspaceSe
                 <Clock className="h-5 w-5" />
               </div>
               <div>
-                <p className="text-xs font-medium uppercase tracking-wider text-[var(--muted)]">Directory</p>
+                <p className="text-xs font-medium uppercase tracking-wider text-[var(--muted)]">
+                  Directory
+                </p>
                 <span
                   className="text-sm font-semibold text-[var(--foreground)] truncate max-w-[200px] block"
                   title={service.directory ?? ""}
@@ -311,9 +424,13 @@ export function ServiceDetail({ service, endpoints, requiredSecrets, workspaceSe
                 <Zap className="h-5 w-5" />
               </div>
               <div>
-                <p className="text-xs font-medium uppercase tracking-wider text-[var(--muted)]">Port</p>
+                <p className="text-xs font-medium uppercase tracking-wider text-[var(--muted)]">
+                  Port
+                </p>
                 <span className="text-sm font-semibold text-[var(--foreground)]">
-                  {service.port ?? <span className="text-[var(--muted)]">—</span>}
+                  {service.port ?? (
+                    <span className="text-[var(--muted)]">—</span>
+                  )}
                 </span>
               </div>
             </div>
@@ -326,7 +443,9 @@ export function ServiceDetail({ service, endpoints, requiredSecrets, workspaceSe
                   <Link className="h-5 w-5" />
                 </div>
                 <div className="min-w-0 flex-1">
-                  <p className="text-xs font-medium uppercase tracking-wider text-[var(--muted)]">Service URL</p>
+                  <p className="text-xs font-medium uppercase tracking-wider text-[var(--muted)]">
+                    Service URL
+                  </p>
                   <a
                     href={service.url}
                     target="_blank"
@@ -336,6 +455,41 @@ export function ServiceDetail({ service, endpoints, requiredSecrets, workspaceSe
                     {service.url}
                   </a>
                 </div>
+              </div>
+            </Card>
+          )}
+
+          {service.spawnFailCount > 0 && (
+            <Card className="p-6">
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[var(--hover-bg)] text-red-500">
+                    <RefreshCw className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <p className="text-xs font-medium uppercase tracking-wider text-[var(--muted)]">
+                      Spawn Failures
+                    </p>
+                    <span className="text-sm font-semibold text-red-500">
+                      {service.spawnFailCount}{" "}
+                      {service.spawnFailCount === 1 ? "failure" : "failures"}
+                    </span>
+                  </div>
+                </div>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={handleResetSpawnCount}
+                  disabled={isPending}
+                  title="Reset spawn failure count"
+                >
+                  {isPending ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <RefreshCw className="h-4 w-4" />
+                  )}
+                  <span className="ml-2">Reset</span>
+                </Button>
               </div>
             </Card>
           )}
@@ -351,7 +505,9 @@ export function ServiceDetail({ service, endpoints, requiredSecrets, workspaceSe
                 <Code className="h-5 w-5 text-[var(--muted)]" />
                 <CardTitle>API Endpoints</CardTitle>
               </div>
-              <CardDescription>Available routes and methods for this service.</CardDescription>
+              <CardDescription>
+                Available routes and methods for this service.
+              </CardDescription>
             </div>
             <Button size="sm" onClick={() => setIsSheetOpen(true)}>
               <Plus className="h-4 w-4 mr-2" />
@@ -361,38 +517,62 @@ export function ServiceDetail({ service, endpoints, requiredSecrets, workspaceSe
           <CardContent>
             <div className="divide-y divide-[var(--border)]">
               {endpoints.map((endpoint, i) => (
-                <div key={endpoint.id} className={`group flex items-start justify-between gap-4 py-6 first:pt-0 last:pb-0 ${isPending ? "opacity-50" : ""}`}>
+                <div
+                  key={endpoint.id}
+                  className={`group flex items-start justify-between gap-4 py-6 first:pt-0 last:pb-0 ${isPending ? "opacity-50" : ""}`}
+                >
                   <div className="flex flex-col gap-2">
                     <div className="flex items-center gap-3">
-                      <span className={`rounded-md border px-2 py-0.5 text-[9px] font-bold tracking-wider ${
-                        endpoint.method === 'GET' ? 'border-emerald-500/20 text-emerald-500' :
-                        endpoint.method === 'POST' ? 'border-blue-500/20 text-blue-500' :
-                        endpoint.method === 'DELETE' ? 'border-red-500/20 text-red-500' : 
-                        'border-amber-500/20 text-amber-500'
-                      }`}>
+                      <span
+                        className={`rounded-md border px-2 py-0.5 text-[9px] font-bold tracking-wider ${
+                          endpoint.method === "GET"
+                            ? "border-emerald-500/20 text-emerald-500"
+                            : endpoint.method === "POST"
+                              ? "border-blue-500/20 text-blue-500"
+                              : endpoint.method === "DELETE"
+                                ? "border-red-500/20 text-red-500"
+                                : "border-amber-500/20 text-amber-500"
+                        }`}
+                      >
                         {endpoint.method}
                       </span>
-                      <code className="text-sm font-mono text-[var(--foreground)] opacity-80">{endpoint.path}</code>
+                      <code className="text-sm font-mono text-[var(--foreground)] opacity-80">
+                        {endpoint.path}
+                      </code>
                     </div>
-                    {endpoint.description && <p className="text-sm text-[var(--muted)]">{endpoint.description}</p>}
-                    {endpoint.inputSchema && Object.keys(endpoint.inputSchema).length > 0 && (
-                      <div className="mt-2 rounded-md border border-[var(--border)] bg-[var(--hover-bg)] p-3">
-                        <p className="text-xs font-medium uppercase tracking-wider text-[var(--muted)] mb-2">Input Schema</p>
-                        <pre className="text-xs font-mono text-[var(--foreground)] overflow-auto whitespace-pre-wrap">{JSON.stringify(endpoint.inputSchema, null, 2)}</pre>
-                      </div>
+                    {endpoint.description && (
+                      <p className="text-sm text-[var(--muted)]">
+                        {endpoint.description}
+                      </p>
                     )}
+                    {endpoint.inputSchema &&
+                      Object.keys(endpoint.inputSchema).length > 0 && (
+                        <div className="mt-2 rounded-md border border-[var(--border)] bg-[var(--hover-bg)] p-3">
+                          <p className="text-xs font-medium uppercase tracking-wider text-[var(--muted)] mb-2">
+                            Input Schema
+                          </p>
+                          <pre className="text-xs font-mono text-[var(--foreground)] overflow-auto whitespace-pre-wrap">
+                            {JSON.stringify(endpoint.inputSchema, null, 2)}
+                          </pre>
+                        </div>
+                      )}
                   </div>
                   <div className="shrink-0">
-                     <ActionMenu
-                        onSelect={(val) => {
-                          if (val === "delete") {
-                            handleDeleteEndpoint(endpoint.id);
-                          }
-                        }}
-                        options={[
-                          { label: "Delete", value: "delete", icon: <Trash2 className="h-4 w-4" />, destructive: true },
-                        ]}
-                      />
+                    <ActionMenu
+                      onSelect={(val) => {
+                        if (val === "delete") {
+                          handleDeleteEndpoint(endpoint.id);
+                        }
+                      }}
+                      options={[
+                        {
+                          label: "Delete",
+                          value: "delete",
+                          icon: <Trash2 className="h-4 w-4" />,
+                          destructive: true,
+                        },
+                      ]}
+                    />
                   </div>
                 </div>
               ))}
@@ -443,9 +623,16 @@ export function ServiceDetail({ service, endpoints, requiredSecrets, workspaceSe
                 onChange={(e) => setDescription(e.target.value)}
               />
             </div>
-            
+
             <div className="mt-8 flex justify-end gap-3 border-t border-[var(--border)] pt-4">
-              <Button type="button" variant="ghost" onClick={() => setIsSheetOpen(false)} disabled={isPending}>Cancel</Button>
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={() => setIsSheetOpen(false)}
+                disabled={isPending}
+              >
+                Cancel
+              </Button>
               <Button type="submit" disabled={isPending || !path}>
                 {isPending ? "Creating..." : "Create Endpoint"}
               </Button>
@@ -461,7 +648,9 @@ export function ServiceDetail({ service, endpoints, requiredSecrets, workspaceSe
                 <KeyRound className="h-5 w-5 text-[var(--muted)]" />
                 <CardTitle>Required Secrets</CardTitle>
               </div>
-              <CardDescription>Secrets that must be set before starting this service.</CardDescription>
+              <CardDescription>
+                Secrets that must be set before starting this service.
+              </CardDescription>
             </div>
             <Button size="sm" onClick={() => setIsSecretsSheetOpen(true)}>
               <Plus className="h-4 w-4 mr-2" />
@@ -471,17 +660,28 @@ export function ServiceDetail({ service, endpoints, requiredSecrets, workspaceSe
           <CardContent>
             <div className="divide-y divide-[var(--border)]">
               {localRequiredSecrets.map((req) => {
-                const secret = workspaceSecrets.find(s => s.key === req.secretKey);
+                const secret = workspaceSecrets.find(
+                  (s) => s.key === req.secretKey,
+                );
                 const hasSecret = secret && secret.value?.trim();
                 return (
-                  <div key={req.id} className={`group flex items-start justify-between gap-4 py-6 first:pt-0 last:pb-0 ${isPending ? "opacity-50" : ""}`}>
+                  <div
+                    key={req.id}
+                    className={`group flex items-start justify-between gap-4 py-6 first:pt-0 last:pb-0 ${isPending ? "opacity-50" : ""}`}
+                  >
                     <div className="flex flex-col gap-2">
                       <div className="flex items-center gap-3">
-                        <code className="text-sm font-mono text-[var(--foreground)] opacity-80">{req.secretKey}</code>
+                        <code className="text-sm font-mono text-[var(--foreground)] opacity-80">
+                          {req.secretKey}
+                        </code>
                         {hasSecret ? (
-                          <span className="rounded-md bg-emerald-500/10 px-2 py-0.5 text-[9px] font-medium text-emerald-500">Set</span>
+                          <span className="rounded-md bg-emerald-500/10 px-2 py-0.5 text-[9px] font-medium text-emerald-500">
+                            Set
+                          </span>
                         ) : (
-                          <span className="rounded-md bg-amber-500/10 px-2 py-0.5 text-[9px] font-medium text-amber-500">Missing</span>
+                          <span className="rounded-md bg-amber-500/10 px-2 py-0.5 text-[9px] font-medium text-amber-500">
+                            Missing
+                          </span>
                         )}
                       </div>
                     </div>
@@ -493,7 +693,12 @@ export function ServiceDetail({ service, endpoints, requiredSecrets, workspaceSe
                           }
                         }}
                         options={[
-                          { label: "Remove", value: "delete", icon: <Trash2 className="h-4 w-4" />, destructive: true },
+                          {
+                            label: "Remove",
+                            value: "delete",
+                            icon: <Trash2 className="h-4 w-4" />,
+                            destructive: true,
+                          },
                         ]}
                       />
                     </div>
@@ -523,13 +728,23 @@ export function ServiceDetail({ service, endpoints, requiredSecrets, workspaceSe
                 label="Secret Key"
                 value={selectedSecretKey}
                 onChange={setSelectedSecretKey}
-                options={workspaceSecrets.map(s => ({ label: s.key, value: s.key }))}
+                options={workspaceSecrets.map((s) => ({
+                  label: s.key,
+                  value: s.key,
+                }))}
                 placeholder="Select a secret..."
               />
             </div>
-            
+
             <div className="mt-8 flex justify-end gap-3 border-t border-[var(--border)] pt-4">
-              <Button type="button" variant="ghost" onClick={() => setIsSecretsSheetOpen(false)} disabled={isPending}>Cancel</Button>
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={() => setIsSecretsSheetOpen(false)}
+                disabled={isPending}
+              >
+                Cancel
+              </Button>
               <Button type="submit" disabled={isPending || !selectedSecretKey}>
                 {isPending ? "Adding..." : "Add Secret"}
               </Button>
@@ -544,13 +759,21 @@ export function ServiceDetail({ service, endpoints, requiredSecrets, workspaceSe
               <ShieldCheck className="h-5 w-5 text-[var(--muted)]" />
               <CardTitle>Security & Compliance</CardTitle>
             </div>
-            <CardDescription>All endpoints are secured via JWT and Rate Limited.</CardDescription>
+            <CardDescription>
+              All endpoints are secured via JWT and Rate Limited.
+            </CardDescription>
           </CardHeader>
           <CardContent>
             <div className="flex flex-wrap gap-4">
-              <div className="rounded-lg border border-[var(--border)] bg-[var(--background)] px-3 py-1.5 text-xs font-medium text-[var(--muted)]">TLS 1.3 Active</div>
-              <div className="rounded-lg border border-[var(--border)] bg-[var(--background)] px-3 py-1.5 text-xs font-medium text-[var(--muted)]">SOC2 Compliant</div>
-              <div className="rounded-lg border border-[var(--border)] bg-[var(--background)] px-3 py-1.5 text-xs font-medium text-[var(--muted)]">AES-256 Encryption</div>
+              <div className="rounded-lg border border-[var(--border)] bg-[var(--background)] px-3 py-1.5 text-xs font-medium text-[var(--muted)]">
+                TLS 1.3 Active
+              </div>
+              <div className="rounded-lg border border-[var(--border)] bg-[var(--background)] px-3 py-1.5 text-xs font-medium text-[var(--muted)]">
+                SOC2 Compliant
+              </div>
+              <div className="rounded-lg border border-[var(--border)] bg-[var(--background)] px-3 py-1.5 text-xs font-medium text-[var(--muted)]">
+                AES-256 Encryption
+              </div>
             </div>
           </CardContent>
         </Card>

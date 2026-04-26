@@ -24,6 +24,8 @@ export const ACTION_LABELS: Record<string, Record<string, string>> = {
     update: "Update Service",
     delete: "Delete Service",
     get_logs: "Get Service Logs",
+    redeploy: "Redeploy Service",
+    reset_spawn_count: "Reset Spawn Count",
   },
   manage_tasks: {
     list: "List Tasks",

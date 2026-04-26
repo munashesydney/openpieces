@@ -332,3 +332,20 @@ export async function getServiceLogs(
     totalLines: lines.length,
   };
 }
+
+export async function resetSpawnFailCount(
+  serviceId: string,
+  workspaceId: string,
+): Promise<Service> {
+  const result = await db
+    .update(services)
+    .set({ spawnFailCount: 0, updatedAt: new Date(), updateSource: "user" })
+    .where(
+      and(eq(services.id, serviceId), eq(services.workspaceId, workspaceId)),
+    )
+    .returning();
+  if (!result[0]) {
+    throw new ValidationError(`Service not found: ${serviceId}`);
+  }
+  return result[0];
+}
