@@ -2,7 +2,6 @@
 
 import { useEffect, useMemo, useRef } from "react";
 import { ChatMessageCard } from "./chat-message-card";
-import { ChatThinkingIndicator } from "./chat-thinking-indicator";
 import type { AiToolCall, AiToolResult } from "@/lib/ai-chat/types";
 
 export type ChatMessage = {
@@ -60,12 +59,6 @@ function ChatMessagesLoadingSkeleton() {
   );
 }
 
-function hasPendingToolCalls(msg: ChatMessage): boolean {
-  if (msg.toolCalls.length === 0) return false;
-  const resultIds = new Set(msg.toolResults.map((r) => r.toolCallId));
-  return msg.toolCalls.some((tc) => !resultIds.has(tc.toolCallId));
-}
-
 export function OverviewChatArea({
   messages,
   status,
@@ -76,57 +69,24 @@ export function OverviewChatArea({
 }: OverviewChatAreaProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  const showThinking = useMemo(() => {
-    if (!isChatRunning) return false;
-    const last = messages[messages.length - 1];
-    if (!last) return true;
-    if (last.role === "user") return true;
-    if (last.role !== "assistant") return false;
-    if (last.status !== "streaming" && last.status !== "pending") return false;
-
-    if (hasPendingToolCalls(last)) return true;
-
-    const hasText = last.content.trim().length > 0;
-    const hasReasoning = last.reasoning && last.reasoning.trim().length > 0;
-    if (!hasText && !hasReasoning) return true;
-    if (last.toolCalls.length > 0) return true;
-
-    return false;
-  }, [isChatRunning, messages]);
-
-  const thinkingToolPhase = useMemo(() => {
-    if (!isChatRunning) return false;
-    const last = messages[messages.length - 1];
-    return last?.role === "assistant" && hasPendingToolCalls(last);
-  }, [isChatRunning, messages]);
-
-  /** Omit empty in-flight assistant rows; the thinking strip replaces them.
-   *  Also hide compacted user messages (summary context — model-only). */
+  /** Show all messages — including in-flight placeholders (the thinking
+   *  block inside ChatMessageCard replaces the old separate indicator). */
   const visibleMessages = useMemo(() => {
     return messages.filter((msg) => {
       // Hide compacted user messages (the summary is model-only context)
       if (msg.status === "compacted" && msg.role === "user") return false;
-      if (msg.role !== "assistant") return true;
-      // Show messages that have reasoning (thinking content) even if text is empty
-      const hasReasoning = msg.reasoning && msg.reasoning.trim().length > 0;
-      const isPlaceholder =
-        !msg.content.trim() &&
-        msg.toolCalls.length === 0 &&
-        !hasReasoning &&
-        (msg.status === "streaming" || msg.status === "pending");
-      if (isPlaceholder && isChatRunning) return false;
       return true;
     });
-  }, [messages, isChatRunning]);
+  }, [messages]);
 
   useEffect(() => {
     if (!scrollRef.current) return;
-    if (messages.length === 0 && !showThinking && !isLoadingMessages) return;
+    if (messages.length === 0 && !isLoadingMessages) return;
     scrollRef.current.scrollTo({
       top: scrollRef.current.scrollHeight,
       behavior: "smooth",
     });
-  }, [messages, showThinking, isLoadingMessages]);
+  }, [messages, isLoadingMessages]);
 
   return (
     <div className="flex flex-col flex-1 min-h-0">
@@ -134,9 +94,9 @@ export function OverviewChatArea({
         ref={scrollRef}
         className="flex-1 min-h-0 overflow-auto px-4 py-6 sm:px-8"
       >
-        {isLoadingMessages && visibleMessages.length === 0 && !showThinking ? (
+        {isLoadingMessages && visibleMessages.length === 0 ? (
           <ChatMessagesLoadingSkeleton />
-        ) : visibleMessages.length === 0 && !showThinking ? (
+        ) : visibleMessages.length === 0 ? (
           <p className="text-sm text-[var(--muted)] text-center py-12">
             No messages yet
           </p>
@@ -146,6 +106,10 @@ export function OverviewChatArea({
               const nextMsg = visibleMessages[index + 1];
               const isFollowedByUserMessage =
                 msg.role === "assistant" && nextMsg?.role === "user";
+
+              const isStreaming =
+                msg.role === "assistant" &&
+                (msg.status === "pending" || msg.status === "streaming");
 
               return (
                 <div
@@ -182,6 +146,7 @@ export function OverviewChatArea({
                       role={msg.role}
                       toolCalls={msg.toolCalls}
                       toolResults={msg.toolResults}
+                      isStreaming={isStreaming}
                       onQuestionSubmit={onQuestionSubmit}
                       isFollowedByUserMessage={isFollowedByUserMessage}
                     />
@@ -189,14 +154,6 @@ export function OverviewChatArea({
                 </div>
               );
             })}
-            {showThinking ? (
-              <div className="flex w-full justify-start">
-                <ChatThinkingIndicator
-                  key={thinkingToolPhase ? "tools" : "pre"}
-                  toolPhase={thinkingToolPhase}
-                />
-              </div>
-            ) : null}
             {status === "failed" && error ? (
               <div className="flex w-full max-w-[680px] items-start gap-2.5 rounded-lg border border-red-500/20 bg-red-500/5 px-3.5 py-2.5">
                 <svg
