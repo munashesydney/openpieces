@@ -68,6 +68,31 @@ export function OverviewChatArea({
   onQuestionSubmit,
 }: OverviewChatAreaProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
+  const userScrolledUpRef = useRef(false);
+
+  /** Track whether the user has manually scrolled away from bottom. */
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const handleScroll = () => {
+      const isAtBottom =
+        el.scrollHeight - el.scrollTop - el.clientHeight < 50;
+      userScrolledUpRef.current = !isAtBottom;
+    };
+    el.addEventListener("scroll", handleScroll, { passive: true });
+    return () => el.removeEventListener("scroll", handleScroll);
+  }, []);
+
+  /** Auto-scroll on new content, but only if the user hasn't scrolled up. */
+  useEffect(() => {
+    if (!scrollRef.current) return;
+    if (messages.length === 0 && !isLoadingMessages) return;
+    if (userScrolledUpRef.current) return;
+    scrollRef.current.scrollTo({
+      top: scrollRef.current.scrollHeight,
+      behavior: "smooth",
+    });
+  }, [messages, isLoadingMessages]);
 
   /** Show all messages — including in-flight placeholders (the thinking
    *  block inside ChatMessageCard replaces the old separate indicator). */
@@ -78,15 +103,6 @@ export function OverviewChatArea({
       return true;
     });
   }, [messages]);
-
-  useEffect(() => {
-    if (!scrollRef.current) return;
-    if (messages.length === 0 && !isLoadingMessages) return;
-    scrollRef.current.scrollTo({
-      top: scrollRef.current.scrollHeight,
-      behavior: "smooth",
-    });
-  }, [messages, isLoadingMessages]);
 
   return (
     <div className="flex flex-col flex-1 min-h-0">
