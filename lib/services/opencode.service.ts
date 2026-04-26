@@ -264,8 +264,6 @@ export async function sendMessageWithContext(
 
   const { getDirectory } =
     await import("@/lib/services/opencode-session.service");
-  const { getDefaultWorkspace } =
-    await import("@/lib/services/workspace.service");
 
   const directory = await getDirectory(sessionId);
   if (!directory) {
@@ -289,10 +287,18 @@ export async function sendMessageWithContext(
       userId = user.id;
     }
 
-    const workspace = await getDefaultWorkspace(userId);
-    const serviceId = await getServiceId(sessionId);
-
-    const workspaceId = workspace?.id ?? "unknown";
+    // Derive workspaceId from the session's service instead of the user's default workspace.
+    // Each session is tied to a service that belongs to exactly one workspace, so this is
+    // always correct even when the user has multiple workspaces.
+    let workspaceId = "unknown";
+    if (serviceId) {
+      const { getServiceByIdOnly } =
+        await import("@/lib/services/service.service");
+      const service = await getServiceByIdOnly(serviceId);
+      if (service) {
+        workspaceId = service.workspaceId;
+      }
+    }
     const contextBlock =
       `__OPENPIECES_CONTEXT_START__\n` +
       `workspaceId=${workspaceId}\n` +
