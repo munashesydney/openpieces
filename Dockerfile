@@ -77,7 +77,7 @@ COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 # Seed staging area: pieces/.opencode baked into image outside the volume mount path
 # so entrypoint.sh can copy it into the shared pieces volume on first start.
-RUN mkdir -p ./pieces-seed && cp -r ./pieces/.opencode ./pieces-seed/.opencode
+RUN mkdir -p ./pieces-seed && cp -r ./pieces/.opencode ./pieces-seed/.opencode && cp ./pieces/AGENTS.md ./pieces-seed/AGENTS.md
 CMD ["npx", "tsx", "scripts/ai-worker.ts"]
 
 # =============================================================================
@@ -102,6 +102,7 @@ COPY lib/db/schema.ts ./lib/db/schema.ts
 COPY drizzle/ ./drizzle/
 # Seed staging area: baked in here so entrypoint.sh can copy into the pieces volume
 COPY pieces/.opencode ./pieces-seed/.opencode
+COPY pieces/AGENTS.md ./pieces-seed/AGENTS.md
 
 USER nextjs
 ENV HOSTNAME="0.0.0.0"
