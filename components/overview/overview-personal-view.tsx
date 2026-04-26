@@ -1,13 +1,27 @@
 "use client";
 
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { useMediaQuery } from "@/lib/hooks/use-media-query";
 import { PanelLeftOpen } from "lucide-react";
 import { Button } from "@/components/basic/buttons/button";
 import type { AiChatListItem, AiChatMessage } from "@/lib/ai-chat/types";
 import type { SendAiMessageActionResult } from "@/app/workspace/[workspaceId]/personal/actions";
-import { OverviewAiChatsSidebar, type AgentType } from "./overview-ai-chats-sidebar";
-import { OverviewChatArea, type ChatMessage, type ContextInfo } from "./overview-chat-area";
+import {
+  OverviewAiChatsSidebar,
+  type AgentType,
+} from "./overview-ai-chats-sidebar";
+import {
+  OverviewChatArea,
+  type ChatMessage,
+  type ContextInfo,
+} from "./overview-chat-area";
 import { OverviewComposer } from "./overview-composer";
 import { OverviewTitle } from "./overview-title";
 
@@ -28,7 +42,7 @@ type OverviewPersonalViewProps = {
   initialWorkspaceModel: string;
   sendMessageAction: (
     chatId: string | null,
-    content: string
+    content: string,
   ) => Promise<SendAiMessageActionResult>;
   updateWorkspaceModelAction: (model: string) => Promise<void>;
   updateChatModelAction: (chatId: string, model: string) => Promise<void>;
@@ -38,6 +52,7 @@ function mapMessage(message: AiChatMessage): ChatMessage {
   return {
     id: message.id,
     content: message.content,
+    reasoning: message.reasoning,
     role: message.role,
     status: message.status,
     toolCalls: message.toolCalls,
@@ -56,7 +71,10 @@ function mapChat(chat: AiChatListItem): Chat {
 }
 
 function upsertChat(currentChats: Chat[], chat: Chat): Chat[] {
-  return [chat, ...currentChats.filter((currentChat) => currentChat.id !== chat.id)];
+  return [
+    chat,
+    ...currentChats.filter((currentChat) => currentChat.id !== chat.id),
+  ];
 }
 
 export function OverviewPersonalView({
@@ -77,19 +95,23 @@ export function OverviewPersonalView({
     setSidebarOpen(isLg);
   }, [isLg]);
   const [chats, setChats] = useState<Chat[]>(initialChats.map(mapChat));
-  const [selectedChatId, setSelectedChatId] = useState<string | null>(initialSelectedChatId);
+  const [selectedChatId, setSelectedChatId] = useState<string | null>(
+    initialSelectedChatId,
+  );
   const [hasMore, setHasMore] = useState(initialChats.length < initialTotal);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
-  const [selectedAgentType, setSelectedAgentType] = useState<AgentType | null>("orchestrator");
+  const [selectedAgentType, setSelectedAgentType] = useState<AgentType | null>(
+    "orchestrator",
+  );
   const pageSize = 20;
   const [messages, setMessages] = useState<Record<string, ChatMessage[]>>(() =>
     Object.fromEntries(
       Object.entries(initialMessages).map(([chatId, chatMessages]) => [
         chatId,
         chatMessages.map(mapMessage),
-      ])
-    )
+      ]),
+    ),
   );
   const [loadingMessages, setLoadingMessages] = useState(false);
   const [isSending, setIsSending] = useState(false);
@@ -100,13 +122,15 @@ export function OverviewPersonalView({
 
   const selectedChat = useMemo(
     () => chats.find((chat) => chat.id === selectedChatId) ?? null,
-    [chats, selectedChatId]
+    [chats, selectedChatId],
   );
   const selectedChatStatus = selectedChat?.status;
   const selectedChatIsRunning =
     selectedChatStatus === "pending" || selectedChatStatus === "processing";
 
-  const selectedMessages = selectedChatId ? messages[selectedChatId] ?? [] : [];
+  const selectedMessages = selectedChatId
+    ? (messages[selectedChatId] ?? [])
+    : [];
 
   const clearPolling = () => {
     if (pollingRef.current != null) {
@@ -120,7 +144,10 @@ export function OverviewPersonalView({
 
     try {
       const response = await fetch(`/api/chats/${chatId}/messages`);
-      const data = (await response.json()) as { messages?: AiChatMessage[]; error?: string };
+      const data = (await response.json()) as {
+        messages?: AiChatMessage[];
+        error?: string;
+      };
 
       if (!response.ok) {
         throw new Error(data.error ?? "Failed to load messages.");
@@ -150,7 +177,9 @@ export function OverviewPersonalView({
     if (!selectedChatId || isCompacting) return;
     setIsCompacting(true);
     try {
-      const response = await fetch(`/api/chats/${selectedChatId}/compact`, { method: "POST" });
+      const response = await fetch(`/api/chats/${selectedChatId}/compact`, {
+        method: "POST",
+      });
       if (response.ok) {
         await fetchMessages(selectedChatId);
         await fetchContextInfo(selectedChatId);
@@ -186,8 +215,8 @@ export function OverviewPersonalView({
                   status: data.status ?? chat.status,
                   error: data.error ?? null,
                 }
-              : chat
-          )
+              : chat,
+          ),
         );
 
         await fetchMessages(chatId);
@@ -199,7 +228,7 @@ export function OverviewPersonalView({
         clearPolling();
       }, 1500);
     },
-    [fetchMessages]
+    [fetchMessages],
   );
 
   const handleSend = async (text: string) => {
@@ -207,6 +236,7 @@ export function OverviewPersonalView({
     const optimisticMessage: ChatMessage = {
       id: crypto.randomUUID(),
       content: text,
+      reasoning: null,
       role: "user",
       status: "complete",
       toolCalls: [],
@@ -218,7 +248,10 @@ export function OverviewPersonalView({
     if (currentChatId) {
       setMessages((currentMessages) => ({
         ...currentMessages,
-        [currentChatId]: [...(currentMessages[currentChatId] ?? []), optimisticMessage],
+        [currentChatId]: [
+          ...(currentMessages[currentChatId] ?? []),
+          optimisticMessage,
+        ],
       }));
 
       setChats((currentChats) =>
@@ -226,12 +259,15 @@ export function OverviewPersonalView({
           chat.id === currentChatId
             ? {
                 ...chat,
-                title: chat.title === "New chat" ? text.slice(0, 48) || "New chat" : chat.title,
+                title:
+                  chat.title === "New chat"
+                    ? text.slice(0, 48) || "New chat"
+                    : chat.title,
                 status: "pending",
                 error: null,
               }
-            : chat
-        )
+            : chat,
+        ),
       );
     }
 
@@ -243,9 +279,10 @@ export function OverviewPersonalView({
       setSelectedChatId(chat.id);
 
       if (!currentChatId) {
+        // Add the optimistic message immediately so the thinking UI shows right away
         setMessages((currentMessages) => ({
           ...currentMessages,
-          [chat.id]: [],
+          [chat.id]: [optimisticMessage],
         }));
       }
 
@@ -268,9 +305,9 @@ export function OverviewPersonalView({
     setChats((currentChats) =>
       currentChats.map((chat) =>
         chat.id === selectedChatId
-          ? { ...chat, status: "stopped" as (typeof chat.status) }
-          : chat
-      )
+          ? { ...chat, status: "stopped" as typeof chat.status }
+          : chat,
+      ),
     );
     await fetch(`/api/chats/${selectedChatId}/stop`, { method: "POST" });
   }, [selectedChatId, clearPolling]);
@@ -284,10 +321,8 @@ export function OverviewPersonalView({
           await updateChatModelAction(selectedChatId, model);
           setChats((currentChats) =>
             currentChats.map((chat) =>
-              chat.id === selectedChatId
-                ? { ...chat, model }
-                : chat
-            )
+              chat.id === selectedChatId ? { ...chat, model } : chat,
+            ),
           );
           // Refetch context info with new model
           await fetchContextInfo(selectedChatId);
@@ -296,7 +331,12 @@ export function OverviewPersonalView({
         console.error("Failed to update model:", err);
       }
     },
-    [selectedChatId, fetchContextInfo, updateWorkspaceModelAction, updateChatModelAction]
+    [
+      selectedChatId,
+      fetchContextInfo,
+      updateWorkspaceModelAction,
+      updateChatModelAction,
+    ],
   );
 
   const handleQuestionSubmit = useCallback(
@@ -304,7 +344,7 @@ export function OverviewPersonalView({
       const answersJson = JSON.stringify(answers, null, 2);
       await handleSend(answersJson);
     },
-    [handleSend]
+    [handleSend],
   );
 
   const handleLoadMore = useCallback(async () => {
@@ -313,15 +353,21 @@ export function OverviewPersonalView({
     try {
       const nextPage = currentPage + 1;
       const base = typeof window !== "undefined" ? window.location.origin : "";
-      const url = new URL(`${base}/api/chats?workspaceId=${workspaceId}&page=${nextPage}&pageSize=${pageSize}`);
-      if (selectedAgentType) url.searchParams.set("agentType", selectedAgentType);
+      const url = new URL(
+        `${base}/api/chats?workspaceId=${workspaceId}&page=${nextPage}&pageSize=${pageSize}`,
+      );
+      if (selectedAgentType)
+        url.searchParams.set("agentType", selectedAgentType);
       const response = await fetch(url.toString());
       if (!response.ok) throw new Error("Failed to load more chats");
-      const result = (await response.json()) as { data: AiChatListItem[]; total: number };
+      const result = (await response.json()) as {
+        data: AiChatListItem[];
+        total: number;
+      };
       const newChats = result.data.map(mapChat);
       setChats((prev) => [...prev, ...newChats]);
       setCurrentPage(nextPage);
-      setHasMore(newChats.length > 0 && (nextPage * pageSize) < result.total);
+      setHasMore(newChats.length > 0 && nextPage * pageSize < result.total);
     } catch (e) {
       console.error("Failed to load more chats:", e);
     } finally {
@@ -329,30 +375,46 @@ export function OverviewPersonalView({
     }
   }, [isLoadingMore, hasMore, currentPage, workspaceId, selectedAgentType]);
 
-  const handleFilterChange = useCallback(async (agentType: AgentType | null) => {
-    if (agentType === null) {
-      setSelectedAgentType(null);
-    } else {
-      setSelectedAgentType(agentType);
-    }
-    setCurrentPage(1);
-    setChats([]);
-    setIsLoadingMore(true);
-    try {
-      const base = typeof window !== "undefined" ? window.location.origin : "";
-      const url = new URL(`${base}/api/chats?workspaceId=${workspaceId}&page=1&pageSize=${pageSize}`);
-      if (agentType) url.searchParams.set("agentType", agentType);
-      const response = await fetch(url.toString());
-      if (!response.ok) throw new Error("Failed to load chats");
-      const result = (await response.json()) as { data: AiChatListItem[]; total: number };
-      setChats(result.data.map(mapChat));
-      setHasMore(result.data.length > 0 && result.data.length < result.total);
-    } catch (e) {
-      console.error("Failed to filter chats:", e, "agentType:", agentType, "workspaceId:", workspaceId);
-    } finally {
-      setIsLoadingMore(false);
-    }
-  }, [workspaceId]);
+  const handleFilterChange = useCallback(
+    async (agentType: AgentType | null) => {
+      if (agentType === null) {
+        setSelectedAgentType(null);
+      } else {
+        setSelectedAgentType(agentType);
+      }
+      setCurrentPage(1);
+      setChats([]);
+      setIsLoadingMore(true);
+      try {
+        const base =
+          typeof window !== "undefined" ? window.location.origin : "";
+        const url = new URL(
+          `${base}/api/chats?workspaceId=${workspaceId}&page=1&pageSize=${pageSize}`,
+        );
+        if (agentType) url.searchParams.set("agentType", agentType);
+        const response = await fetch(url.toString());
+        if (!response.ok) throw new Error("Failed to load chats");
+        const result = (await response.json()) as {
+          data: AiChatListItem[];
+          total: number;
+        };
+        setChats(result.data.map(mapChat));
+        setHasMore(result.data.length > 0 && result.data.length < result.total);
+      } catch (e) {
+        console.error(
+          "Failed to filter chats:",
+          e,
+          "agentType:",
+          agentType,
+          "workspaceId:",
+          workspaceId,
+        );
+      } finally {
+        setIsLoadingMore(false);
+      }
+    },
+    [workspaceId],
+  );
 
   useEffect(() => {
     return () => {
@@ -407,7 +469,7 @@ export function OverviewPersonalView({
       setSelectedChatId(chatId);
       if (!isLg) setSidebarOpen(false);
     },
-    [isLg]
+    [isLg],
   );
 
   const chatsSidebarProps = {
@@ -428,7 +490,9 @@ export function OverviewPersonalView({
 
   return (
     <div className="flex h-full min-h-0 overflow-hidden">
-      {sidebarOpen && isLg ? <OverviewAiChatsSidebar {...chatsSidebarProps} /> : null}
+      {sidebarOpen && isLg ? (
+        <OverviewAiChatsSidebar {...chatsSidebarProps} />
+      ) : null}
       {sidebarOpen && !isLg ? (
         <>
           <button
@@ -438,7 +502,10 @@ export function OverviewPersonalView({
             onClick={() => setSidebarOpen(false)}
           />
           <div className="fixed inset-y-0 left-0 z-[45] flex w-[min(100vw-1rem,18rem)] max-w-[calc(100vw-1rem)] flex-col border-r border-[var(--border)] bg-[var(--sidebar-bg)] shadow-xl lg:hidden">
-            <OverviewAiChatsSidebar {...chatsSidebarProps} className="w-full border-r-0" />
+            <OverviewAiChatsSidebar
+              {...chatsSidebarProps}
+              className="w-full border-r-0"
+            />
           </div>
         </>
       ) : null}
@@ -477,7 +544,10 @@ export function OverviewPersonalView({
                 onSend={handleSend}
                 onStop={handleStop}
                 onCompact={handleCompact}
-                disabled={selectedChat.status === "pending" || selectedChat.status === "processing"}
+                disabled={
+                  selectedChat.status === "pending" ||
+                  selectedChat.status === "processing"
+                }
                 isSending={isSending || loadingMessages}
                 isRunning={selectedChatIsRunning}
                 isCompacting={isCompacting}
@@ -493,9 +563,9 @@ export function OverviewPersonalView({
             <div className="flex items-center justify-center px-4 sm:px-6 w-full shrink-0">
               <div className="mt-10 h-px w-full max-w-[920px] bg-[var(--border)]" />
             </div>
-            <OverviewComposer 
-              onSend={handleSend} 
-              isSending={isSending} 
+            <OverviewComposer
+              onSend={handleSend}
+              isSending={isSending}
               model={workspaceModel}
               onModelChange={handleModelChange}
             />
