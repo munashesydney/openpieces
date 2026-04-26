@@ -1,8 +1,11 @@
 # OpenPieces
 
-A workflow management platform built with Next.js 16, React 19, and Tailwind CSS v4.
+![OpenPieces](public/op_public.png)
+
+OpenPieces is an intelligent personal assistant that dynamically creates, deploys, and manages tools — called *pieces* — on the fly. When it encounters a task it can't handle with its existing toolkit, it autonomously builds a new piece to fill the gap, deploys it instantly, and retains it for future use. Over time, OpenPieces grows a continuously expanding ecosystem of capabilities, adapting to your needs without manual intervention.
 
 ---
+
 
 ## Quick Start
 
