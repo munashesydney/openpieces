@@ -85,9 +85,9 @@ function requireGatewayApiKey() {
   }
 }
 
-function getModel() {
+function getModel(model?: string | null) {
   requireGatewayApiKey();
-  return gateway.languageModel(DEFAULT_MODEL);
+  return gateway.languageModel(model ?? DEFAULT_MODEL);
 }
 
 function sanitizeJson<T>(value: T): T {
@@ -401,6 +401,7 @@ export async function getModelMessagesForContext(chatId: string) {
 export async function compactChat(
   chatId: string,
   _systemPrompt: string,
+  model?: string | null,
 ): Promise<{ summary: string; archivedCount: number }> {
   // Load only non-compacted messages for transcript
   const messages = await db
@@ -477,7 +478,7 @@ export async function compactChat(
   );
 
   const result = streamText({
-    model: getModel(),
+    model: getModel(model ?? DEFAULT_MODEL),
     system: COMPACTOR_PROMPT,
     messages: [
       {
@@ -596,6 +597,7 @@ export async function executeAiChatJob(
         const { summary, archivedCount } = await compactChat(
           chat.id,
           systemPrompt,
+          chat.model,
         );
         await replaceMessagesWithSummary(chat.id, summary, archivedCount);
       }
@@ -606,12 +608,23 @@ export async function executeAiChatJob(
       // using the `system` parameter, to work around a Vercel AI Gateway bug
       // where the system prompt leaks into the model's response output.
       const modelMessages = await getModelMessages(chat.id);
+      const selectedModelId = chat.model ?? DEFAULT_MODEL;
+      const isAnthropicModel = selectedModelId.startsWith("anthropic/");
+      const isDeepseekThinkingModel = selectedModelId.includes("thinking");
+
       const result = streamText({
-        model: getModel(),
+        model: getModel(selectedModelId),
         messages: [
           { role: "system" as const, content: cleanedSystemPrompt },
           ...modelMessages,
         ],
+        providerOptions: isAnthropicModel
+          ? {
+              anthropic: {
+                thinking: { type: "enabled", budgetTokens: 12000 },
+              },
+            }
+          : {},
         tools: createTools({
           workspaceId: input.workspaceId,
           userId: input.userId,
@@ -782,6 +795,7 @@ export async function executeAiChatJob(
           const { summary, archivedCount } = await compactChat(
             chat.id,
             systemPrompt,
+            chat.model,
           );
           await replaceMessagesWithSummary(chat.id, summary, archivedCount);
           // Create a fresh assistant message after the compaction divider
@@ -847,6 +861,7 @@ export async function executeAiChatJob(
           const { summary, archivedCount } = await compactChat(
             chat.id,
             systemPrompt,
+            chat.model,
           );
           await replaceMessagesWithSummary(chat.id, summary, archivedCount);
           // Create a fresh assistant message after the compaction divider
