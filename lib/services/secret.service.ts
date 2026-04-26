@@ -19,7 +19,7 @@ export async function getSecrets(
   workspaceId: string,
   userId: string,
   page: number = 1,
-  pageSize: number = 50
+  pageSize: number = 50,
 ): Promise<{ data: Secret[]; total: number }> {
   if (!isValidUuid(workspaceId) || !isValidUuid(userId)) {
     return { data: [], total: 0 };
@@ -31,14 +31,18 @@ export async function getSecrets(
     db
       .select()
       .from(secrets)
-      .where(and(eq(secrets.workspaceId, workspaceId), eq(secrets.userId, userId)))
+      .where(
+        and(eq(secrets.workspaceId, workspaceId), eq(secrets.userId, userId)),
+      )
       .orderBy(desc(secrets.createdAt))
       .limit(pageSize)
       .offset(offset),
     db
       .select({ count: count() })
       .from(secrets)
-      .where(and(eq(secrets.workspaceId, workspaceId), eq(secrets.userId, userId))),
+      .where(
+        and(eq(secrets.workspaceId, workspaceId), eq(secrets.userId, userId)),
+      ),
   ]);
 
   return {
@@ -50,7 +54,7 @@ export async function getSecrets(
 export async function getSecretById(
   id: string,
   workspaceId: string,
-  userId: string
+  userId: string,
 ): Promise<Secret | null> {
   if (!isValidUuid(id) || !isValidUuid(workspaceId) || !isValidUuid(userId)) {
     return null;
@@ -63,8 +67,8 @@ export async function getSecretById(
       and(
         eq(secrets.id, id),
         eq(secrets.workspaceId, workspaceId),
-        eq(secrets.userId, userId)
-      )
+        eq(secrets.userId, userId),
+      ),
     )
     .limit(1);
 
@@ -92,6 +96,26 @@ export async function createSecret(input: {
     throw new ValidationError("Value is required.");
   }
 
+  // Proactively check for an existing secret with the same key to give a
+  // friendly message instead of letting the unique constraint throw a 500.
+  const existing = await db
+    .select({ id: secrets.id })
+    .from(secrets)
+    .where(
+      and(
+        eq(secrets.workspaceId, input.workspaceId),
+        eq(secrets.userId, input.userId),
+        eq(secrets.key, key),
+      ),
+    )
+    .limit(1);
+
+  if (existing.length > 0) {
+    throw new ValidationError(
+      `Secret "${key}" already exists in this workspace. Use the "update" action to modify its value.`,
+    );
+  }
+
   const encrypted = encryptSecret(value);
 
   const now = new Date();
@@ -110,8 +134,11 @@ export async function createSecret(input: {
 
     // Auto-respawn services that use this secret
     if (value) {
-      const { respawnServicesUsingSecret } = await import("./service-required-secrets.service");
-      respawnServicesUsingSecret(input.workspaceId, secret.key).catch(console.error);
+      const { respawnServicesUsingSecret } =
+        await import("./service-required-secrets.service");
+      respawnServicesUsingSecret(input.workspaceId, secret.key).catch(
+        console.error,
+      );
     }
 
     return secret;
@@ -160,8 +187,8 @@ export async function updateSecret(input: {
         and(
           eq(secrets.id, input.id),
           eq(secrets.workspaceId, input.workspaceId),
-          eq(secrets.userId, input.userId)
-        )
+          eq(secrets.userId, input.userId),
+        ),
       )
       .returning();
 
@@ -173,8 +200,11 @@ export async function updateSecret(input: {
 
     // Auto-respawn services that use this secret
     if (input.value) {
-      const { respawnServicesUsingSecret } = await import("./service-required-secrets.service");
-      respawnServicesUsingSecret(input.workspaceId, secret.key).catch(console.error);
+      const { respawnServicesUsingSecret } =
+        await import("./service-required-secrets.service");
+      respawnServicesUsingSecret(input.workspaceId, secret.key).catch(
+        console.error,
+      );
     }
 
     return secret;
@@ -189,7 +219,7 @@ export async function updateSecret(input: {
 export async function deleteSecret(
   id: string,
   workspaceId: string,
-  userId: string
+  userId: string,
 ): Promise<boolean> {
   if (!isValidUuid(id) || !isValidUuid(workspaceId) || !isValidUuid(userId)) {
     return false;
@@ -201,8 +231,8 @@ export async function deleteSecret(
       and(
         eq(secrets.id, id),
         eq(secrets.workspaceId, workspaceId),
-        eq(secrets.userId, userId)
-      )
+        eq(secrets.userId, userId),
+      ),
     )
     .returning({ id: secrets.id });
 
@@ -232,4 +262,3 @@ function safeDecrypt(valueEncrypted: string | null): string {
     return "";
   }
 }
-
