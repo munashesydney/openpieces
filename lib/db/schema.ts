@@ -202,6 +202,7 @@ export const aiMessages = pgTable(
       .notNull()
       .default("complete"),
     content: text("content").notNull().default(""),
+    reasoning: text("reasoning"),
     toolCalls: jsonb("tool_calls")
       .notNull()
       .default(sql`'[]'::jsonb`),

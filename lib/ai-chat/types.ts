@@ -1,8 +1,19 @@
-export type AiChatStatus = "idle" | "pending" | "processing" | "completed" | "failed" | "stopped";
+export type AiChatStatus =
+  | "idle"
+  | "pending"
+  | "processing"
+  | "completed"
+  | "failed"
+  | "stopped";
 
 export type AiMessageRole = "user" | "assistant";
 
-export type AiMessageStatus = "pending" | "streaming" | "complete" | "error" | "compacted";
+export type AiMessageStatus =
+  | "pending"
+  | "streaming"
+  | "complete"
+  | "error"
+  | "compacted";
 
 export type AiToolCall = {
   toolCallId: string;
@@ -35,6 +46,7 @@ export type AiChatMessage = {
   role: AiMessageRole;
   status: AiMessageStatus;
   content: string;
+  reasoning: string | null;
   toolCalls: AiToolCall[];
   toolResults: AiToolResult[];
   createdAt: string;

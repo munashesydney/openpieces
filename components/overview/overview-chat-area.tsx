@@ -8,6 +8,7 @@ import type { AiToolCall, AiToolResult } from "@/lib/ai-chat/types";
 export type ChatMessage = {
   id: string;
   content: string;
+  reasoning: string | null;
   role: "user" | "assistant";
   status: "pending" | "streaming" | "complete" | "error" | "compacted";
   toolCalls: AiToolCall[];
@@ -82,13 +83,14 @@ export function OverviewChatArea({
     if (last.role === "user") return true;
     if (last.role !== "assistant") return false;
     if (last.status !== "streaming" && last.status !== "pending") return false;
-    
+
     if (hasPendingToolCalls(last)) return true;
-    
+
     const hasText = last.content.trim().length > 0;
-    if (!hasText) return true;
+    const hasReasoning = last.reasoning && last.reasoning.trim().length > 0;
+    if (!hasText && !hasReasoning) return true;
     if (last.toolCalls.length > 0) return true;
-    
+
     return false;
   }, [isChatRunning, messages]);
 
@@ -105,9 +107,12 @@ export function OverviewChatArea({
       // Hide compacted user messages (the summary is model-only context)
       if (msg.status === "compacted" && msg.role === "user") return false;
       if (msg.role !== "assistant") return true;
+      // Show messages that have reasoning (thinking content) even if text is empty
+      const hasReasoning = msg.reasoning && msg.reasoning.trim().length > 0;
       const isPlaceholder =
         !msg.content.trim() &&
         msg.toolCalls.length === 0 &&
+        !hasReasoning &&
         (msg.status === "streaming" || msg.status === "pending");
       if (isPlaceholder && isChatRunning) return false;
       return true;
@@ -140,8 +145,7 @@ export function OverviewChatArea({
             {visibleMessages.map((msg, index) => {
               const nextMsg = visibleMessages[index + 1];
               const isFollowedByUserMessage =
-                msg.role === "assistant" &&
-                nextMsg?.role === "user";
+                msg.role === "assistant" && nextMsg?.role === "user";
 
               return (
                 <div
@@ -158,7 +162,13 @@ export function OverviewChatArea({
                     <div className="flex items-center gap-3 py-2 w-full max-w-[600px]">
                       <div className="flex-1 h-px bg-[var(--border)]" />
                       <span className="text-xs text-[var(--muted)] flex items-center gap-1.5 whitespace-nowrap">
-                        <svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor" opacity="0.5">
+                        <svg
+                          width="12"
+                          height="12"
+                          viewBox="0 0 16 16"
+                          fill="currentColor"
+                          opacity="0.5"
+                        >
                           <path d="M1 3.5A1.5 1.5 0 0 1 2.5 2h3.879a1.5 1.5 0 0 1 1.06.44l1.122 1.12A1.5 1.5 0 0 0 9.62 4H13.5A1.5 1.5 0 0 1 15 5.5v7a1.5 1.5 0 0 1-1.5 1.5h-11A1.5 1.5 0 0 1 1 12.5v-9Z" />
                         </svg>
                         {msg.content}
@@ -168,6 +178,7 @@ export function OverviewChatArea({
                   ) : (
                     <ChatMessageCard
                       content={msg.content}
+                      reasoning={msg.reasoning}
                       role={msg.role}
                       toolCalls={msg.toolCalls}
                       toolResults={msg.toolResults}

@@ -63,10 +63,14 @@ function collectErrorStrings(error: unknown, depth = 0): string {
     parts.push(collectErrorStrings((error as any).cause, depth + 1));
     // Also check .data which Gateway errors expose
     if ((error as any).data) {
-      try { parts.push(JSON.stringify((error as any).data)); } catch { }
+      try {
+        parts.push(JSON.stringify((error as any).data));
+      } catch {}
     }
   } else if (typeof error === "object") {
-    try { parts.push(JSON.stringify(error)); } catch { }
+    try {
+      parts.push(JSON.stringify(error));
+    } catch {}
   }
   return parts.join(" ");
 }
@@ -111,6 +115,7 @@ function serializeMessage(message: AiMessage): AiChatMessage {
     role: message.role,
     status: message.status as AiMessageStatus,
     content: message.content,
+    reasoning: message.reasoning ?? null,
     toolCalls: Array.isArray(message.toolCalls)
       ? (message.toolCalls as AiToolCall[])
       : [],
@@ -153,7 +158,7 @@ function getToolResultError(value: unknown): string {
 
 export async function createAiChat(
   data: Pick<NewAiChat, "workspaceId" | "userId">,
-  agentType: string = "orchestrator"
+  agentType: string = "orchestrator",
 ) {
   const settings = await getWorkspaceSettings(data.workspaceId);
   const model = settings?.defaultModel ?? DEFAULT_MODEL;
@@ -178,14 +183,16 @@ export async function getAiChatsForWorkspace(
   userId: string,
   page: number = 1,
   pageSize: number = 10,
-  agentType?: string
+  agentType?: string,
 ) {
   if (!isValidUuid(workspaceId) || !isValidUuid(userId)) {
     return { data: [], total: 0 };
   }
 
   const offset = (page - 1) * pageSize;
-  const conditions = [and(eq(aiChats.workspaceId, workspaceId), eq(aiChats.userId, userId))];
+  const conditions = [
+    and(eq(aiChats.workspaceId, workspaceId), eq(aiChats.userId, userId)),
+  ];
   if (agentType) {
     conditions.push(eq(aiChats.agentType, agentType));
   }
@@ -259,6 +266,7 @@ export async function createAiMessage(data: {
   status?: NewAiMessage["status"];
   toolCalls?: AiToolCall[];
   toolResults?: AiToolResult[];
+  reasoning?: string;
 }) {
   const [message] = await db
     .insert(aiMessages)
@@ -269,6 +277,7 @@ export async function createAiMessage(data: {
       status: data.status ?? "complete",
       toolCalls: sanitizeJson(data.toolCalls ?? []),
       toolResults: sanitizeJson(data.toolResults ?? []),
+      reasoning: data.reasoning ?? null,
     })
     .returning();
 
@@ -281,7 +290,7 @@ export async function updateAiChatStatus(
   options?: {
     error?: string | null;
     title?: string;
-  }
+  },
 ) {
   await db
     .update(aiChats)
@@ -294,7 +303,10 @@ export async function updateAiChatStatus(
     .where(eq(aiChats.id, chatId));
 }
 
-export async function setChatStopped(chatId: string, stopped: boolean): Promise<void> {
+export async function setChatStopped(
+  chatId: string,
+  stopped: boolean,
+): Promise<void> {
   await db
     .update(aiChats)
     .set({ stopped, updatedAt: new Date() })
@@ -317,7 +329,8 @@ export async function updateAiMessage(
     status?: AiMessageStatus;
     toolCalls?: AiToolCall[];
     toolResults?: AiToolResult[];
-  }
+    reasoning?: string | null;
+  },
 ) {
   await db
     .update(aiMessages)
@@ -325,7 +338,10 @@ export async function updateAiMessage(
       content: data.content,
       status: data.status,
       toolCalls: data.toolCalls ? sanitizeJson(data.toolCalls) : undefined,
-      toolResults: data.toolResults ? sanitizeJson(data.toolResults) : undefined,
+      toolResults: data.toolResults
+        ? sanitizeJson(data.toolResults)
+        : undefined,
+      reasoning: data.reasoning !== undefined ? data.reasoning : undefined,
       updatedAt: new Date(),
     })
     .where(eq(aiMessages.id, messageId));
@@ -365,10 +381,7 @@ async function getModelMessages(chatId: string): Promise<ModelMessage[]> {
     })
     .from(aiMessages)
     .where(
-      and(
-        eq(aiMessages.chatId, chatId),
-        eq(aiMessages.isCompacted, false)
-      )
+      and(eq(aiMessages.chatId, chatId), eq(aiMessages.isCompacted, false)),
     )
     .orderBy(asc(aiMessages.createdAt), asc(aiMessages.id));
 
@@ -387,17 +400,14 @@ export async function getModelMessagesForContext(chatId: string) {
 
 export async function compactChat(
   chatId: string,
-  _systemPrompt: string
+  _systemPrompt: string,
 ): Promise<{ summary: string; archivedCount: number }> {
   // Load only non-compacted messages for transcript
   const messages = await db
     .select()
     .from(aiMessages)
     .where(
-      and(
-        eq(aiMessages.chatId, chatId),
-        eq(aiMessages.isCompacted, false)
-      )
+      and(eq(aiMessages.chatId, chatId), eq(aiMessages.isCompacted, false)),
     )
     .orderBy(asc(aiMessages.createdAt), asc(aiMessages.id));
 
@@ -416,28 +426,35 @@ export async function compactChat(
       if (content) parts.push(content);
 
       // Tool calls: include tool name and action
-      const toolCalls = Array.isArray(m.toolCalls) ? (m.toolCalls as AiToolCall[]) : [];
+      const toolCalls = Array.isArray(m.toolCalls)
+        ? (m.toolCalls as AiToolCall[])
+        : [];
       if (toolCalls.length > 0) {
         const callSummaries = toolCalls.map((tc) => {
-          const action = tc.input && typeof tc.input === 'object' && 'action' in tc.input
-            ? ` (${(tc.input as any).action})`
-            : '';
+          const action =
+            tc.input && typeof tc.input === "object" && "action" in tc.input
+              ? ` (${(tc.input as any).action})`
+              : "";
           return `  → called ${tc.toolName}${action}`;
         });
         parts.push(callSummaries.join("\n"));
       }
 
       // Tool results: brief snippet of each output
-      const toolResults = Array.isArray(m.toolResults) ? (m.toolResults as AiToolResult[]) : [];
+      const toolResults = Array.isArray(m.toolResults)
+        ? (m.toolResults as AiToolResult[])
+        : [];
       if (toolResults.length > 0) {
         const resultSummaries = toolResults.map((tr) => {
           if (tr.error) return `  ← ${tr.toolName}: ERROR: ${tr.error}`;
-          const output = typeof tr.output === 'string'
-            ? tr.output
-            : JSON.stringify(tr.output);
-          const snippet = output.length > 300
-            ? output.slice(0, 300) + '... [truncated]'
-            : output;
+          const output =
+            typeof tr.output === "string"
+              ? tr.output
+              : JSON.stringify(tr.output);
+          const snippet =
+            output.length > 300
+              ? output.slice(0, 300) + "... [truncated]"
+              : output;
           return `  ← ${tr.toolName}: ${snippet}`;
         });
         parts.push(resultSummaries.join("\n"));
@@ -449,11 +466,15 @@ export async function compactChat(
 
   // Cap the full transcript to ~80k chars (~40k tokens)
   const MAX_TRANSCRIPT_CHARS = 80000;
-  const truncatedTranscript = transcript.length > MAX_TRANSCRIPT_CHARS
-    ? "[Earlier messages truncated]\n\n" + transcript.slice(-MAX_TRANSCRIPT_CHARS)
-    : transcript;
+  const truncatedTranscript =
+    transcript.length > MAX_TRANSCRIPT_CHARS
+      ? "[Earlier messages truncated]\n\n" +
+        transcript.slice(-MAX_TRANSCRIPT_CHARS)
+      : transcript;
 
-  console.log(`[chat.service] Compacting chat: ${archivedCount} messages, transcript ${transcript.length} chars, sent ${truncatedTranscript.length} chars`);
+  console.log(
+    `[chat.service] Compacting chat: ${archivedCount} messages, transcript ${transcript.length} chars, sent ${truncatedTranscript.length} chars`,
+  );
 
   const result = streamText({
     model: getModel(),
@@ -481,17 +502,14 @@ export async function compactChat(
 export async function replaceMessagesWithSummary(
   chatId: string,
   summary: string,
-  archivedCount: number
+  archivedCount: number,
 ): Promise<void> {
   // Archive old messages instead of deleting
   await db
     .update(aiMessages)
     .set({ isCompacted: true, updatedAt: new Date() })
     .where(
-      and(
-        eq(aiMessages.chatId, chatId),
-        eq(aiMessages.isCompacted, false)
-      )
+      and(eq(aiMessages.chatId, chatId), eq(aiMessages.isCompacted, false)),
     );
 
   // Create a compaction divider message (shown as UI indicator, not as chat text)
@@ -513,7 +531,7 @@ export async function replaceMessagesWithSummary(
 
 export async function executeAiChatJob(
   input: { chatId: string; workspaceId: string; userId: string },
-  signal?: AbortSignal
+  signal?: AbortSignal,
 ) {
   const chat = await getAiChatRecordById(input.chatId, input.userId);
   if (!chat) {
@@ -532,6 +550,7 @@ export async function executeAiChatJob(
   });
 
   let content = "";
+  let reasoningText = "";
   let toolCalls: AiToolCall[] = [];
   let toolResults: AiToolResult[] = [];
 
@@ -546,6 +565,10 @@ export async function executeAiChatJob(
             ? QA_CHAT_SYSTEM_PROMPT
             : OPENPIECES_CHAT_SYSTEM_PROMPT;
 
+  // HACK: Strip leading markdown heading artifacts to reduce model's tendency to
+  // "continue" the system prompt text as if it were a prefix completion.
+  const cleanedSystemPrompt = systemPrompt.replace(/^#+\s*/m, "").trimStart();
+
   let attempt = 0;
   const MAX_ATTEMPTS = 3;
 
@@ -554,6 +577,7 @@ export async function executeAiChatJob(
     let isContextError = false;
     // Reset per-attempt state
     content = "";
+    reasoningText = "";
     toolCalls = [];
     toolResults = [];
 
@@ -563,18 +587,31 @@ export async function executeAiChatJob(
 
     try {
       const messages = await getModelMessages(chat.id);
-      const contextInfo = await getContextInfo(chat.model ?? DEFAULT_MODEL, messages, systemPrompt);
+      const contextInfo = await getContextInfo(
+        chat.model ?? DEFAULT_MODEL,
+        messages,
+        systemPrompt,
+      );
       if (contextInfo.needsCompaction) {
-        const { summary, archivedCount } = await compactChat(chat.id, systemPrompt);
+        const { summary, archivedCount } = await compactChat(
+          chat.id,
+          systemPrompt,
+        );
         await replaceMessagesWithSummary(chat.id, summary, archivedCount);
       }
 
       const modelLimits = await getModelLimits(chat.model ?? DEFAULT_MODEL);
 
+      // Include system prompt as first message in messages array instead of
+      // using the `system` parameter, to work around a Vercel AI Gateway bug
+      // where the system prompt leaks into the model's response output.
+      const modelMessages = await getModelMessages(chat.id);
       const result = streamText({
         model: getModel(),
-        system: systemPrompt,
-        messages: await getModelMessages(chat.id),
+        messages: [
+          { role: "system" as const, content: cleanedSystemPrompt },
+          ...modelMessages,
+        ],
         tools: createTools({
           workspaceId: input.workspaceId,
           userId: input.userId,
@@ -593,15 +630,24 @@ export async function executeAiChatJob(
             toolResults,
           });
           await updateAiChatStatus(chat.id, "stopped");
-          void updateWorkflowExecutionByChatId(chat.id, "cancelled", content || null);
+          void updateWorkflowExecutionByChatId(
+            chat.id,
+            "cancelled",
+            content || null,
+          );
         },
         stopWhen: stepCountIs(500),
         onError: ({ error }) => {
           if (isContextWindowError(error)) {
             isContextError = true;
-            console.log("[chat.service] Context window error detected via onError");
+            console.log(
+              "[chat.service] Context window error detected via onError",
+            );
           }
-          console.error("[chat.service] AI stream error:", (error as any)?.message);
+          console.error(
+            "[chat.service] AI stream error:",
+            (error as any)?.message,
+          );
         },
       });
 
@@ -638,6 +684,28 @@ export async function executeAiChatJob(
           continue;
         }
 
+        if (part.type === "reasoning-start") {
+          // Thinking phase began — reset accumulated reasoning
+          reasoningText = "";
+          continue;
+        }
+
+        if (part.type === "reasoning-delta") {
+          reasoningText += part.text;
+          await updateAiMessage(assistantMessage.id, {
+            reasoning: reasoningText,
+          });
+          continue;
+        }
+
+        if (part.type === "reasoning-end") {
+          // Finalize reasoning when the model finishes its thinking phase
+          await updateAiMessage(assistantMessage.id, {
+            reasoning: reasoningText,
+          });
+          continue;
+        }
+
         if (part.type === "tool-call") {
           toolCalls = [
             ...toolCalls,
@@ -658,11 +726,15 @@ export async function executeAiChatJob(
           // Truncate large tool outputs to prevent context overflow
           const rawOutput = part.output ?? null;
           const truncated = truncateToolOutput(
-            typeof rawOutput === "string" ? rawOutput : JSON.stringify(rawOutput)
+            typeof rawOutput === "string"
+              ? rawOutput
+              : JSON.stringify(rawOutput),
           );
 
           toolResults = [
-            ...toolResults.filter((resultItem) => resultItem.toolCallId !== part.toolCallId),
+            ...toolResults.filter(
+              (resultItem) => resultItem.toolCallId !== part.toolCallId,
+            ),
             {
               toolCallId: part.toolCallId,
               toolName: part.toolName,
@@ -678,7 +750,9 @@ export async function executeAiChatJob(
 
         if (part.type === "tool-error") {
           toolResults = [
-            ...toolResults.filter((resultItem) => resultItem.toolCallId !== part.toolCallId),
+            ...toolResults.filter(
+              (resultItem) => resultItem.toolCallId !== part.toolCallId,
+            ),
             {
               toolCallId: part.toolCallId,
               toolName: part.toolName,
@@ -695,13 +769,20 @@ export async function executeAiChatJob(
 
       clearInterval(stopPollInterval);
 
-      console.log(`[chat.service] Stream ended: isContextError=${isContextError}, contentLen=${content.length}, attempt=${attempt}/${MAX_ATTEMPTS}`);
+      console.log(
+        `[chat.service] Stream ended: isContextError=${isContextError}, contentLen=${content.length}, attempt=${attempt}/${MAX_ATTEMPTS}`,
+      );
 
       // If a context error was detected (via onError or error part), compact and retry
       if (isContextError && attempt < MAX_ATTEMPTS) {
-        console.log("[chat.service] Context window exceeded, compacting and retrying...");
+        console.log(
+          "[chat.service] Context window exceeded, compacting and retrying...",
+        );
         try {
-          const { summary, archivedCount } = await compactChat(chat.id, systemPrompt);
+          const { summary, archivedCount } = await compactChat(
+            chat.id,
+            systemPrompt,
+          );
           await replaceMessagesWithSummary(chat.id, summary, archivedCount);
           // Create a fresh assistant message after the compaction divider
           content = "";
@@ -726,7 +807,8 @@ export async function executeAiChatJob(
       // If there was an error but no retry possible, mark as failed
       if (isContextError) {
         await updateAiMessage(assistantMessage.id, {
-          content: "The conversation exceeded the model's context limit and compaction was not sufficient. Please start a new chat.",
+          content:
+            "The conversation exceeded the model's context limit and compaction was not sufficient. Please start a new chat.",
           status: "error",
           toolCalls,
           toolResults,
@@ -740,12 +822,17 @@ export async function executeAiChatJob(
       await updateAiMessage(assistantMessage.id, {
         content,
         status: "complete",
+        reasoning: reasoningText || null,
         toolCalls,
         toolResults,
       });
 
       await updateAiChatStatus(chat.id, "completed");
-      void updateWorkflowExecutionByChatId(chat.id, "completed", content || null);
+      void updateWorkflowExecutionByChatId(
+        chat.id,
+        "completed",
+        content || null,
+      );
       break; // Exit retry loop on success
     } catch (error) {
       if (signal?.aborted) {
@@ -757,7 +844,10 @@ export async function executeAiChatJob(
 
       if (isContextLengthError && attempt < MAX_ATTEMPTS && !content) {
         try {
-          const { summary, archivedCount } = await compactChat(chat.id, systemPrompt);
+          const { summary, archivedCount } = await compactChat(
+            chat.id,
+            systemPrompt,
+          );
           await replaceMessagesWithSummary(chat.id, summary, archivedCount);
           // Create a fresh assistant message after the compaction divider
           assistantMessage = await createAiMessage({
@@ -775,7 +865,9 @@ export async function executeAiChatJob(
       }
 
       const errorMessage =
-        error instanceof Error ? error.message : "An unexpected AI error occurred.";
+        error instanceof Error
+          ? error.message
+          : "An unexpected AI error occurred.";
 
       await updateAiMessage(assistantMessage.id, {
         content:
