@@ -198,7 +198,18 @@ export function OverviewChatArea({
               </div>
             ) : null}
             {status === "failed" && error ? (
-              <p className="text-sm text-red-500">{error}</p>
+              <div className="flex w-full max-w-[680px] items-start gap-2.5 rounded-lg border border-red-500/20 bg-red-500/5 px-3.5 py-2.5">
+                <svg
+                  className="mt-0.5 h-4 w-4 shrink-0 text-red-500"
+                  viewBox="0 0 16 16"
+                  fill="currentColor"
+                >
+                  <path d="M8 1a7 7 0 1 1 0 14A7 7 0 0 1 8 1ZM7 5v3a1 1 0 0 0 2 0V5a1 1 0 1 0-2 0Zm1 5.5a1 1 0 1 0 0-2 1 1 0 0 0 0 2Z" />
+                </svg>
+                <p className="text-sm text-red-500/90 leading-relaxed">
+                  {error}
+                </p>
+              </div>
             ) : null}
           </div>
         )}

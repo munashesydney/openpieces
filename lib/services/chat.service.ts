@@ -53,6 +53,17 @@ function isContextWindowError(error: unknown): boolean {
   return CONTEXT_ERROR_PHRASES.some((phrase) => haystack.includes(phrase));
 }
 
+const MODEL_ERROR_PHRASES = [
+  "thinking.type.enabled",
+  "thinking.type.adaptive",
+  "is not supported for this model",
+];
+
+function isModelCompatibilityError(error: unknown): boolean {
+  const haystack = collectErrorStrings(error);
+  return MODEL_ERROR_PHRASES.some((phrase) => haystack.includes(phrase));
+}
+
 function collectErrorStrings(error: unknown, depth = 0): string {
   if (depth > 4 || error == null) return "";
   const parts: string[] = [];
@@ -88,6 +99,82 @@ function requireGatewayApiKey() {
 function getModel(model?: string | null) {
   requireGatewayApiKey();
   return gateway.languageModel(model ?? DEFAULT_MODEL);
+}
+
+/**
+ * Strip empty text blocks from messages before sending to Anthropic.
+ * Anthropic's API rejects messages where a text content block is empty.
+ */
+function sanitizeForAnthropic(messages: ModelMessage[]): ModelMessage[] {
+  const result = messages
+    .map((msg) => {
+      if (typeof msg.content === "string") {
+        // String content — filter out empty strings
+        if (msg.content.trim() === "") return null;
+        return msg;
+      }
+
+      if (Array.isArray(msg.content)) {
+        const filtered = msg.content.filter((block) => {
+          if (block.type === "text") return block.text.trim() !== "";
+          // tool_use, tool_result, image, reasoning, file etc — keep as-is
+          return true;
+        });
+
+        if (filtered.length === 0) return null;
+        return { ...msg, content: filtered };
+      }
+
+      return msg;
+    })
+    .filter(Boolean) as ModelMessage[];
+
+  if (messages.length !== result.length) {
+    const removed = messages.length - result.length;
+    console.log(
+      `[chat.service] sanitizeForAnthropic removed ${removed} message(s) with empty content`,
+    );
+  }
+
+  return result;
+}
+
+/**
+ * Build provider options for Anthropic models.
+ *
+ * - Newer models (claude-opus-4+, claude-sonnet-4+, claude-haiku-4.5+):
+ *   use `thinking.type: "adaptive"` (letting the model decide how much
+ *   thinking to do based on prompt complexity).
+ * - Older models (claude-3-*): use budget-based `thinking.type: "enabled"`.
+ *
+ * If a model throws an error about thinking config, it will be caught
+ * and displayed as a friendly "please pick another model" message.
+ */
+function buildAnthropicProviderOptions(modelId: string) {
+  // Newer Claude models (4.x series) support adaptive thinking
+  if (
+    modelId.includes("opus-4") ||
+    modelId.includes("sonnet-4") ||
+    modelId.includes("haiku-4.5")
+  ) {
+    return {
+      anthropic: {
+        thinking: {
+          type: "adaptive" as const,
+        },
+      },
+    };
+  }
+
+  // Older Claude models (claude-3-*) - use budget-based thinking
+  return {
+    anthropic: {
+      thinking: {
+        type: "enabled" as const,
+        budgetTokens: 12000,
+      },
+    },
+  };
 }
 
 function sanitizeJson<T>(value: T): T {
@@ -607,23 +694,43 @@ export async function executeAiChatJob(
       // Include system prompt as first message in messages array instead of
       // using the `system` parameter, to work around a Vercel AI Gateway bug
       // where the system prompt leaks into the model's response output.
-      const modelMessages = await getModelMessages(chat.id);
+      // Note: For Anthropic models, we must use the `system` parameter instead
+      // because Anthropic's API rejects `system`-role entries in the messages array.
       const selectedModelId = chat.model ?? DEFAULT_MODEL;
       const isAnthropicModel = selectedModelId.startsWith("anthropic/");
-      const isDeepseekThinkingModel = selectedModelId.includes("thinking");
+
+      let modelMessages = await getModelMessages(chat.id);
+      console.log(
+        `[chat.service] Pre-stream message count=${modelMessages.length}, model="${selectedModelId}", anthropic=${isAnthropicModel}`,
+      );
+      for (const m of modelMessages) {
+        const contentPreview =
+          typeof m.content === "string"
+            ? JSON.stringify(m.content.slice(0, 80))
+            : `[array of ${m.content.length} blocks]`;
+        console.log(`  msg role="${m.role}" content=${contentPreview}`);
+      }
+
+      // Always sanitize empty content — Anthropic rejects empty text blocks
+      const before = modelMessages.length;
+      modelMessages = sanitizeForAnthropic(modelMessages);
+      if (modelMessages.length !== before) {
+        console.log(
+          `[chat.service] Removed ${before - modelMessages.length} empty message(s)`,
+        );
+      }
 
       const result = streamText({
         model: getModel(selectedModelId),
-        messages: [
-          { role: "system" as const, content: cleanedSystemPrompt },
-          ...modelMessages,
-        ],
+        system: isAnthropicModel ? cleanedSystemPrompt : undefined,
+        messages: isAnthropicModel
+          ? modelMessages
+          : [
+              { role: "system" as const, content: cleanedSystemPrompt },
+              ...modelMessages,
+            ],
         providerOptions: isAnthropicModel
-          ? {
-              anthropic: {
-                thinking: { type: "enabled", budgetTokens: 12000 },
-              },
-            }
+          ? buildAnthropicProviderOptions(selectedModelId)
           : {},
         tools: createTools({
           workspaceId: input.workspaceId,
@@ -633,7 +740,7 @@ export async function executeAiChatJob(
           loopState,
         }),
         maxOutputTokens: modelLimits.output,
-        temperature: 0.2,
+        temperature: isAnthropicModel ? undefined : 0.5,
         abortSignal: signal,
         onAbort: async () => {
           await updateAiMessage(assistantMessage.id, {
@@ -655,6 +762,11 @@ export async function executeAiChatJob(
             isContextError = true;
             console.log(
               "[chat.service] Context window error detected via onError",
+            );
+          }
+          if (isModelCompatibilityError(error)) {
+            console.log(
+              "[chat.service] Model compatibility error detected via onError",
             );
           }
           console.error(
@@ -879,10 +991,14 @@ export async function executeAiChatJob(
         }
       }
 
-      const errorMessage =
+      const rawErrorMessage =
         error instanceof Error
           ? error.message
           : "An unexpected AI error occurred.";
+
+      const errorMessage = isModelCompatibilityError(error)
+        ? "There is an issue with the selected model. Please pick another one."
+        : rawErrorMessage;
 
       await updateAiMessage(assistantMessage.id, {
         content:
