@@ -705,14 +705,34 @@ export async function startServiceWorker() {
           }
           _spawningServices.delete(serviceId);
 
-          // Atomically increment spawnFailCount so concurrent failures
-          // don't race on read-then-write and all see the same value.
-          await db.execute(
-            sql`UPDATE ${services} SET spawn_fail_count = spawn_fail_count + 1, port = NULL, pid = NULL, status = 'crashed' WHERE id = ${serviceId}`,
-          );
+          // Soft errors (missing index.ts, missing/empty required secrets)
+          // should NOT increment spawnFailCount - they are permanent conditions.
+          const errMessage =
+            error instanceof Error ? error.message : String(error);
+          const isSoftError =
+            errMessage.includes("has no index.ts") ||
+            errMessage.includes("Missing or empty required secrets");
+
+          if (isSoftError) {
+            await db.execute(
+              sql`UPDATE ${services} SET port = NULL, pid = NULL, status = 'stopped' WHERE id = ${serviceId}`,
+            );
+          } else {
+            // Atomically increment spawnFailCount so concurrent failures
+            // don't race on read-then-write and all see the same value.
+            await db.execute(
+              sql`UPDATE ${services} SET spawn_fail_count = spawn_fail_count + 1, port = NULL, pid = NULL, status = 'crashed' WHERE id = ${serviceId}`,
+            );
+          }
         } catch (updateError) {
+          const targetStatus =
+            error instanceof Error &&
+            (error.message.includes("has no index.ts") ||
+              error.message.includes("Missing or empty required secrets"))
+              ? "stopped"
+              : "crashed";
           console.error(
-            `[service-worker] Failed to update service status to crashed:`,
+            `[service-worker] Failed to update service status to ${targetStatus}:`,
             updateError,
           );
         }
