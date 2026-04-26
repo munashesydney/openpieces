@@ -1,7 +1,9 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import { ChevronDown, ChevronRight } from "lucide-react";
 import type { AiToolCall, AiToolResult } from "@/lib/ai-chat/types";
 import { ChatToolCalls } from "./chat-tool-calls";
 import { QuestionInputCard } from "./question-input-card";
@@ -9,8 +11,11 @@ import { QuestionInputCard } from "./question-input-card";
 type ChatMessageCardProps = {
   content: string;
   role?: "user" | "assistant";
+  reasoning?: string | null;
   toolCalls?: AiToolCall[];
   toolResults?: AiToolResult[];
+  /** Whether the model is still streaming this message. */
+  isStreaming?: boolean;
   onQuestionSubmit?: (answers: Record<string, string>) => void;
   isFollowedByUserMessage?: boolean;
 };
@@ -21,8 +26,10 @@ const assistantMarkdownClass =
 export function ChatMessageCard({
   content,
   role = "user",
+  reasoning,
   toolCalls = [],
   toolResults = [],
+  isStreaming = false,
   onQuestionSubmit,
   isFollowedByUserMessage,
 }: ChatMessageCardProps) {
@@ -40,34 +47,130 @@ export function ChatMessageCard({
   }
 
   const hasBody = content.trim().length > 0;
+  const hasReasoning = !!reasoning && reasoning.trim().length > 0;
+  const isStreamingReasoning = isStreaming && !hasBody;
 
-  // Separate question tool calls so they render after content instead of with other tool calls
+  // Separate question tool calls (rendered after content) from other tool calls
   const questionToolCalls = toolCalls.filter(
     (tc) => (tc.input as { action?: string })?.action === "ask_question",
   );
+  const nonQuestionToolCalls = toolCalls.filter(
+    (tc) => (tc.input as { action?: string })?.action !== "ask_question",
+  );
+
+  const showThinkingSection =
+    isStreaming || hasReasoning || nonQuestionToolCalls.length > 0;
+
+  // Auto-collapse once streaming finishes
+  const [autoCollapsed, setAutoCollapsed] = useState(false);
+  const [expanded, setExpanded] = useState(true);
+
+  useEffect(() => {
+    if (!isStreaming && (hasReasoning || nonQuestionToolCalls.length > 0) && !autoCollapsed) {
+      setAutoCollapsed(true);
+      setExpanded(false);
+    }
+  }, [isStreaming, hasReasoning, nonQuestionToolCalls.length, autoCollapsed]);
+
+  // Determine section label
+  let sectionLabel: string;
+  if (isStreaming) {
+    sectionLabel = "Thinking";
+  } else if (hasReasoning) {
+    sectionLabel = "Thought";
+  } else {
+    sectionLabel = "Process";
+  }
 
   return (
     <div
       className="w-full max-w-[min(100%,680px)] min-w-0"
       data-role="assistant"
     >
-      <ChatToolCalls
-        toolCalls={toolCalls}
-        toolResults={toolResults}
-        standalone={!hasBody}
-        onQuestionSubmit={onQuestionSubmit}
-        isFollowedByUserMessage={isFollowedByUserMessage}
-        skipQuestions={hasBody}
-      />
+      {/* Thinking / thought process section — includes reasoning and tool calls */}
+      {showThinkingSection ? (
+        <div className="mb-3">
+          {/* Header row: entire row is clickable, chevron sits right next to the label */}
+          <button
+            type="button"
+            onClick={() => setExpanded((v) => !v)}
+            className="flex items-center gap-1 mb-1.5 rounded px-0.5 -ml-0.5 transition-colors hover:bg-[var(--hover-bg)]"
+            aria-label={expanded ? "Collapse reasoning" : "Expand reasoning"}
+          >
+            {isStreaming ? (
+              <>
+                <span className="inline-block h-2 w-2 shrink-0 rounded-full bg-[var(--foreground)]/50" />
+                <span className="text-xs font-medium text-[var(--muted)] shrink-0 tracking-wide">
+                  {sectionLabel}
+                </span>
+                <span className="flex gap-0.5">
+                  <span className="h-1 w-1 animate-[thinkingDot_1.4s_ease-in-out_infinite] rounded-full bg-[var(--muted)]" />
+                  <span className="h-1 w-1 animate-[thinkingDot_1.4s_ease-in-out_infinite] rounded-full bg-[var(--muted)] [animation-delay:0.2s]" />
+                  <span className="h-1 w-1 animate-[thinkingDot_1.4s_ease-in-out_infinite] rounded-full bg-[var(--muted)] [animation-delay:0.4s]" />
+                </span>
+                {/* Chevron right next to label */}
+                {expanded ? (
+                  <ChevronDown className="h-3 w-3 text-[var(--muted)]" />
+                ) : (
+                  <ChevronRight className="h-3 w-3 text-[var(--muted)]" />
+                )}
+              </>
+            ) : (
+              <>
+                <span className="inline-block h-2 w-2 shrink-0 rounded-full bg-[var(--foreground)]/50" />
+                <span className="text-xs font-medium text-[var(--muted)]">
+                  {sectionLabel}
+                </span>
+                {/* Chevron right next to the text */}
+                {expanded ? (
+                  <ChevronDown className="h-3 w-3 text-[var(--muted)]" />
+                ) : (
+                  <ChevronRight className="h-3 w-3 text-[var(--muted)]" />
+                )}
+              </>
+            )}
+          </button>
+
+          {/* Expandable content — amber left border area */}
+          {expanded ? (
+            <div className="border-l-2 border-[var(--border)] pl-3 py-0.5 space-y-1.5">
+              {/* Reasoning text or waiting spinner */}
+              {hasReasoning ? (
+                <p className="text-[13px] leading-[1.6] text-[var(--muted)] whitespace-pre-wrap">
+                  {reasoning}
+                </p>
+              ) : isStreaming ? (
+                <div className="flex items-center gap-2 py-1">
+                  <span className="inline-block h-3 w-3 rounded-full border-2 border-[var(--border)] border-t-[var(--foreground)]/50 animate-spin" />
+                  <span className="text-xs text-[var(--muted)]">
+                    Waiting for model response…
+                  </span>
+                </div>
+              ) : null}
+
+              {/* Tool calls rendered compactly inside the thought process */}
+              {nonQuestionToolCalls.length > 0 ? (
+                <ChatToolCalls
+                  toolCalls={nonQuestionToolCalls}
+                  toolResults={toolResults}
+                  variant="compact"
+                />
+              ) : null}
+            </div>
+          ) : null}
+        </div>
+      ) : null}
+
       {hasBody ? (
         <div
-          className={`${assistantMarkdownClass}${toolCalls.length > 0 ? " mt-3" : ""}`}
+          className={`${assistantMarkdownClass}${toolCalls.length > 0 || hasReasoning || isStreaming ? " mt-3" : ""}`}
         >
           <ReactMarkdown remarkPlugins={[remarkGfm]}>{content}</ReactMarkdown>
         </div>
       ) : null}
+
       {/* Render question cards after content (bottom of message) when there is body text */}
-      {hasBody &&
+      {(hasBody || hasReasoning) &&
         !isFollowedByUserMessage &&
         questionToolCalls.map((tc) => {
           const result = toolResults.find(

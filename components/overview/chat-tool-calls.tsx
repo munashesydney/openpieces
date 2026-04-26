@@ -15,6 +15,8 @@ type ChatToolCallsProps = {
   isFollowedByUserMessage?: boolean;
   /** When true, ask_question tool calls are skipped (rendered elsewhere, e.g. after content) */
   skipQuestions?: boolean;
+  /** Compact variant for inline use inside the thought process section */
+  variant?: "default" | "compact";
 };
 
 type ToolExecutionState = "running" | "success" | "failed";
@@ -59,6 +61,7 @@ export function ChatToolCalls({
   onQuestionSubmit,
   isFollowedByUserMessage = false,
   skipQuestions = false,
+  variant = "default",
 }: ChatToolCallsProps) {
   if (toolCalls.length === 0) return null;
 
@@ -96,6 +99,24 @@ export function ChatToolCalls({
                 isPending={toolState === "running"}
                 onSubmit={onQuestionSubmit ?? (() => {})}
               />
+            </div>
+          );
+        }
+
+        const isCompact = variant === "compact";
+
+        if (isCompact) {
+          return (
+            <div
+              key={toolCall.toolCallId}
+              className="flex items-center gap-1.5 py-0.5"
+            >
+              <StateIcon
+                className={`h-3 w-3 shrink-0 ${stateMeta.iconClass}`}
+              />
+              <span className="truncate text-xs text-[var(--muted)]">
+                {getActionLabel(toolCall.toolName, action)}
+              </span>
             </div>
           );
         }
