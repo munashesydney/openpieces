@@ -64,6 +64,10 @@ export function estimateMessagesTokens(
             const t = estimateContentTokens(block.text ?? "");
             textContentTokens += t;
             messageTotal += t;
+          } else if (block.type === "reasoning") {
+            const t = estimateContentTokens(block.text ?? "");
+            textContentTokens += t;
+            messageTotal += t;
           } else if (block.type === "tool-call") {
             toolTotalCount++;
             const inputStr =

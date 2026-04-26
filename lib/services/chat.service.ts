@@ -465,6 +465,7 @@ async function getModelMessages(chatId: string): Promise<ModelMessage[]> {
       content: aiMessages.content,
       toolCalls: aiMessages.toolCalls,
       toolResults: aiMessages.toolResults,
+      reasoning: aiMessages.reasoning,
     })
     .from(aiMessages)
     .where(
@@ -484,6 +485,10 @@ async function getModelMessages(chatId: string): Promise<ModelMessage[]> {
 
     if (message.role === "assistant") {
       const content: any[] = [];
+      const reasoning = message.reasoning ?? "";
+      if (reasoning.trim()) {
+        content.push({ type: "reasoning", text: reasoning });
+      }
       if (message.content?.trim()) {
         content.push({ type: "text", text: message.content });
       }
