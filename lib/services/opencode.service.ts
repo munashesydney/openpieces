@@ -290,15 +290,20 @@ export async function sendMessageWithContext(
     // Derive workspaceId from the session's service instead of the user's default workspace.
     // Each session is tied to a service that belongs to exactly one workspace, so this is
     // always correct even when the user has multiple workspaces.
-    let workspaceId = "unknown";
-    if (serviceId) {
-      const { getServiceByIdOnly } =
-        await import("@/lib/services/service.service");
-      const service = await getServiceByIdOnly(serviceId);
-      if (service) {
-        workspaceId = service.workspaceId;
-      }
+    if (!serviceId) {
+      throw new Error(
+        "Cannot determine workspace: session has no associated service.",
+      );
     }
+    const { getServiceByIdOnly } =
+      await import("@/lib/services/service.service");
+    const service = await getServiceByIdOnly(serviceId);
+    if (!service) {
+      throw new Error(
+        `Cannot determine workspace: service "${serviceId}" not found.`,
+      );
+    }
+    const workspaceId = service.workspaceId;
     const contextBlock =
       `__OPENPIECES_CONTEXT_START__\n` +
       `workspaceId=${workspaceId}\n` +
