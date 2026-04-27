@@ -197,7 +197,7 @@ async function fetchOpenCodeSessionStatuses(
       method: "GET",
       headers: getAuthHeaders(),
       cache: "no-store",
-      signal: AbortSignal.timeout(10_000),
+      signal: AbortSignal.timeout(60_000),
     });
 
     if (!response.ok) {
@@ -229,7 +229,7 @@ async function abortOpenCodeSession(sessionId: string): Promise<boolean> {
         method: "POST",
         headers: getAuthHeaders(),
         cache: "no-store",
-        signal: AbortSignal.timeout(10_000),
+        signal: AbortSignal.timeout(30_000),
       },
     );
 
