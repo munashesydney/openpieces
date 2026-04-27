@@ -115,6 +115,7 @@ services:
       - pieces:/pieces
       - opencode_data:/root/.local/share/opencode
     environment:
+      - OPENCODE_CONFIG_CONTENT={"permission":"allow"}
       - PORT=${OPENCODE_PORT:-4096}
       - HOSTNAME_OVERRIDE=0.0.0.0
       - AI_GATEWAY_API_KEY=${AI_GATEWAY_API_KEY}

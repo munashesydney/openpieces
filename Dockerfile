@@ -77,7 +77,7 @@ COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 # Seed staging area: pieces/.opencode baked into image outside the volume mount path
 # so entrypoint.sh can copy it into the shared pieces volume on first start.
-RUN mkdir -p ./pieces-seed && cp -r ./pieces/.opencode ./pieces-seed/.opencode
+RUN mkdir -p ./pieces-seed && cp -r ./pieces/.opencode ./pieces-seed/.opencode && cp ./pieces/AGENTS.md ./pieces-seed/AGENTS.md
 CMD ["npx", "tsx", "scripts/ai-worker.ts"]
 
 # =============================================================================
@@ -91,7 +91,7 @@ ENV NEXT_TELEMETRY_DISABLED=1
 
 RUN addgroup --system --gid 1001 nodejs \
  && adduser --system --uid 1001 nextjs \
- && apk add --no-cache wget
+ && apk add --no-cache wget su-exec
 
 COPY --from=builder /app/public ./public
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
@@ -102,8 +102,8 @@ COPY lib/db/schema.ts ./lib/db/schema.ts
 COPY drizzle/ ./drizzle/
 # Seed staging area: baked in here so entrypoint.sh can copy into the pieces volume
 COPY pieces/.opencode ./pieces-seed/.opencode
+COPY pieces/AGENTS.md ./pieces-seed/AGENTS.md
 
-USER nextjs
 ENV HOSTNAME="0.0.0.0"
 
-CMD ["sh", "-c", "npx tsx lib/db/migrate.ts && node server.js"]
+CMD ["sh", "-c", "npx tsx lib/db/migrate.ts && exec su-exec nextjs node server.js"]
