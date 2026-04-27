@@ -1,47 +1,77 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getMessages, sendMessageWithContext } from "@/lib/services/opencode.service";
+import {
+  getMessages,
+  sendMessageWithContext,
+} from "@/lib/services/opencode.service";
 import { requireUser } from "@/lib/services/auth.service";
+import {
+  getServiceId,
+  serviceHasWorkingSession,
+} from "@/lib/services/opencode-session.service";
 import { db } from "@/lib/db";
 import { opencodeSessions } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: Promise<{ sessionId: string }> }
+  { params }: { params: Promise<{ sessionId: string }> },
 ) {
   try {
     const { sessionId } = await params;
     const rawMessages = await getMessages(sessionId);
-    
+
     // Normalize to { role, content } format expected by UI
-    const messages = (Array.isArray(rawMessages) ? rawMessages : []).map(msg => ({
-      role: msg.info?.role || "user",
-      content: (msg.parts || [])
-        .filter((p: any) => p.type === "text")
-        .map((p: any) => p.text)
-        .join("\n")
-    }));
+    const messages = (Array.isArray(rawMessages) ? rawMessages : []).map(
+      (msg) => ({
+        role: msg.info?.role || "user",
+        content: (msg.parts || [])
+          .filter((p: any) => p.type === "text")
+          .map((p: any) => p.text)
+          .join("\n"),
+      }),
+    );
 
     return NextResponse.json(messages);
   } catch (error: any) {
-    console.error(`GET /api/opencode/sessions/${await params.then(p => p.sessionId)}/messages error:`, error);
+    console.error(
+      `GET /api/opencode/sessions/${await params.then((p) => p.sessionId)}/messages error:`,
+      error,
+    );
     return NextResponse.json(
       { error: error.message || "Failed to get messages" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: Promise<{ sessionId: string }> }
+  { params }: { params: Promise<{ sessionId: string }> },
 ) {
   try {
     const { sessionId } = await params;
     const { content } = await request.json();
 
     if (!content) {
-      return NextResponse.json({ error: "Message content is required" }, { status: 400 });
+      return NextResponse.json(
+        { error: "Message content is required" },
+        { status: 400 },
+      );
+    }
+
+    // Guard: check if another session for this service is already working
+    const serviceId = await getServiceId(sessionId);
+    if (serviceId) {
+      const hasWorking = await serviceHasWorkingSession(serviceId, sessionId);
+      if (hasWorking) {
+        return NextResponse.json(
+          {
+            error:
+              "Cannot send message: service is already processing another request",
+          },
+          { status: 409 },
+        );
+      }
     }
 
     // Get user from session - this is the UI path where there's a valid request context
@@ -55,10 +85,13 @@ export async function POST(
 
     return NextResponse.json({ accepted: true }, { status: 202 });
   } catch (error: any) {
-    console.error(`POST /api/opencode/sessions/${await params.then(p => p.sessionId)}/messages error:`, error);
+    console.error(
+      `POST /api/opencode/sessions/${await params.then((p) => p.sessionId)}/messages error:`,
+      error,
+    );
     return NextResponse.json(
       { error: error.message || "Failed to send message" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

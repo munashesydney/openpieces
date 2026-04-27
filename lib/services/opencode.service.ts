@@ -19,11 +19,11 @@ export interface OpenCodeMessage {
   [key: string]: any;
 }
 
-function getBaseUrl() {
+export function getBaseUrl() {
   return process.env.OPENCODE_INTERNAL_URL || "http://opencode:4096";
 }
 
-function getAuthHeaders() {
+export function getAuthHeaders() {
   const username = process.env.OPENCODE_SERVER_USERNAME || "opencode";
   const password = process.env.OPENCODE_SERVER_PASSWORD || "";
 
