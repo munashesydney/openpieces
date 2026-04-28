@@ -171,7 +171,7 @@ function addDaysInTimezone(
   tzDay: number,
   days: number,
 ): { year: number; month: number; day: number } {
-  const utcDate = new Date(Date.UTC(tzYear, tzMonth - 1, tzDay + days));
+  const utcDate = new Date(Date.UTC(tzYear, tzMonth - 1, tzDay + days, 12));
   return getDateInTimezone(timezone, utcDate);
 }
 
@@ -343,9 +343,9 @@ export function calculateNextRunTime(task: Task): Date {
   if (intervalType === "minutes" || intervalType === "hours") {
     const next = new Date(now);
     if (intervalType === "minutes") {
-      next.setMinutes(next.getMinutes() + (intervalValue ?? 1));
+      next.setMinutes(next.getMinutes() + Math.max(1, intervalValue ?? 1));
     } else {
-      next.setHours(next.getHours() + (intervalValue ?? 1));
+      next.setHours(next.getHours() + Math.max(1, intervalValue ?? 1));
     }
     return next;
   }
