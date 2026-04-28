@@ -3,7 +3,7 @@
     <picture>
       <source media="(prefers-color-scheme: dark)" srcset="public/op-not-moving.png">
       <source media="(prefers-color-scheme: light)" srcset="public/banner-for-light.png">
-      <img src="public/op-not-moving.png" alt="OpenPieces Logo" width="100"/>
+      <img src="public/op-not-moving.png" alt="OpenPieces Logo"/>
     </picture>
   </a>
 </p>
