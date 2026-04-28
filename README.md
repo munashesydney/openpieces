@@ -3,10 +3,14 @@
     <picture>
       <source media="(prefers-color-scheme: dark)" srcset="public/banner-for-dark.png">
       <source media="(prefers-color-scheme: light)" srcset="public/banner-for-light.png">
-      <img src="public/op-not-moving.png" alt="OpenPieces Logo"/>
+      <img src="public/banner-for-light.png" alt="OpenPieces Logo"/>
     </picture>
   </a>
 </p>
+
+
+<p align="center">OpenPieces is an intelligent personal assistant that dynamically creates, deploys, and manages tools — called *pieces* — on the fly. When it encounters a task it can't handle with its existing toolkit, it autonomously builds a new piece to fill the gap, deploys it instantly, and retains it for future use. Over time, OpenPieces grows a continuously expanding ecosystem of capabilities, adapting to your needs without manual intervention.</p>
+
 
 <p align="center">
   <a href="https://openpieces.com" target="_blank" rel="noopener noreferrer"><img src="https://img.shields.io/badge/openpieces.com-6366f1" alt="OpenPieces"></a>
@@ -16,11 +20,7 @@
   <a href="https://openpieces.com" target="_blank" rel="noopener noreferrer"><img src="https://img.shields.io/badge/Get%20Started-000000?logo=github&logoColor=white" alt="Get Started"></a>
 </p>
 
-# OpenPieces
-
 ![OpenPieces](public/op_public.png)
-
-OpenPieces is an intelligent personal assistant that dynamically creates, deploys, and manages tools — called *pieces* — on the fly. When it encounters a task it can't handle with its existing toolkit, it autonomously builds a new piece to fill the gap, deploys it instantly, and retains it for future use. Over time, OpenPieces grows a continuously expanding ecosystem of capabilities, adapting to your needs without manual intervention.
 
 ---
 
