@@ -2,7 +2,7 @@
   <a href="https://openpieces.com" target="_blank" rel="noopener noreferrer">
     <picture>
       <source media="(prefers-color-scheme: dark)" srcset="public/op-not-moving.png">
-      <source media="(prefers-color-scheme: light)" srcset="public/op-not-moving.png">
+      <source media="(prefers-color-scheme: light)" srcset="public/banner-for-light.png">
       <img src="public/op-not-moving.png" alt="OpenPieces Logo" width="100"/>
     </picture>
   </a>
