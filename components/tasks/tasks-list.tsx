@@ -2,7 +2,19 @@
 
 import { useState, useTransition } from "react";
 import Link from "next/link";
-import { Calendar, Clock, Plus, Repeat, Timer, Play, Pause, Trash2, CheckCircle2, ChevronLeft, ChevronRight } from "lucide-react";
+import {
+  Calendar,
+  Clock,
+  Plus,
+  Repeat,
+  Timer,
+  Play,
+  Pause,
+  Trash2,
+  CheckCircle2,
+  ChevronLeft,
+  ChevronRight,
+} from "lucide-react";
 import { Card } from "../ui/card";
 import { Button } from "@/components/basic/buttons/button";
 import { Sheet } from "../ui/sheet";
@@ -10,7 +22,13 @@ import { Input } from "@/components/basic/input/input";
 import { ActionMenu } from "@/components/basic/input/action-menu";
 import { Dropdown } from "@/components/basic/input/dropdown";
 import { Textarea } from "@/components/basic/input/textarea";
-import { createTaskAction, pauseTaskAction, resumeTaskAction, completeTaskAction, deleteTaskAction } from "@/app/workspace/[workspaceId]/personal/tasks/actions";
+import {
+  createTaskAction,
+  pauseTaskAction,
+  resumeTaskAction,
+  completeTaskAction,
+  deleteTaskAction,
+} from "@/app/workspace/[workspaceId]/personal/tasks/actions";
 import { type Task, type Workflow } from "@/lib/db/schema";
 import { TaskDeleteModal } from "./task-delete-modal";
 
@@ -38,7 +56,8 @@ function formatSchedule(task: Task): string {
     return date.toLocaleString();
   }
   if (task.type === "recurring") {
-    const { intervalType, intervalValue, dayOfWeek, dayOfMonth, timeOfDay } = task;
+    const { intervalType, intervalValue, dayOfWeek, dayOfMonth, timeOfDay } =
+      task;
     if (intervalType === "minutes" && intervalValue) {
       return `Every ${intervalValue} minute${intervalValue > 1 ? "s" : ""}`;
     }
@@ -49,7 +68,7 @@ function formatSchedule(task: Task): string {
       return `Daily at ${timeOfDay}`;
     }
     if (intervalType === "weekly" && dayOfWeek !== null && timeOfDay) {
-      const day = WEEKDAYS.find(d => d.value === dayOfWeek)?.label || "";
+      const day = WEEKDAYS.find((d) => d.value === dayOfWeek)?.label || "";
       return `Every ${day} at ${timeOfDay}`;
     }
     if (intervalType === "monthly" && dayOfMonth && timeOfDay) {
@@ -86,7 +105,9 @@ export function TasksList({
   const [isPending, startTransition] = useTransition();
 
   // Form state
-  const [taskType, setTaskType] = useState<"one-time" | "recurring">("one-time");
+  const [taskType, setTaskType] = useState<"one-time" | "recurring">(
+    "one-time",
+  );
   const [selectedWorkflow, setSelectedWorkflow] = useState("");
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -105,7 +126,9 @@ export function TasksList({
   const [taskToDelete, setTaskToDelete] = useState<Task | null>(null);
 
   const recurringTasks = initialTasks.filter((t) => t.type === "recurring");
-  const upcomingTasks = initialTasks.filter((t) => t.type === "one-time" && t.status !== "completed");
+  const upcomingTasks = initialTasks.filter(
+    (t) => t.type === "one-time" && t.status !== "completed",
+  );
   const completedTasks = initialTasks.filter((t) => t.status === "completed");
 
   const handleCreateTask = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -119,13 +142,19 @@ export function TasksList({
     if (taskType === "one-time") {
       // Combine date and time into ISO string
       if (scheduledDate && scheduledTime) {
-        const scheduledAt = new Date(`${scheduledDate}T${scheduledTime}:00`).toISOString();
+        const scheduledAt = new Date(
+          `${scheduledDate}T${scheduledTime}:00`,
+        ).toISOString();
         formData.append("scheduledAt", scheduledAt);
       }
     } else {
       // Recurring task
       formData.append("intervalType", intervalType);
       formData.append("timeOfDay", timeOfDay);
+      formData.append(
+        "timezone",
+        Intl.DateTimeFormat().resolvedOptions().timeZone,
+      );
       if (intervalType === "minutes" || intervalType === "hours") {
         formData.append("intervalValue", intervalValue.toString());
       }
@@ -169,7 +198,13 @@ export function TasksList({
     });
   };
 
-  const StatusAction = ({ task, onDeleteRequest }: { task: Task; onDeleteRequest: (task: Task) => void }) => {
+  const StatusAction = ({
+    task,
+    onDeleteRequest,
+  }: {
+    task: Task;
+    onDeleteRequest: (task: Task) => void;
+  }) => {
     return (
       <ActionMenu
         onSelect={(val) => {
@@ -180,14 +215,44 @@ export function TasksList({
           startTransition(async () => {
             if (val === "pause") await pauseTaskAction(workspaceId, task.id);
             if (val === "resume") await resumeTaskAction(workspaceId, task.id);
-            if (val === "complete") await completeTaskAction(workspaceId, task.id);
+            if (val === "complete")
+              await completeTaskAction(workspaceId, task.id);
           });
         }}
         options={[
-          ...(task.status === "active" ? [{ label: "Pause", value: "pause", icon: <Pause className="h-4 w-4" /> }] : []),
-          ...(task.status === "paused" ? [{ label: "Resume", value: "resume", icon: <Play className="h-4 w-4" /> }] : []),
-          ...(task.status !== "completed" ? [{ label: "Mark Completed", value: "complete", icon: <CheckCircle2 className="h-4 w-4" /> }] : []),
-          { label: "Delete", value: "delete", icon: <Trash2 className="h-4 w-4" />, destructive: true },
+          ...(task.status === "active"
+            ? [
+                {
+                  label: "Pause",
+                  value: "pause",
+                  icon: <Pause className="h-4 w-4" />,
+                },
+              ]
+            : []),
+          ...(task.status === "paused"
+            ? [
+                {
+                  label: "Resume",
+                  value: "resume",
+                  icon: <Play className="h-4 w-4" />,
+                },
+              ]
+            : []),
+          ...(task.status !== "completed"
+            ? [
+                {
+                  label: "Mark Completed",
+                  value: "complete",
+                  icon: <CheckCircle2 className="h-4 w-4" />,
+                },
+              ]
+            : []),
+          {
+            label: "Delete",
+            value: "delete",
+            icon: <Trash2 className="h-4 w-4" />,
+            destructive: true,
+          },
         ]}
       />
     );
@@ -199,8 +264,12 @@ export function TasksList({
         {/* Header Section */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-semibold text-[var(--foreground)]">Tasks</h1>
-            <p className="text-sm text-[var(--muted)]">Manage your one-time and recurring scheduled actions.</p>
+            <h1 className="text-2xl font-semibold text-[var(--foreground)]">
+              Tasks
+            </h1>
+            <p className="text-sm text-[var(--muted)]">
+              Manage your one-time and recurring scheduled actions.
+            </p>
           </div>
           <Button onClick={() => setIsSheetOpen(true)}>
             <Plus className="h-4 w-4" />
@@ -249,7 +318,9 @@ export function TasksList({
 
               {/* Task Type Selector */}
               <div className="space-y-2">
-                <label className="text-sm font-medium text-[var(--foreground)]">Task Type</label>
+                <label className="text-sm font-medium text-[var(--foreground)]">
+                  Task Type
+                </label>
                 <div className="flex gap-4">
                   <label className="flex items-center gap-2 cursor-pointer">
                     <input
@@ -260,7 +331,9 @@ export function TasksList({
                       onChange={() => setTaskType("one-time")}
                       className="accent-[var(--accent)]"
                     />
-                    <span className="text-sm text-[var(--foreground)]">One-time</span>
+                    <span className="text-sm text-[var(--foreground)]">
+                      One-time
+                    </span>
                   </label>
                   <label className="flex items-center gap-2 cursor-pointer">
                     <input
@@ -271,7 +344,9 @@ export function TasksList({
                       onChange={() => setTaskType("recurring")}
                       className="accent-[var(--accent)]"
                     />
-                    <span className="text-sm text-[var(--foreground)]">Recurring</span>
+                    <span className="text-sm text-[var(--foreground)]">
+                      Recurring
+                    </span>
                   </label>
                 </div>
               </div>
@@ -315,10 +390,14 @@ export function TasksList({
                         min="1"
                         max="59"
                         value={intervalValue}
-                        onChange={(e) => setIntervalValue(parseInt(e.target.value) || 1)}
+                        onChange={(e) =>
+                          setIntervalValue(parseInt(e.target.value) || 1)
+                        }
                         className="w-20 rounded-lg border border-[var(--border)] bg-[var(--card-bg)] px-3 py-2 text-sm text-[var(--foreground)]"
                       />
-                      <span className="text-sm text-[var(--muted)]">minute(s)</span>
+                      <span className="text-sm text-[var(--muted)]">
+                        minute(s)
+                      </span>
                     </div>
                   )}
 
@@ -330,10 +409,14 @@ export function TasksList({
                         min="1"
                         max="23"
                         value={intervalValue}
-                        onChange={(e) => setIntervalValue(parseInt(e.target.value) || 1)}
+                        onChange={(e) =>
+                          setIntervalValue(parseInt(e.target.value) || 1)
+                        }
                         className="w-20 rounded-lg border border-[var(--border)] bg-[var(--card-bg)] px-3 py-2 text-sm text-[var(--foreground)]"
                       />
-                      <span className="text-sm text-[var(--muted)]">hour(s)</span>
+                      <span className="text-sm text-[var(--muted)]">
+                        hour(s)
+                      </span>
                     </div>
                   )}
 
@@ -354,7 +437,10 @@ export function TasksList({
                         label="Day of week"
                         value={dayOfWeek.toString()}
                         onChange={(v) => setDayOfWeek(parseInt(v))}
-                        options={WEEKDAYS.map(d => ({ label: d.label, value: d.value.toString() }))}
+                        options={WEEKDAYS.map((d) => ({
+                          label: d.label,
+                          value: d.value.toString(),
+                        }))}
                       />
                       <Input
                         type="time"
@@ -369,16 +455,22 @@ export function TasksList({
                   {intervalType === "monthly" && (
                     <div className="space-y-4">
                       <div className="flex items-center gap-2">
-                        <span className="text-sm text-[var(--muted)]">On day</span>
+                        <span className="text-sm text-[var(--muted)]">
+                          On day
+                        </span>
                         <input
                           type="number"
                           min="1"
                           max="31"
                           value={dayOfMonth}
-                          onChange={(e) => setDayOfMonth(parseInt(e.target.value) || 1)}
+                          onChange={(e) =>
+                            setDayOfMonth(parseInt(e.target.value) || 1)
+                          }
                           className="w-20 rounded-lg border border-[var(--border)] bg-[var(--card-bg)] px-3 py-2 text-sm text-[var(--foreground)]"
                         />
-                        <span className="text-sm text-[var(--muted)]">of each month</span>
+                        <span className="text-sm text-[var(--muted)]">
+                          of each month
+                        </span>
                       </div>
                       <Input
                         type="time"
@@ -397,8 +489,18 @@ export function TasksList({
               </div>
             )}
             <div className="mt-6 flex justify-end gap-3 border-t border-[var(--border)] pt-4">
-              <Button type="button" variant="ghost" onClick={() => setIsSheetOpen(false)} disabled={isPending}>Cancel</Button>
-              <Button type="submit" disabled={isPending || !title || !selectedWorkflow}>
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={() => setIsSheetOpen(false)}
+                disabled={isPending}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                disabled={isPending || !title || !selectedWorkflow}
+              >
                 {isPending ? "Creating..." : "Create Task"}
               </Button>
             </div>
@@ -409,7 +511,9 @@ export function TasksList({
         <section className="space-y-4">
           <div className="flex items-center gap-2 px-1">
             <Repeat className="h-4 w-4 text-[var(--accent)]" />
-            <h2 className="text-sm font-bold uppercase tracking-wider text-[var(--muted)]">Recurring</h2>
+            <h2 className="text-sm font-bold uppercase tracking-wider text-[var(--muted)]">
+              Recurring
+            </h2>
           </div>
           <div className="grid grid-cols-1 gap-4">
             {recurringTasks.map((task) => (
@@ -420,22 +524,31 @@ export function TasksList({
                       <Clock className="h-5 w-5" />
                     </div>
                     <div>
-                      <h3 className="text-base font-medium text-[var(--foreground)]">{task.title}</h3>
-                      <p className="mt-1 text-sm text-[var(--muted)]">{task.description}</p>
+                      <h3 className="text-base font-medium text-[var(--foreground)]">
+                        {task.title}
+                      </h3>
+                      <p className="mt-1 text-sm text-[var(--muted)]">
+                        {task.description}
+                      </p>
                       <div className="mt-3 flex items-center gap-3">
                         <div className="flex items-center gap-1.5 text-[10px] font-bold uppercase text-[var(--accent)]">
                           <Timer className="h-3 w-3" />
                           {formatSchedule(task)}
                         </div>
                         <div className="h-1 w-1 rounded-full bg-[var(--border)]" />
-                        <span className={`text-[10px] font-bold uppercase ${task.status === "active" ? "text-emerald-500" : "text-amber-500"}`}>
+                        <span
+                          className={`text-[10px] font-bold uppercase ${task.status === "active" ? "text-emerald-500" : "text-amber-500"}`}
+                        >
                           {task.status}
                         </span>
                       </div>
                     </div>
                   </div>
                   <div className="shrink-0">
-                    <StatusAction task={task} onDeleteRequest={setTaskToDelete} />
+                    <StatusAction
+                      task={task}
+                      onDeleteRequest={setTaskToDelete}
+                    />
                   </div>
                 </div>
               </Card>
@@ -452,7 +565,9 @@ export function TasksList({
         <section className="space-y-4">
           <div className="flex items-center gap-2 px-1">
             <Calendar className="h-4 w-4 text-[var(--accent)]" />
-            <h2 className="text-sm font-bold uppercase tracking-wider text-[var(--muted)]">Upcoming</h2>
+            <h2 className="text-sm font-bold uppercase tracking-wider text-[var(--muted)]">
+              Upcoming
+            </h2>
           </div>
           <div className="grid grid-cols-1 gap-4">
             {upcomingTasks.map((task) => (
@@ -463,25 +578,38 @@ export function TasksList({
                       <Calendar className="h-5 w-5" />
                     </div>
                     <div>
-                      <h3 className="text-base font-medium text-[var(--foreground)]">{task.title}</h3>
-                      <p className="mt-1 text-sm text-[var(--muted)]">{task.description}</p>
+                      <h3 className="text-base font-medium text-[var(--foreground)]">
+                        {task.title}
+                      </h3>
+                      <p className="mt-1 text-sm text-[var(--muted)]">
+                        {task.description}
+                      </p>
                       <div className="mt-3 flex items-center gap-3 text-[10px] font-bold uppercase text-[var(--muted)]">
-                         <span>One-time</span>
-                         {task.scheduledAt && (
-                           <>
-                             <div className="h-1 w-1 rounded-full bg-[var(--border)]" />
-                             <span>{formatSchedule(task)}</span>
-                           </>
-                         )}
-                         <div className="h-1 w-1 rounded-full bg-[var(--border)]" />
-                         <span className={task.status === "active" ? "text-emerald-500 text-[10px] font-bold uppercase" : "text-amber-500 text-[10px] font-bold uppercase"}>
-                           {task.status}
-                         </span>
+                        <span>One-time</span>
+                        {task.scheduledAt && (
+                          <>
+                            <div className="h-1 w-1 rounded-full bg-[var(--border)]" />
+                            <span>{formatSchedule(task)}</span>
+                          </>
+                        )}
+                        <div className="h-1 w-1 rounded-full bg-[var(--border)]" />
+                        <span
+                          className={
+                            task.status === "active"
+                              ? "text-emerald-500 text-[10px] font-bold uppercase"
+                              : "text-amber-500 text-[10px] font-bold uppercase"
+                          }
+                        >
+                          {task.status}
+                        </span>
                       </div>
                     </div>
                   </div>
                   <div className="shrink-0">
-                    <StatusAction task={task} onDeleteRequest={setTaskToDelete} />
+                    <StatusAction
+                      task={task}
+                      onDeleteRequest={setTaskToDelete}
+                    />
                   </div>
                 </div>
               </Card>
@@ -497,18 +625,32 @@ export function TasksList({
         {/* Completed Tasks (Simplified) */}
         {completedTasks.length > 0 && (
           <section className="space-y-4 pt-4">
-            <h2 className="px-1 text-sm font-bold uppercase tracking-wider text-[var(--muted)]">Recently Completed</h2>
+            <h2 className="px-1 text-sm font-bold uppercase tracking-wider text-[var(--muted)]">
+              Recently Completed
+            </h2>
             <div className="space-y-2">
               {completedTasks.map((task) => (
-                <div key={task.id} className="flex items-center justify-between rounded-xl border border-[var(--border)] bg-[var(--sidebar-bg)] p-4 opacity-60">
+                <div
+                  key={task.id}
+                  className="flex items-center justify-between rounded-xl border border-[var(--border)] bg-[var(--sidebar-bg)] p-4 opacity-60"
+                >
                   <div className="flex items-center gap-3">
                     <div className="h-2 w-2 rounded-full bg-emerald-500" />
-                    <span className="text-sm font-medium text-[var(--foreground)]">{task.title}</span>
+                    <span className="text-sm font-medium text-[var(--foreground)]">
+                      {task.title}
+                    </span>
                   </div>
                   <div className="flex items-center gap-3">
-                    {task.scheduledAt && <span className="text-[10px] font-bold uppercase text-[var(--muted)]">{formatSchedule(task)}</span>}
+                    {task.scheduledAt && (
+                      <span className="text-[10px] font-bold uppercase text-[var(--muted)]">
+                        {formatSchedule(task)}
+                      </span>
+                    )}
                     <div className="shrink-0">
-                      <StatusAction task={task} onDeleteRequest={setTaskToDelete} />
+                      <StatusAction
+                        task={task}
+                        onDeleteRequest={setTaskToDelete}
+                      />
                     </div>
                   </div>
                 </div>
@@ -530,29 +672,48 @@ export function TasksList({
                 {Math.min(currentPage * pageSize, total)}
               </span>{" "}
               of{" "}
-              <span className="font-medium text-[var(--foreground)]">{total}</span> tasks
+              <span className="font-medium text-[var(--foreground)]">
+                {total}
+              </span>{" "}
+              tasks
             </div>
             <div className="flex items-center gap-2">
               <Link href={currentPage > 1 ? `?page=${currentPage - 1}` : "#"}>
-                <Button variant="outline" size="icon" disabled={currentPage <= 1} aria-label="Previous">
+                <Button
+                  variant="outline"
+                  size="icon"
+                  disabled={currentPage <= 1}
+                  aria-label="Previous"
+                >
                   <ChevronLeft className="h-4 w-4" />
                 </Button>
               </Link>
               <div className="flex gap-1">
-                {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
-                  <Link key={page} href={`?page=${page}`}>
-                    <Button
-                      variant={page === currentPage ? "primary" : "outline"}
-                      size="icon"
-                      className="text-sm"
-                    >
-                      {page}
-                    </Button>
-                  </Link>
-                ))}
+                {Array.from({ length: totalPages }, (_, i) => i + 1).map(
+                  (page) => (
+                    <Link key={page} href={`?page=${page}`}>
+                      <Button
+                        variant={page === currentPage ? "primary" : "outline"}
+                        size="icon"
+                        className="text-sm"
+                      >
+                        {page}
+                      </Button>
+                    </Link>
+                  ),
+                )}
               </div>
-              <Link href={currentPage < totalPages ? `?page=${currentPage + 1}` : "#"}>
-                <Button variant="outline" size="icon" disabled={currentPage >= totalPages} aria-label="Next">
+              <Link
+                href={
+                  currentPage < totalPages ? `?page=${currentPage + 1}` : "#"
+                }
+              >
+                <Button
+                  variant="outline"
+                  size="icon"
+                  disabled={currentPage >= totalPages}
+                  aria-label="Next"
+                >
                   <ChevronRight className="h-4 w-4" />
                 </Button>
               </Link>

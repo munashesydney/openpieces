@@ -3,14 +3,21 @@ import { db } from "../db";
 import { tasks, workflows, type NewTask, type Task } from "../db/schema";
 import { isValidUuid } from "../utils/uuid";
 import { ValidationError } from "../errors/validation-error";
+import { calculateNextRunTime } from "./task-execution.service";
 
 const VALID_TASK_TYPES = ["one-time", "recurring"] as const;
-const VALID_INTERVAL_TYPES = ["minutes", "hours", "daily", "weekly", "monthly"] as const;
+const VALID_INTERVAL_TYPES = [
+  "minutes",
+  "hours",
+  "daily",
+  "weekly",
+  "monthly",
+] as const;
 
 export async function getTasks(
   workspaceId: string,
   page: number = 1,
-  pageSize: number = 10
+  pageSize: number = 10,
 ): Promise<{ data: Task[]; total: number }> {
   if (!isValidUuid(workspaceId)) return { data: [], total: 0 };
 
@@ -36,15 +43,23 @@ export async function getTasks(
   };
 }
 
-export async function getTasksByWorkflowId(workflowId: string, workspaceId: string): Promise<Task[]> {
+export async function getTasksByWorkflowId(
+  workflowId: string,
+  workspaceId: string,
+): Promise<Task[]> {
   if (!isValidUuid(workflowId) || !isValidUuid(workspaceId)) return [];
   return db
     .select()
     .from(tasks)
-    .where(and(eq(tasks.workflowId, workflowId), eq(tasks.workspaceId, workspaceId)));
+    .where(
+      and(eq(tasks.workflowId, workflowId), eq(tasks.workspaceId, workspaceId)),
+    );
 }
 
-export async function getTaskById(taskId: string, workspaceId: string): Promise<Task | null> {
+export async function getTaskById(
+  taskId: string,
+  workspaceId: string,
+): Promise<Task | null> {
   if (!isValidUuid(taskId) || !isValidUuid(workspaceId)) return null;
   const result = await db
     .select()
@@ -61,9 +76,11 @@ export async function createTask(data: NewTask): Promise<Task> {
   }
 
   // ── Validate type ─────────────────────────────────────────────────────────
-  if (!VALID_TASK_TYPES.includes(data.type as typeof VALID_TASK_TYPES[number])) {
+  if (
+    !VALID_TASK_TYPES.includes(data.type as (typeof VALID_TASK_TYPES)[number])
+  ) {
     throw new ValidationError(
-      `Invalid task type "${data.type}". Must be one of: ${VALID_TASK_TYPES.join(", ")}.`
+      `Invalid task type "${data.type}". Must be one of: ${VALID_TASK_TYPES.join(", ")}.`,
     );
   }
 
@@ -76,22 +93,36 @@ export async function createTask(data: NewTask): Promise<Task> {
   } else if (data.type === "recurring") {
     // Recurring tasks require intervalType
     if (!data.intervalType) {
-      throw new ValidationError("intervalType is required for recurring tasks.");
-    }
-    if (!VALID_INTERVAL_TYPES.includes(data.intervalType as typeof VALID_INTERVAL_TYPES[number])) {
       throw new ValidationError(
-        `Invalid interval type "${data.intervalType}". Must be one of: ${VALID_INTERVAL_TYPES.join(", ")}.`
+        "intervalType is required for recurring tasks.",
+      );
+    }
+    if (
+      !VALID_INTERVAL_TYPES.includes(
+        data.intervalType as (typeof VALID_INTERVAL_TYPES)[number],
+      )
+    ) {
+      throw new ValidationError(
+        `Invalid interval type "${data.intervalType}". Must be one of: ${VALID_INTERVAL_TYPES.join(", ")}.`,
       );
     }
     // Validate based on interval type
     if (data.intervalType === "minutes" || data.intervalType === "hours") {
       if (!data.intervalValue || data.intervalValue < 1) {
-        throw new ValidationError(`intervalValue (minimum 1) is required for ${data.intervalType} tasks.`);
+        throw new ValidationError(
+          `intervalValue (minimum 1) is required for ${data.intervalType} tasks.`,
+        );
       }
     }
-    if (data.intervalType === "daily" || data.intervalType === "weekly" || data.intervalType === "monthly") {
+    if (
+      data.intervalType === "daily" ||
+      data.intervalType === "weekly" ||
+      data.intervalType === "monthly"
+    ) {
       if (!data.timeOfDay) {
-        throw new ValidationError(`timeOfDay is required for ${data.intervalType} tasks.`);
+        throw new ValidationError(
+          `timeOfDay is required for ${data.intervalType} tasks.`,
+        );
       }
     }
     if (data.intervalType === "weekly") {
@@ -113,7 +144,7 @@ export async function createTask(data: NewTask): Promise<Task> {
 
   if (!isValidUuid(data.workflowId)) {
     throw new ValidationError(
-      `The provided workflow ID "${data.workflowId}" is not a valid ID.`
+      `The provided workflow ID "${data.workflowId}" is not a valid ID.`,
     );
   }
 
@@ -124,38 +155,62 @@ export async function createTask(data: NewTask): Promise<Task> {
     .where(
       and(
         eq(workflows.id, data.workflowId),
-        eq(workflows.workspaceId, data.workspaceId)
-      )
+        eq(workflows.workspaceId, data.workspaceId),
+      ),
     )
     .limit(1);
 
   if (workflow.length === 0) {
     throw new ValidationError(
-      "The selected workflow does not exist in this workspace."
+      "The selected workflow does not exist in this workspace.",
     );
   }
 
   const result = await db.insert(tasks).values(data).returning();
-  return result[0];
+  const task = result[0];
+
+  // For recurring tasks, calculate the initial nextRunAt so the poller picks it up
+  if (task.type === "recurring" && task.intervalType) {
+    const nextRunAt = calculateNextRunTime(task);
+    await db.update(tasks).set({ nextRunAt }).where(eq(tasks.id, task.id));
+    task.nextRunAt = nextRunAt;
+  }
+
+  return task;
 }
 
-
-export async function updateTask(taskId: string, workspaceId: string, data: Partial<NewTask>): Promise<Task> {
+export async function updateTask(
+  taskId: string,
+  workspaceId: string,
+  data: Partial<NewTask>,
+): Promise<Task> {
   // If intervalType is being updated, validate the scheduling fields
   if (data.intervalType) {
-    if (!VALID_INTERVAL_TYPES.includes(data.intervalType as typeof VALID_INTERVAL_TYPES[number])) {
+    if (
+      !VALID_INTERVAL_TYPES.includes(
+        data.intervalType as (typeof VALID_INTERVAL_TYPES)[number],
+      )
+    ) {
       throw new ValidationError(
-        `Invalid interval type "${data.intervalType}". Must be one of: ${VALID_INTERVAL_TYPES.join(", ")}.`
+        `Invalid interval type "${data.intervalType}". Must be one of: ${VALID_INTERVAL_TYPES.join(", ")}.`,
       );
     }
     if (data.intervalType === "minutes" || data.intervalType === "hours") {
       if (!data.intervalValue || data.intervalValue < 1) {
-        throw new ValidationError(`intervalValue (minimum 1) is required for ${data.intervalType} tasks.`);
+        throw new ValidationError(
+          `intervalValue (minimum 1) is required for ${data.intervalType} tasks.`,
+        );
       }
     }
-    if (data.intervalType === "daily" || data.intervalType === "weekly" || data.intervalType === "monthly") {
+    if (
+      data.intervalType === "daily" ||
+      data.intervalType === "weekly" ||
+      data.intervalType === "monthly"
+    ) {
       if (!data.timeOfDay) {
-        throw new ValidationError(`timeOfDay is required for ${data.intervalType} tasks.`);
+        throw new ValidationError(
+          `timeOfDay is required for ${data.intervalType} tasks.`,
+        );
       }
     }
     if (data.intervalType === "weekly") {
@@ -170,15 +225,42 @@ export async function updateTask(taskId: string, workspaceId: string, data: Part
     }
   }
 
+  // If updating scheduling fields on a recurring task, recalculate nextRunAt
+  const hasSchedulingChanges =
+    data.intervalType !== undefined ||
+    data.intervalValue !== undefined ||
+    data.dayOfWeek !== undefined ||
+    data.dayOfMonth !== undefined ||
+    data.timeOfDay !== undefined ||
+    data.timezone !== undefined;
+
+  const mergedData = { ...data };
+
+  if (hasSchedulingChanges) {
+    // Fetch the current task to merge with updates
+    const existing = await getTaskById(taskId, workspaceId);
+    if (
+      existing &&
+      existing.type === "recurring" &&
+      (existing.intervalType || mergedData.intervalType)
+    ) {
+      const mergedTask = { ...existing, ...mergedData };
+      mergedData.nextRunAt = calculateNextRunTime(mergedTask);
+    }
+  }
+
   const result = await db
     .update(tasks)
-    .set(data)
+    .set(mergedData)
     .where(and(eq(tasks.id, taskId), eq(tasks.workspaceId, workspaceId)))
     .returning();
   return result[0];
 }
 
-export async function deleteTask(taskId: string, workspaceId: string): Promise<boolean> {
+export async function deleteTask(
+  taskId: string,
+  workspaceId: string,
+): Promise<boolean> {
   const result = await db
     .delete(tasks)
     .where(and(eq(tasks.id, taskId), eq(tasks.workspaceId, workspaceId)))

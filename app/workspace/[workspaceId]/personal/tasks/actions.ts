@@ -1,7 +1,13 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { createTask, updateTask, deleteTask } from "../../../../../lib/services/task.service";
+import {
+  createTask,
+  updateTask,
+  deleteTask,
+  getTaskById,
+} from "../../../../../lib/services/task.service";
+import { calculateNextRunTime } from "../../../../../lib/services/task-execution.service";
 import { requireWorkspaceOwner } from "../../../../../lib/services/auth.service";
 import { ValidationError } from "../../../../../lib/errors/validation-error";
 
@@ -9,7 +15,7 @@ export type ActionResult = { error: string } | { success: true };
 
 export async function createTaskAction(
   workspaceId: string,
-  formData: FormData
+  formData: FormData,
 ): Promise<ActionResult> {
   await requireWorkspaceOwner(workspaceId);
 
@@ -42,12 +48,23 @@ export async function createTaskAction(
       type,
       status: "active",
       scheduledAt,
-      intervalType: type === "recurring" ? (intervalType as "minutes" | "hours" | "daily" | "weekly" | "monthly" | null) : null,
+      intervalType:
+        type === "recurring"
+          ? (intervalType as
+              | "minutes"
+              | "hours"
+              | "daily"
+              | "weekly"
+              | "monthly"
+              | null)
+          : null,
       intervalValue: type === "recurring" ? intervalValue : null,
-      dayOfWeek: type === "recurring" && intervalType === "weekly" ? dayOfWeek : null,
-      dayOfMonth: type === "recurring" && intervalType === "monthly" ? dayOfMonth : null,
+      dayOfWeek:
+        type === "recurring" && intervalType === "weekly" ? dayOfWeek : null,
+      dayOfMonth:
+        type === "recurring" && intervalType === "monthly" ? dayOfMonth : null,
       timeOfDay: type === "recurring" ? timeOfDay : null,
-      timezone: "UTC",
+      timezone: (formData.get("timezone") as string) || "UTC",
     });
   } catch (err) {
     if (err instanceof ValidationError) return { error: err.message };
@@ -67,7 +84,21 @@ export async function pauseTaskAction(workspaceId: string, taskId: string) {
 
 export async function resumeTaskAction(workspaceId: string, taskId: string) {
   await requireWorkspaceOwner(workspaceId);
-  await updateTask(taskId, workspaceId, { status: "active" });
+
+  // If resuming a recurring task with no nextRunAt, calculate initial schedule
+  const task = await getTaskById(taskId, workspaceId);
+  if (
+    task &&
+    task.type === "recurring" &&
+    !task.nextRunAt &&
+    task.intervalType
+  ) {
+    const nextRunAt = calculateNextRunTime(task);
+    await updateTask(taskId, workspaceId, { status: "active", nextRunAt });
+  } else {
+    await updateTask(taskId, workspaceId, { status: "active" });
+  }
+
   revalidatePath(`/workspace/${workspaceId}/personal/tasks`);
 }
 
