@@ -9,8 +9,15 @@ export const callEndpointToolDefinition = {
     pathParams: z
       .record(z.string(), z.string())
       .optional()
-      .describe("Path parameter values to substitute in the path (e.g. { id: '123' } for /users/:id)"),
-    body: z.unknown().optional().describe("JSON body for POST/PUT/PATCH requests"),
+      .describe(
+        "Path parameter values to substitute in the path (e.g. { id: '123' } for /users/:id)",
+      ),
+    body: z
+      .unknown()
+      .optional()
+      .describe(
+        'JSON body as a native object (not a string!). Pass it directly — do NOT JSON.stringify() it. Example: { "name": "my-service", "port": 8080 }',
+      ),
     query: z
       .record(z.string(), z.string())
       .optional()
@@ -18,4 +25,6 @@ export const callEndpointToolDefinition = {
   }),
 };
 
-export type CallEndpointInput = z.infer<typeof callEndpointToolDefinition.inputSchema>;
+export type CallEndpointInput = z.infer<
+  typeof callEndpointToolDefinition.inputSchema
+>;
