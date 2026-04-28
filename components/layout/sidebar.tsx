@@ -2,7 +2,13 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { User, PanelLeftOpen, PanelLeftClose, Settings, Brain } from "lucide-react";
+import {
+  User,
+  PanelLeftOpen,
+  PanelLeftClose,
+  Settings,
+  Brain,
+} from "lucide-react";
 import { WorkspaceSwitcher } from "./workspace-switcher";
 
 type SidebarProps = {
@@ -20,8 +26,12 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
   const brainHref = workspaceId ? `/workspace/${workspaceId}/brain` : "/brain";
   const brainActive = pathname.startsWith(`/workspace/${workspaceId}/brain`);
 
-  const settingsHref = workspaceId ? `/workspace/${workspaceId}/settings/general` : "/settings";
-  const settingsActive = workspaceId ? pathname.includes(`/workspace/${workspaceId}/settings`) : pathname.startsWith(settingsHref);
+  const settingsHref = workspaceId
+    ? `/workspace/${workspaceId}/settings/general`
+    : "/settings";
+  const settingsActive = workspaceId
+    ? pathname.includes(`/workspace/${workspaceId}/settings`)
+    : pathname.startsWith(settingsHref);
 
   if (collapsed) {
     return (
@@ -37,18 +47,21 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
         </button>
 
         {/* Brand logo */}
-        <div className="mt-2 flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-[var(--accent)] to-purple-900">
-          <span className="text-lg font-bold text-white">O</span>
-        </div>
+        <img
+          src="/op-not-moving.png"
+          alt="OpenPieces"
+          className="mt-2 h-8 w-8 rounded-lg object-cover"
+        />
 
         {/* Navigation icons */}
         <div className="mt-5 flex-1 space-y-2">
           <Link
             href={personalHref}
-            className={`flex h-10 w-10 items-center justify-center rounded-lg text-[var(--muted)] transition-colors ${personalActive
-              ? "bg-[var(--hover-bg-strong)] text-[var(--foreground)]"
-              : "hover:bg-[var(--hover-bg-strong)] hover:text-[var(--foreground)]"
-              }`}
+            className={`flex h-10 w-10 items-center justify-center rounded-lg text-[var(--muted)] transition-colors ${
+              personalActive
+                ? "bg-[var(--hover-bg-strong)] text-[var(--foreground)]"
+                : "hover:bg-[var(--hover-bg-strong)] hover:text-[var(--foreground)]"
+            }`}
             aria-label="Personal"
           >
             <User
@@ -59,10 +72,11 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
           </Link>
           <Link
             href={brainHref}
-            className={`flex h-10 w-10 items-center justify-center rounded-lg text-[var(--muted)] transition-colors ${brainActive
-              ? "bg-[var(--hover-bg-strong)] text-[var(--foreground)]"
-              : "hover:bg-[var(--hover-bg-strong)] hover:text-[var(--foreground)]"
-              }`}
+            className={`flex h-10 w-10 items-center justify-center rounded-lg text-[var(--muted)] transition-colors ${
+              brainActive
+                ? "bg-[var(--hover-bg-strong)] text-[var(--foreground)]"
+                : "hover:bg-[var(--hover-bg-strong)] hover:text-[var(--foreground)]"
+            }`}
             aria-label="Brain"
           >
             <Brain
@@ -73,10 +87,11 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
           </Link>
           <Link
             href={settingsHref}
-            className={`flex h-10 w-10 items-center justify-center rounded-lg text-[var(--muted)] transition-colors ${settingsActive
-              ? "bg-[var(--hover-bg-strong)] text-[var(--foreground)]"
-              : "hover:bg-[var(--hover-bg-strong)] hover:text-[var(--foreground)]"
-              }`}
+            className={`flex h-10 w-10 items-center justify-center rounded-lg text-[var(--muted)] transition-colors ${
+              settingsActive
+                ? "bg-[var(--hover-bg-strong)] text-[var(--foreground)]"
+                : "hover:bg-[var(--hover-bg-strong)] hover:text-[var(--foreground)]"
+            }`}
             aria-label="Settings"
           >
             <Settings
@@ -89,7 +104,11 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
 
         {/* Workspace switcher */}
         <div className="w-full border-t border-[var(--border)] py-3">
-          <WorkspaceSwitcher placement="up" variant="icon" activeWorkspaceId={workspaceId} />
+          <WorkspaceSwitcher
+            placement="up"
+            variant="icon"
+            activeWorkspaceId={workspaceId}
+          />
         </div>
       </aside>
     );
@@ -100,9 +119,11 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
       {/* Logo + collapse button */}
       <div className="flex items-center justify-between gap-3 px-4 pt-5 pb-3">
         <div className="flex items-center gap-3">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-[var(--accent)] to-purple-900">
-            <span className="text-lg font-bold text-white">O</span>
-          </div>
+          <img
+            src="/op-not-moving.png"
+            alt="OpenPieces"
+            className="h-8 w-8 rounded-lg object-cover"
+          />
           <span className="text-xl font-semibold text-[var(--foreground)]">
             OpenPieces
           </span>
@@ -123,10 +144,11 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
           <li>
             <Link
               href={personalHref}
-              className={`flex items-start gap-2 rounded-lg p-3 transition-colors ${personalActive
-                ? "bg-[var(--hover-bg-strong)] text-[var(--foreground)]"
-                : "bg-[var(--hover-bg)] text-[var(--muted)] hover:bg-[var(--hover-bg-strong)] hover:text-[var(--foreground)]"
-                }`}
+              className={`flex items-start gap-2 rounded-lg p-3 transition-colors ${
+                personalActive
+                  ? "bg-[var(--hover-bg-strong)] text-[var(--foreground)]"
+                  : "bg-[var(--hover-bg)] text-[var(--muted)] hover:bg-[var(--hover-bg-strong)] hover:text-[var(--foreground)]"
+              }`}
             >
               <User
                 className="mt-0.5 h-4 w-4 shrink-0"
@@ -141,10 +163,11 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
           <li>
             <Link
               href={brainHref}
-              className={`flex items-start gap-2 rounded-lg p-3 transition-colors ${brainActive
-                ? "bg-[var(--hover-bg-strong)] text-[var(--foreground)]"
-                : "bg-[var(--hover-bg)] text-[var(--muted)] hover:bg-[var(--hover-bg-strong)] hover:text-[var(--foreground)]"
-                }`}
+              className={`flex items-start gap-2 rounded-lg p-3 transition-colors ${
+                brainActive
+                  ? "bg-[var(--hover-bg-strong)] text-[var(--foreground)]"
+                  : "bg-[var(--hover-bg)] text-[var(--muted)] hover:bg-[var(--hover-bg-strong)] hover:text-[var(--foreground)]"
+              }`}
             >
               <Brain
                 className="mt-0.5 h-4 w-4 shrink-0"
@@ -159,10 +182,11 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
           <li>
             <Link
               href={settingsHref}
-              className={`flex items-start gap-2 rounded-lg p-3 transition-colors ${settingsActive
-                ? "bg-[var(--hover-bg-strong)] text-[var(--foreground)]"
-                : "bg-[var(--hover-bg)] text-[var(--muted)] hover:bg-[var(--hover-bg-strong)] hover:text-[var(--foreground)]"
-                }`}
+              className={`flex items-start gap-2 rounded-lg p-3 transition-colors ${
+                settingsActive
+                  ? "bg-[var(--hover-bg-strong)] text-[var(--foreground)]"
+                  : "bg-[var(--hover-bg)] text-[var(--muted)] hover:bg-[var(--hover-bg-strong)] hover:text-[var(--foreground)]"
+              }`}
             >
               <Settings
                 className="mt-0.5 h-4 w-4 shrink-0"

@@ -75,8 +75,7 @@ export function OverviewChatArea({
     const el = scrollRef.current;
     if (!el) return;
     const handleScroll = () => {
-      const isAtBottom =
-        el.scrollHeight - el.scrollTop - el.clientHeight < 50;
+      const isAtBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 50;
       userScrolledUpRef.current = !isAtBottom;
     };
     el.addEventListener("scroll", handleScroll, { passive: true });
@@ -184,6 +183,27 @@ export function OverviewChatArea({
                 </p>
               </div>
             ) : null}
+            {/* Floating indicator at bottom of last message — left-aligned */}
+            <div className="flex justify-start w-full">
+              {isChatRunning ? (
+                <video
+                  src="/op-moving.webm"
+                  autoPlay
+                  loop
+                  muted
+                  playsInline
+                  className="w-20 h-20 rounded-xl opacity-70 hover:opacity-100 transition-opacity"
+                  style={{ aspectRatio: "16/9", objectFit: "cover" }}
+                />
+              ) : (
+                <img
+                  src="/op-not-moving.png"
+                  alt=""
+                  className="w-20 h-20 rounded-xl opacity-70 hover:opacity-100 transition-opacity"
+                  style={{}}
+                />
+              )}
+            </div>
           </div>
         )}
       </div>
