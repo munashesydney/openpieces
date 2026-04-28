@@ -1,3 +1,21 @@
+<p align="center">
+  <a href="https://openpieces.com" target="_blank" rel="noopener noreferrer">
+    <picture>
+      <source media="(prefers-color-scheme: dark)" srcset="public/op-not-moving.png">
+      <source media="(prefers-color-scheme: light)" srcset="public/op-not-moving.png">
+      <img src="public/op-not-moving.png" alt="OpenPieces Logo" width="100"/>
+    </picture>
+  </a>
+</p>
+
+<p align="center">
+  <a href="https://openpieces.com" target="_blank" rel="noopener noreferrer"><img src="https://img.shields.io/badge/openpieces.com-6366f1" alt="OpenPieces"></a>
+  <a href="https://discord.gg/openpieces" target="_blank" rel="noopener noreferrer"><img src="https://img.shields.io/badge/Discord-Join%20Server-5865F2?logo=discord&logoColor=white" alt="Discord"></a>
+  <a href="https://x.com/openpieces" target="_blank" rel="noopener noreferrer"><img src="https://img.shields.io/twitter/follow/openpieces?style=social" alt="Twitter"></a>
+  <a href="https://docs.openpieces.com" target="_blank" rel="noopener noreferrer"><img src="https://img.shields.io/badge/Docs-6366f1.svg" alt="Documentation"></a>
+  <a href="https://openpieces.com" target="_blank" rel="noopener noreferrer"><img src="https://img.shields.io/badge/Get%20Started-000000?logo=github&logoColor=white" alt="Get Started"></a>
+</p>
+
 # OpenPieces
 
 ![OpenPieces](public/op_public.png)
@@ -5,7 +23,6 @@
 OpenPieces is an intelligent personal assistant that dynamically creates, deploys, and manages tools — called *pieces* — on the fly. When it encounters a task it can't handle with its existing toolkit, it autonomously builds a new piece to fill the gap, deploys it instantly, and retains it for future use. Over time, OpenPieces grows a continuously expanding ecosystem of capabilities, adapting to your needs without manual intervention.
 
 ---
-
 
 ## Quick Start
 
