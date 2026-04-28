@@ -17,6 +17,7 @@ export async function getWorkspaceSettings(workspaceId: string) {
     return {
       workspaceId,
       defaultModel: "deepseek/deepseek-v3.2",
+      timezone: "UTC",
       createdAt: new Date(),
       updatedAt: new Date(),
     };
@@ -25,7 +26,10 @@ export async function getWorkspaceSettings(workspaceId: string) {
   return settings;
 }
 
-export async function updateWorkspaceDefaultModel(workspaceId: string, defaultModel: string) {
+export async function updateWorkspaceDefaultModel(
+  workspaceId: string,
+  defaultModel: string,
+) {
   if (!isValidUuid(workspaceId)) return null;
 
   const [settings] = await db
@@ -37,6 +41,27 @@ export async function updateWorkspaceDefaultModel(workspaceId: string, defaultMo
     .onConflictDoUpdate({
       target: workspaceSettings.workspaceId,
       set: { defaultModel, updatedAt: new Date() },
+    })
+    .returning();
+
+  return settings;
+}
+
+export async function updateWorkspaceTimezone(
+  workspaceId: string,
+  timezone: string,
+) {
+  if (!isValidUuid(workspaceId)) return null;
+
+  const [settings] = await db
+    .insert(workspaceSettings)
+    .values({
+      workspaceId,
+      timezone,
+    })
+    .onConflictDoUpdate({
+      target: workspaceSettings.workspaceId,
+      set: { timezone, updatedAt: new Date() },
     })
     .returning();
 

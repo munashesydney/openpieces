@@ -44,9 +44,6 @@ export async function getDueTasks(): Promise<Task[]> {
       ),
     );
 
-  console.log(
-    `[task-execution] getDueTasks: found ${dueTasks.length} due task(s) at ${now.toISOString()}`,
-  );
   for (const t of dueTasks) {
     console.log(
       `  task id=${t.id} type=${t.type} status=${t.status} scheduledAt=${t.scheduledAt?.toISOString() ?? "null"} nextRunAt=${t.nextRunAt?.toISOString() ?? "null"}`,
@@ -570,11 +567,9 @@ export async function markTaskAsExecuted(task: Task): Promise<void> {
  * Process all due tasks.
  */
 export async function processDueTasks(): Promise<void> {
-  console.log(`[task-execution] processDueTasks: polling for due tasks...`);
   const dueTasks = await getDueTasks();
 
   if (dueTasks.length === 0) {
-    console.log(`[task-execution] processDueTasks: no due tasks found`);
     return;
   }
 

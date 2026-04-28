@@ -5,12 +5,13 @@ import { requireWorkspaceOwner } from "@/lib/services/auth.service";
 import { eq, and } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { workspaces } from "@/lib/db/schema";
+import { updateWorkspaceTimezone } from "@/lib/services/workspace-settings.service";
 
 export type ActionResult = { error: string } | { success: true };
 
 export async function updateGeneralSettingsAction(
   workspaceId: string,
-  formData: FormData
+  formData: FormData,
 ): Promise<ActionResult> {
   const { user } = await requireWorkspaceOwner(workspaceId);
 
@@ -29,9 +30,37 @@ export async function updateGeneralSettingsAction(
     await db
       .update(workspaces)
       .set({ name, description, updatedAt: new Date() })
-      .where(and(eq(workspaces.id, workspaceId), eq(workspaces.userId, user.id)));
+      .where(
+        and(eq(workspaces.id, workspaceId), eq(workspaces.userId, user.id)),
+      );
   } catch (err) {
     console.error("Unexpected error updating workspace:", err);
+    return { error: "Something went wrong. Please try again." };
+  }
+
+  revalidatePath(`/workspace/${workspaceId}/settings/general`);
+  return { success: true };
+}
+
+export async function updateTimezoneAction(
+  workspaceId: string,
+  formData: FormData,
+): Promise<ActionResult> {
+  await requireWorkspaceOwner(workspaceId);
+
+  const timezone = (formData.get("timezone") as string)?.trim();
+
+  if (!timezone) {
+    return { error: "Timezone is required." };
+  }
+
+  try {
+    const result = await updateWorkspaceTimezone(workspaceId, timezone);
+    if (!result) {
+      return { error: "Failed to update timezone." };
+    }
+  } catch (err) {
+    console.error("Unexpected error updating timezone:", err);
     return { error: "Something went wrong. Please try again." };
   }
 

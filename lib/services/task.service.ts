@@ -4,6 +4,7 @@ import { tasks, workflows, type NewTask, type Task } from "../db/schema";
 import { isValidUuid } from "../utils/uuid";
 import { ValidationError } from "../errors/validation-error";
 import { calculateNextRunTime } from "./task-execution.service";
+import { getWorkspaceSettings } from "./workspace-settings.service";
 
 const VALID_TASK_TYPES = ["one-time", "recurring"] as const;
 const VALID_INTERVAL_TYPES = [
@@ -171,6 +172,17 @@ export async function createTask(data: NewTask): Promise<Task> {
 
   // For recurring tasks, calculate the initial nextRunAt so the poller picks it up
   if (task.type === "recurring" && task.intervalType) {
+    // If no explicit timezone was provided, fall back to workspace default
+    if (!task.timezone || task.timezone === "UTC") {
+      const settings = await getWorkspaceSettings(task.workspaceId);
+      if (settings?.timezone && settings.timezone !== "UTC") {
+        await db
+          .update(tasks)
+          .set({ timezone: settings.timezone })
+          .where(eq(tasks.id, task.id));
+        task.timezone = settings.timezone;
+      }
+    }
     const nextRunAt = calculateNextRunTime(task);
     await db.update(tasks).set({ nextRunAt }).where(eq(tasks.id, task.id));
     task.nextRunAt = nextRunAt;
@@ -232,7 +244,8 @@ export async function updateTask(
     data.dayOfWeek !== undefined ||
     data.dayOfMonth !== undefined ||
     data.timeOfDay !== undefined ||
-    data.timezone !== undefined;
+    data.timezone !== undefined ||
+    data.status !== undefined;
 
   const mergedData = { ...data };
 
@@ -245,6 +258,19 @@ export async function updateTask(
       (existing.intervalType || mergedData.intervalType)
     ) {
       const mergedTask = { ...existing, ...mergedData };
+
+      // If no explicit timezone in the update, fall back to workspace default
+      if (
+        data.timezone === undefined &&
+        (!mergedTask.timezone || mergedTask.timezone === "UTC")
+      ) {
+        const settings = await getWorkspaceSettings(workspaceId);
+        if (settings?.timezone && settings.timezone !== "UTC") {
+          mergedTask.timezone = settings.timezone;
+          mergedData.timezone = settings.timezone;
+        }
+      }
+
       mergedData.nextRunAt = calculateNextRunTime(mergedTask);
     }
   }
