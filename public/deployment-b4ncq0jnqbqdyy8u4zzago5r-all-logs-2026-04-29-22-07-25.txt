@@ -1,0 +1,264 @@
+2026-Apr-29 05:19:13.696241 Docker 27.0.3 with BuildKit and Buildx detected on deployment server (localhost).
+2026-Apr-29 05:19:13.714488 Starting deployment of openpieces:main-bsg1ssu6j2mdfd6v601vaqd8 to localhost.
+2026-Apr-29 05:19:13.925273 Preparing container with helper image: ghcr.io/coollabsio/coolify-helper:1.0.13
+2026-Apr-29 05:19:14.046437 [DEBUG] [CMD]: docker stop -t 30 b4ncq0jnqbqdyy8u4zzago5r
+2026-Apr-29 05:19:14.046437 [DEBUG] Error response from daemon: No such container: b4ncq0jnqbqdyy8u4zzago5r
+2026-Apr-29 05:19:14.242343 [DEBUG] [CMD]: docker run -d --network 'coolify' --name b4ncq0jnqbqdyy8u4zzago5r  --rm -v /var/run/docker.sock:/var/run/docker.sock ghcr.io/coollabsio/coolify-helper:1.0.13
+2026-Apr-29 05:19:14.242343 [DEBUG] 499ea244d7d579ab2c18470a0e0d1019a79e807955d3d6f92f11c541259d8d3e
+2026-Apr-29 05:19:15.723525 [DEBUG] [CMD]: docker exec b4ncq0jnqbqdyy8u4zzago5r bash -c 'GIT_SSH_COMMAND="ssh -o ConnectTimeout=30 -p 22 -o Port=22 -o LogLevel=ERROR -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null" git ls-remote https://github.com/munashesydney/openpieces refs/heads/main'
+2026-Apr-29 05:<REDACTED>@\(.*\):#https://\1/#g" '\''/artifacts/b4ncq0jnqbqdyy8u4zzago5r'\''/.gitmodules || true && git submodule sync && GIT_SSH_COMMAND="ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null" git submodule update --init --recursive --depth=1; fi && cd '\''/artifacts/b4ncq0jnqbqdyy8u4zzago5r'\'' && GIT_SSH_COMMAND="ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null" git lfs pull'
+2026-Apr-29 05:<REDACTED>@sha256:fb4cd12c85ee03686f6af5362a0b0d56d50c58a04632e6c0fb8363f609372293
+2026-Apr-29 05:19:27.730515 [DEBUG] #12 CACHED
+2026-Apr-29 05:19:27.730515 [DEBUG] 
+2026-Apr-29 05:19:27.730515 [DEBUG] #13 [app base 2/5] RUN apk add --no-cache libc6-compat
+2026-Apr-29 05:19:27.863499 [DEBUG] #13 ...
+2026-Apr-29 05:19:27.863499 [DEBUG] 
+2026-Apr-29 05:19:27.863499 [DEBUG] #12 [worker base 1/5] FROM docker.io/library/node:20-alpine@sha256:fb4cd12c85ee03686f6af5362a0b0d56d50c58a04632e6c0fb8363f609372293
+2026-Apr-29 05:19:27.863499 [DEBUG] #12 CACHED
+2026-Apr-29 05:19:27.863499 [DEBUG] 
+2026-Apr-29 05:19:27.863499 [DEBUG] #14 [worker deno-bin 1/1] FROM docker.io/denoland/deno:bin@sha256:4c99106eadea6645640dacf35967c97ae34814d54fc417f4f9e9746245e8633f
+2026-Apr-29 05:19:27.863499 [DEBUG] #14 DONE 0.0s
+2026-Apr-29 05:19:27.863499 [DEBUG] 
+2026-Apr-29 05:19:27.863499 [DEBUG] #15 [db 1/5] FROM docker.io/pgvector/pgvector:pg16@sha256:7d400e340efb42f4d8c9c12c6427adb253f726881a9985d2a471bf0eed824dff
+2026-Apr-29 05:19:27.863499 [DEBUG] #15 DONE 0.0s
+2026-Apr-29 05:19:27.863499 [DEBUG] 
+2026-Apr-29 05:19:27.863499 [DEBUG] #16 [worker deno-cc 1/1] FROM gcr.io/distroless/cc:latest@sha256:56aaf20ab2523a346a67c8e8f8e8dabe447447d0788b82284d14ad79cd5f93cc
+2026-Apr-29 05:19:27.863499 [DEBUG] #16 DONE 0.0s
+2026-Apr-29 05:19:27.863499 [DEBUG] 
+2026-Apr-29 05:19:27.863499 [DEBUG] #13 [worker base 2/5] RUN apk add --no-cache libc6-compat
+2026-Apr-29 05:19:27.994988 [DEBUG] #13 ...
+2026-Apr-29 05:19:27.994988 [DEBUG] 
+2026-Apr-29 05:19:27.994988 [DEBUG] #17 [db internal] load build context
+2026-Apr-29 05:19:27.994988 [DEBUG] #17 transferring context: 1.24kB 0.1s done
+2026-Apr-29 05:19:27.994988 [DEBUG] #17 DONE 0.2s
+2026-Apr-29 05:19:27.994988 [DEBUG] 
+2026-Apr-29 05:19:27.994988 [DEBUG] #18 [db 2/5] COPY db-init/001-*.sh /docker-entrypoint-initdb.d/
+2026-Apr-29 05:19:27.994988 [DEBUG] #18 CACHED
+2026-Apr-29 05:19:28.160389 [DEBUG] #19 [worker internal] load build context
+2026-Apr-29 05:19:28.360146 [DEBUG] #19 transferring context: 3.13MB 0.5s done
+2026-Apr-29 05:19:28.360146 [DEBUG] #19 DONE 0.6s
+2026-Apr-29 05:19:28.360146 [DEBUG] 
+2026-Apr-29 05:19:28.360146 [DEBUG] #20 [app internal] load build context
+2026-Apr-29 05:19:28.360146 [DEBUG] #20 transferring context: 3.13MB 0.5s done
+2026-Apr-29 05:19:28.360146 [DEBUG] #20 DONE 0.6s
+2026-Apr-29 05:19:28.360146 [DEBUG] 
+2026-Apr-29 05:19:28.360146 [DEBUG] #16 [worker deno-cc 1/1] FROM gcr.io/distroless/cc:latest@sha256:56aaf20ab2523a346a67c8e8f8e8dabe447447d0788b82284d14ad79cd5f93cc
+2026-Apr-29 05:19:28.360146 [DEBUG] #16 CACHED
+2026-Apr-29 05:19:28.360146 [DEBUG] 
+2026-Apr-29 05:19:28.360146 [DEBUG] #14 [worker deno-bin 1/1] FROM docker.io/denoland/deno:bin@sha256:4c99106eadea6645640dacf35967c97ae34814d54fc417f4f9e9746245e8633f
+2026-Apr-29 05:19:28.360146 [DEBUG] #14 CACHED
+2026-Apr-29 05:19:28.360146 [DEBUG] 
+2026-Apr-29 05:19:28.360146 [DEBUG] #21 [db 3/5] RUN chmod +x /docker-entrypoint-initdb.d/*.sh
+2026-Apr-29 05:19:28.633017 [DEBUG] #21 DONE 0.7s
+2026-Apr-29 05:19:28.633017 [DEBUG] 
+2026-Apr-29 05:19:28.633017 [DEBUG] #13 [worker base 2/5] RUN apk add --no-cache libc6-compat
+2026-Apr-29 05:19:28.739560 [DEBUG] #13 ...
+2026-Apr-29 05:19:28.739560 [DEBUG] 
+2026-Apr-29 05:19:28.739560 [DEBUG] #22 [db 4/5] COPY db-init/db-entrypoint.sh /usr/local/bin/
+2026-Apr-29 05:19:28.739560 [DEBUG] #22 DONE 0.1s
+2026-Apr-29 05:19:28.891899 [DEBUG] #23 [db 5/5] RUN chmod +x /usr/local/bin/db-entrypoint.sh
+2026-Apr-29 05:19:29.380432 [DEBUG] #23 DONE 0.6s
+2026-Apr-29 05:19:29.380432 [DEBUG] 
+2026-Apr-29 05:19:29.380432 [DEBUG] #13 [worker base 2/5] RUN apk add --no-cache libc6-compat
+2026-Apr-29 05:19:29.852211 [DEBUG] #13 ...
+2026-Apr-29 05:19:29.852211 [DEBUG] 
+2026-Apr-29 05:19:29.852211 [DEBUG] #24 [db] exporting to image
+2026-Apr-29 05:19:29.852211 [DEBUG] #24 exporting layers 0.2s done
+2026-Apr-29 05:19:29.852211 [DEBUG] #24 writing image sha256:576fff34eee2cbc3c7e7afa5123f465d26e39841950c3ac7f376d8dbcabad2a9 0.0s done
+2026-Apr-29 05:19:29.852211 [DEBUG] #24 naming to docker.io/library/elthvd2zvqqy7blja428cdiw_db:0f26a322e4549046398da1d2e9102455a456da6c 0.0s done
+2026-Apr-29 05:19:29.852211 [DEBUG] #24 DONE 0.3s
+2026-Apr-29 05:19:29.902580 [DEBUG] #25 [db] resolving provenance for metadata file
+2026-Apr-29 05:19:30.033416 [DEBUG] #25 DONE 0.0s
+2026-Apr-29 05:19:30.033416 [DEBUG] 
+2026-Apr-29 05:19:30.033416 [DEBUG] #13 [worker base 2/5] RUN apk add --no-cache libc6-compat
+2026-Apr-29 05:19:30.033416 [DEBUG] #13 2.317 (1/3) Installing musl-obstack (1.2.3-r2)
+2026-Apr-29 05:19:30.178145 [DEBUG] #13 2.324 (2/3) Installing libucontext (1.3.3-r0)
+2026-Apr-29 05:19:30.178145 [DEBUG] #13 2.330 (3/3) Installing gcompat (1.1.0-r4)
+2026-Apr-29 05:19:30.178145 [DEBUG] #13 2.340 OK: 11.0 MiB in 21 packages
+2026-Apr-29 05:19:30.415491 [DEBUG] #13 DONE 2.5s
+2026-Apr-29 05:19:30.415491 [DEBUG] 
+2026-Apr-29 05:19:30.415491 [DEBUG] #26 [worker base 3/5] COPY scripts/entrypoint.sh /usr/local/bin/
+2026-Apr-29 05:19:30.415491 [DEBUG] #26 DONE 0.1s
+2026-Apr-29 05:19:30.415491 [DEBUG] 
+2026-Apr-29 05:19:30.415491 [DEBUG] #27 [app base 4/5] RUN chmod +x /usr/local/bin/entrypoint.sh
+2026-Apr-29 05:19:31.091429 [DEBUG] #27 DONE 0.7s
+2026-Apr-29 05:19:31.091429 [DEBUG] 
+2026-Apr-29 05:19:31.091429 [DEBUG] #28 [worker base 5/5] WORKDIR /app
+2026-Apr-29 05:19:31.294649 [DEBUG] #28 DONE 0.2s
+2026-Apr-29 05:19:31.294649 [DEBUG] 
+2026-Apr-29 05:19:31.294649 [DEBUG] #29 [worker base 3/5] COPY scripts/entrypoint.sh /usr/local/bin/
+2026-Apr-29 05:19:31.294649 [DEBUG] #29 CACHED
+2026-Apr-29 05:19:31.294649 [DEBUG] 
+2026-Apr-29 05:19:31.294649 [DEBUG] #30 [worker base 4/5] RUN chmod +x /usr/local/bin/entrypoint.sh
+2026-Apr-29 05:19:31.294649 [DEBUG] #30 CACHED
+2026-Apr-29 05:19:31.294649 [DEBUG] 
+2026-Apr-29 05:19:31.294649 [DEBUG] #31 [worker base 5/5] WORKDIR /app
+2026-Apr-29 05:19:31.294649 [DEBUG] #31 CACHED
+2026-Apr-29 05:19:31.294649 [DEBUG] 
+2026-Apr-29 05:19:31.294649 [DEBUG] #32 [worker deps 1/2] COPY package.json package-lock.json ./
+2026-Apr-29 05:19:31.294649 [DEBUG] #32 ...
+2026-Apr-29 05:19:31.294649 [DEBUG] 
+2026-Apr-29 05:19:31.294649 [DEBUG] #33 [app runner  1/11] WORKDIR /app
+2026-Apr-29 05:19:31.294649 [DEBUG] #33 DONE 0.2s
+2026-Apr-29 05:19:31.440461 [DEBUG] #32 [app deps 1/2] COPY package.json package-lock.json ./
+2026-Apr-29 05:19:31.637961 [DEBUG] #32 DONE 0.3s
+2026-Apr-29 05:19:31.637961 [DEBUG] 
+2026-Apr-29 05:19:31.637961 [DEBUG] #34 [app deps 2/2] RUN npm ci --include=dev
+2026-Apr-29 05:19:32.459526 [DEBUG] #34 ...
+2026-Apr-29 05:19:32.459526 [DEBUG] 
+2026-Apr-29 05:19:32.459526 [DEBUG] #35 [worker worker 1/7] COPY --from=deno-cc --chown=root:root --chmod=755 /lib/*-linux-gnu/* /opt/deno-glibc/
+2026-Apr-29 05:19:32.459526 [DEBUG] #35 DONE 1.3s
+2026-Apr-29 05:19:32.591125 [DEBUG] #36 [worker worker 2/7] COPY --from=deno-cc --chown=root:root --chmod=755 /lib/ld-linux-* /opt/deno-glibc/
+2026-Apr-29 05:19:32.591125 [DEBUG] #36 DONE 0.1s
+2026-Apr-29 05:19:32.591125 [DEBUG] 
+2026-Apr-29 05:19:32.591125 [DEBUG] #37 [app runner  2/11] RUN addgroup --system --gid 1001 nodejs  && adduser --system --uid 1001 nextjs  && apk add --no-cache wget su-exec
+2026-Apr-29 05:19:33.553686 [DEBUG] #37 ...
+2026-Apr-29 05:19:33.553686 [DEBUG] 
+2026-Apr-29 05:19:33.553686 [DEBUG] #38 [worker worker 3/7] RUN mkdir -p /lib64 && ln -sf /opt/deno-glibc/ld-linux-* /lib64/
+2026-Apr-29 05:19:33.553686 [DEBUG] #38 DONE 0.9s
+2026-Apr-29 05:19:33.710353 [DEBUG] #39 [worker worker 4/7] COPY --from=deno-bin /deno /usr/local/bin/deno
+2026-Apr-29 05:19:34.710027 [DEBUG] #39 ...
+2026-Apr-29 05:19:34.710027 [DEBUG] 
+2026-Apr-29 05:19:34.710027 [DEBUG] #37 [app runner  2/11] RUN addgroup --system --gid 1001 nodejs  && adduser --system --uid 1001 nextjs  && apk add --no-cache wget su-exec
+2026-Apr-29 05:19:34.710027 [DEBUG] #37 2.991 (1/5) Installing su-exec (0.3-r0)
+2026-Apr-29 05:19:34.710027 [DEBUG] #37 3.019 (2/5) Installing libunistring (1.4.1-r0)
+2026-Apr-29 05:19:34.710027 [DEBUG] #37 3.062 (3/5) Installing libidn2 (2.3.8-r0)
+2026-Apr-29 05:19:34.710027 [DEBUG] #37 3.069 (4/5) Installing pcre2 (10.47-r0)
+2026-Apr-29 05:19:34.710027 [DEBUG] #37 3.091 (5/5) Installing wget (1.25.0-r2)
+2026-Apr-29 05:19:34.710027 [DEBUG] #37 3.111 Executing busybox-1.37.0-r30.trigger
+2026-Apr-29 05:19:34.710027 [DEBUG] #37 3.148 OK: 14.2 MiB in 26 packages
+2026-Apr-29 05:19:34.710027 [DEBUG] #37 DONE 3.4s
+2026-Apr-29 05:19:34.860357 [DEBUG] #34 [app deps 2/2] RUN npm ci --include=dev
+2026-Apr-29 05:19:34.920703 [DEBUG] #34 ...
+2026-Apr-29 05:19:34.920703 [DEBUG] 
+2026-Apr-29 05:19:34.920703 [DEBUG] #39 [worker worker 4/7] COPY --from=deno-bin /deno /usr/local/bin/deno
+2026-Apr-29 05:19:34.920703 [DEBUG] #39 DONE 1.4s
+2026-Apr-29 05:19:35.071607 [DEBUG] #34 [app deps 2/2] RUN npm ci --include=dev
+2026-Apr-29 05:19:35.878265 [DEBUG] #34 4.403 npm warn EBADENGINE Unsupported engine {
+2026-Apr-29 05:19:35.878265 [DEBUG] #34 4.403 npm warn EBADENGINE   package: 'pg-boss@12.15.0',
+2026-Apr-29 05:19:35.878265 [DEBUG] #34 4.403 npm warn EBADENGINE   required: { node: '>=22.12.0' },
+2026-Apr-29 05:19:35.878265 [DEBUG] #34 4.403 npm warn EBADENGINE   current: { node: 'v20.20.2', npm: '10.8.2' }
+2026-Apr-29 05:19:35.878265 [DEBUG] #34 4.403 npm warn EBADENGINE }
+2026-Apr-29 05:19:46.659527 [DEBUG] #34 15.03 npm warn deprecated @esbuild-kit/esm-loader@2.6.5: Merged into tsx: https://tsx.is
+2026-Apr-29 05:<REDACTED>@esbuild-kit/core-utils@3.3.2: Merged into tsx: https://tsx.is
+2026-Apr-29 05:<REDACTED>@11.13.0
+2026-Apr-29 05:20:21.632026 [DEBUG] #34 50.01 npm notice
+2026-Apr-29 05:20:22.352464 [DEBUG] #34 DONE 50.7s
+2026-Apr-29 05:20:32.351727 [DEBUG] #40 [worker deps 2/2] RUN npm ci --include=dev
+2026-Apr-29 05:20:32.351727 [DEBUG] #40 CACHED
+2026-Apr-29 05:20:32.351727 [DEBUG] 
+2026-Apr-29 05:20:32.351727 [DEBUG] #41 [worker deps 1/2] COPY package.json package-lock.json ./
+2026-Apr-29 05:20:32.351727 [DEBUG] #41 CACHED
+2026-Apr-29 05:20:32.351727 [DEBUG] 
+2026-Apr-29 05:20:32.351727 [DEBUG] #42 [worker worker 5/7] COPY --from=deps /app/node_modules ./node_modules
+2026-Apr-29 05:20:42.403523 [DEBUG] #42 ...
+2026-Apr-29 05:20:42.403523 [DEBUG] 
+2026-Apr-29 05:20:42.403523 [DEBUG] #43 [app builder 1/3] COPY --from=deps /app/node_modules ./node_modules
+2026-Apr-29 05:20:49.326048 [DEBUG] #43 ...
+2026-Apr-29 05:20:49.326048 [DEBUG] 
+2026-Apr-29 05:20:49.326048 [DEBUG] #42 [worker worker 5/7] COPY --from=deps /app/node_modules ./node_modules
+2026-Apr-29 05:20:49.326048 [DEBUG] #42 DONE 17.0s
+2026-Apr-29 05:20:49.490136 [DEBUG] #44 [worker worker 6/7] COPY . .
+2026-Apr-29 05:20:49.498701 [DEBUG] #44 ...
+2026-Apr-29 05:20:49.498701 [DEBUG] 
+2026-Apr-29 05:20:49.498701 [DEBUG] #43 [app builder 1/3] COPY --from=deps /app/node_modules ./node_modules
+2026-Apr-29 05:20:49.498701 [DEBUG] #43 DONE 17.2s
+2026-Apr-29 05:20:49.657592 [DEBUG] #45 [app builder 2/3] COPY . .
+2026-Apr-29 05:20:49.682461 [DEBUG] #45 ...
+2026-Apr-29 05:20:49.682461 [DEBUG] 
+2026-Apr-29 05:20:49.682461 [DEBUG] #44 [worker worker 6/7] COPY . .
+2026-Apr-29 05:20:49.682461 [DEBUG] #44 DONE 0.3s
+2026-Apr-29 05:20:49.870595 [DEBUG] #46 [worker worker 7/7] RUN mkdir -p ./pieces-seed && cp -r ./pieces/.opencode ./pieces-seed/.opencode && cp ./pieces/AGENTS.md ./pieces-seed/AGENTS.md
+2026-Apr-29 05:20:50.429767 [DEBUG] #46 ...
+2026-Apr-29 05:20:50.429767 [DEBUG] 
+2026-Apr-29 05:20:50.429767 [DEBUG] #45 [app builder 2/3] COPY . .
+2026-Apr-29 05:20:50.429767 [DEBUG] #45 DONE 0.9s
+2026-Apr-29 05:20:50.586019 [DEBUG] #47 [app builder 3/3] RUN npm run build
+2026-Apr-29 05:20:50.668789 [DEBUG] #47 ...
+2026-Apr-29 05:20:50.668789 [DEBUG] 
+2026-Apr-29 05:20:50.668789 [DEBUG] #46 [worker worker 7/7] RUN mkdir -p ./pieces-seed && cp -r ./pieces/.opencode ./pieces-seed/.opencode && cp ./pieces/AGENTS.md ./pieces-seed/AGENTS.md
+2026-Apr-29 05:20:50.668789 [DEBUG] #46 DONE 1.0s
+2026-Apr-29 05:20:50.880999 [DEBUG] #48 [worker] exporting to image
+2026-Apr-29 05:20:50.880999 [DEBUG] #48 exporting layers
+2026-Apr-29 05:20:56.936774 [DEBUG] #48 ...
+2026-Apr-29 05:20:56.936774 [DEBUG] 
+2026-Apr-29 05:20:56.936774 [DEBUG] #47 [app builder 3/3] RUN npm run build
+2026-Apr-29 05:20:56.936774 [DEBUG] #47 2.713
+2026-Apr-29 05:20:56.944879 [DEBUG] #47 2.713 > my-app@0.1.0 build
+2026-Apr-29 05:20:56.944879 [DEBUG] #47 2.713 > next build
+2026-Apr-29 05:20:56.944879 [DEBUG] #47 2.713
+2026-Apr-29 05:20:56.944879 [DEBUG] #47 5.657 ▲ Next.js 16.1.6 (Turbopack)
+2026-Apr-29 05:20:56.944879 [DEBUG] #47 5.659
+2026-Apr-29 05:20:56.944879 [DEBUG] #47 5.671 ⚠ The "middleware" file convention is deprecated. Please use "proxy" instead. Learn more: https://nextjs.org/docs/messages/middleware-to-proxy
+2026-Apr-29 05:<REDACTED>@11.13.0
+2026-Apr-29 05:22:20.474477 [DEBUG] #47 89.93 npm notice
+2026-Apr-29 05:22:20.474477 [DEBUG] #47 DONE 90.0s
+2026-Apr-29 05:22:22.897724 [DEBUG] #50 [app runner  3/11] COPY --from=builder /app/public ./public
+2026-Apr-29 05:22:23.122140 [DEBUG] #50 DONE 0.1s
+2026-Apr-29 05:22:23.122140 [DEBUG] 
+2026-Apr-29 05:22:23.122140 [DEBUG] #51 [app runner  4/11] COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
+2026-Apr-29 05:22:23.759662 [DEBUG] #51 DONE 0.8s
+2026-Apr-29 05:22:23.972318 [DEBUG] #52 [app runner  5/11] COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
+2026-Apr-29 05:22:23.972318 [DEBUG] #52 DONE 0.1s
+2026-Apr-29 05:22:23.972318 [DEBUG] 
+2026-Apr-29 05:22:23.972318 [DEBUG] #53 [app runner  6/11] COPY --from=deps /app/node_modules ./node_modules
+2026-Apr-29 05:22:42.419670 [DEBUG] #53 DONE 18.6s
+2026-Apr-29 05:22:42.586152 [DEBUG] #54 [app runner  7/11] COPY lib/db/migrate.ts ./lib/db/migrate.ts
+2026-Apr-29 05:22:42.586152 [DEBUG] #54 DONE 0.1s
+2026-Apr-29 05:22:42.586152 [DEBUG] 
+2026-Apr-29 05:22:42.586152 [DEBUG] #55 [app runner  8/11] COPY lib/db/schema.ts ./lib/db/schema.ts
+2026-Apr-29 05:22:42.586152 [DEBUG] #55 DONE 0.1s
+2026-Apr-29 05:22:42.752109 [DEBUG] #56 [app runner  9/11] COPY drizzle/ ./drizzle/
+2026-Apr-29 05:22:42.752109 [DEBUG] #56 DONE 0.1s
+2026-Apr-29 05:22:42.752109 [DEBUG] 
+2026-Apr-29 05:22:42.752109 [DEBUG] #57 [app runner 10/11] COPY pieces/.opencode ./pieces-seed/.opencode
+2026-Apr-29 05:22:42.752109 [DEBUG] #57 DONE 0.1s
+2026-Apr-29 05:22:42.951849 [DEBUG] #58 [app runner 11/11] COPY pieces/AGENTS.md ./pieces-seed/AGENTS.md
+2026-Apr-29 05:22:42.951849 [DEBUG] #58 DONE 0.0s
+2026-Apr-29 05:22:42.951849 [DEBUG] 
+2026-Apr-29 05:22:42.951849 [DEBUG] #59 [app] exporting to image
+2026-Apr-29 05:22:42.951849 [DEBUG] #59 exporting layers
+2026-Apr-29 05:22:49.652274 [DEBUG] #59 exporting layers 6.9s done
+2026-Apr-29 05:22:49.772549 [DEBUG] #59 writing image sha256:cca8c6b4669e9877417c01b2e11951bc136014ce7c3167ab80125f6b15cdf531 done
+2026-Apr-29 05:22:49.772549 [DEBUG] #59 naming to docker.io/library/elthvd2zvqqy7blja428cdiw_app:0f26a322e4549046398da1d2e9102455a456da6c done
+2026-Apr-29 05:22:49.772549 [DEBUG] #59 DONE 6.9s
+2026-Apr-29 05:22:49.772549 [DEBUG] 
+2026-Apr-29 05:22:49.772549 [DEBUG] #60 [app] resolving provenance for metadata file
+2026-Apr-29 05:22:49.772549 [DEBUG] #60 DONE 0.0s
+2026-Apr-29 05:22:49.785878 [DEBUG] worker  Built
+2026-Apr-29 05:22:49.785878 [DEBUG] db  Built
+2026-Apr-29 05:22:49.785878 [DEBUG] app  Built
+2026-Apr-29 05:22:49.979166 [DEBUG] Creating .env file with runtime variables for container.
+2026-Apr-29 05:22:50.359067 Removing old containers.
+2026-Apr-29 05:22:50.497852 Starting new application.
+2026-Apr-29 05:22:51.110981 [DEBUG] [CMD]: docker exec b4ncq0jnqbqdyy8u4zzago5r bash -c 'COOLIFY_BRANCH=main COOLIFY_RESOURCE_UUID=elthvd2zvqqy7blja428cdiw  docker compose --env-file /artifacts/b4ncq0jnqbqdyy8u4zzago5r/.env --project-name elthvd2zvqqy7blja428cdiw --project-directory /artifacts/b4ncq0jnqbqdyy8u4zzago5r -f /artifacts/b4ncq0jnqbqdyy8u4zzago5r/docker-compose.yml up -d'
+2026-Apr-29 05:22:51.898796 Container db-elthvd2zvqqy7blja428cdiw-051920576062  Creating
+2026-Apr-29 05:22:52.040201 Container db-elthvd2zvqqy7blja428cdiw-051920576062  Created
+2026-Apr-29 05:22:52.040201 Container app-elthvd2zvqqy7blja428cdiw-051920536173  Creating
+2026-Apr-29 05:22:52.076360 Container app-elthvd2zvqqy7blja428cdiw-051920536173  Created
+2026-Apr-29 05:22:52.076360 Container worker-elthvd2zvqqy7blja428cdiw-051920558345  Creating
+2026-Apr-29 05:22:52.076360 Container opencode-elthvd2zvqqy7blja428cdiw-051920590901  Creating
+2026-Apr-29 05:22:52.114703 Container opencode-elthvd2zvqqy7blja428cdiw-051920590901  Created
+2026-Apr-29 05:22:52.132432 Container worker-elthvd2zvqqy7blja428cdiw-051920558345  Created
+2026-Apr-29 05:22:52.140136 Container db-elthvd2zvqqy7blja428cdiw-051920576062  Starting
+2026-Apr-29 05:22:52.563456 Container db-elthvd2zvqqy7blja428cdiw-051920576062  Started
+2026-Apr-29 05:22:52.563456 Container db-elthvd2zvqqy7blja428cdiw-051920576062  Waiting
+2026-Apr-29 05:22:58.061804 Container db-elthvd2zvqqy7blja428cdiw-051920576062  Healthy
+2026-Apr-29 05:22:58.061804 Container app-elthvd2zvqqy7blja428cdiw-051920536173  Starting
+2026-Apr-29 05:22:58.743795 Container app-elthvd2zvqqy7blja428cdiw-051920536173  Started
+2026-Apr-29 05:22:58.743795 Container db-elthvd2zvqqy7blja428cdiw-051920576062  Waiting
+2026-Apr-29 05:22:58.743795 Container app-elthvd2zvqqy7blja428cdiw-051920536173  Waiting
+2026-Apr-29 05:22:58.743795 Container db-elthvd2zvqqy7blja428cdiw-051920576062  Waiting
+2026-Apr-29 05:22:58.743795 Container app-elthvd2zvqqy7blja428cdiw-051920536173  Waiting
+2026-Apr-29 05:22:59.238366 Container db-elthvd2zvqqy7blja428cdiw-051920576062  Healthy
+2026-Apr-29 05:22:59.238366 Container db-elthvd2zvqqy7blja428cdiw-051920576062  Healthy
+2026-Apr-29 05:23:10.242977 Container app-elthvd2zvqqy7blja428cdiw-051920536173  Healthy
+2026-Apr-29 05:23:10.242977 Container opencode-elthvd2zvqqy7blja428cdiw-051920590901  Starting
+2026-Apr-29 05:23:10.242977 Container app-elthvd2zvqqy7blja428cdiw-051920536173  Healthy
+2026-Apr-29 05:23:10.242977 Container worker-elthvd2zvqqy7blja428cdiw-051920558345  Starting
+2026-Apr-29 05:23:11.032143 Container worker-elthvd2zvqqy7blja428cdiw-051920558345  Started
+2026-Apr-29 05:23:11.158688 Container opencode-elthvd2zvqqy7blja428cdiw-051920590901  Started
+2026-Apr-29 05:23:12.110616 New container started.
+2026-Apr-29 05:23:13.022840 Gracefully shutting down build container: b4ncq0jnqbqdyy8u4zzago5r
+2026-Apr-29 05:23:13.667606 [DEBUG] [CMD]: docker stop -t 30 b4ncq0jnqbqdyy8u4zzago5r
+2026-Apr-29 05:23:13.667606 [DEBUG] b4ncq0jnqbqdyy8u4zzago5r

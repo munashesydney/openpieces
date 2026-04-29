@@ -552,6 +552,10 @@ export async function markTaskAsExecuted(task: Task): Promise<void> {
     // Calculate next run time for recurring tasks
     const nextRunAt = calculateNextRunTime(task);
 
+    console.log(
+      `[task-execution] Task ${task.id} (${task.timeOfDay} ${task.intervalType}) nextRunAt: ${task.nextRunAt?.toISOString() ?? "null"} → ${nextRunAt.toISOString()} (timezone=${task.timezone ?? "UTC"})`,
+    );
+
     await db
       .update(tasks)
       .set({
