@@ -504,9 +504,41 @@ async function getModelMessages(chatId: string): Promise<ModelMessage[]> {
         result.push({ role: "assistant", content } as ModelMessage);
       }
 
-      // Tool results go in a separate "tool" message right after
-      if (toolResults.length > 0) {
-        const toolContent = toolResults.map((tr) => ({
+      // Tool results go in a separate "tool" message right after.
+      // CRITICAL: every tool-call MUST have a matching tool-result in the
+      // conversation, otherwise the Vercel AI SDK throws "Tool result is
+      // missing for tool call …". This can happen when a stream is
+      // interrupted between a tool-call and its result.
+      if (toolCalls.length > 0 || toolResults.length > 0) {
+        // Index existing results by toolCallId for quick lookup
+        const resultMap = new Map<string, AiToolResult>();
+        for (const tr of toolResults) {
+          resultMap.set(tr.toolCallId, tr);
+        }
+
+        // Walk every tool-call and pair it with a result. Inject an error
+        // result for orphaned calls that lost their result.
+        const pairedResults: AiToolResult[] = toolCalls.map((tc) => {
+          const existing = resultMap.get(tc.toolCallId);
+          if (existing) {
+            resultMap.delete(tc.toolCallId); // consume it
+            return existing;
+          }
+          return {
+            toolCallId: tc.toolCallId,
+            toolName: tc.toolName,
+            output: null,
+            error:
+              "Tool result was not received (stream may have been interrupted).",
+          };
+        });
+
+        // Append any orphaned tool-results that have no matching call
+        for (const tr of resultMap.values()) {
+          pairedResults.push(tr);
+        }
+
+        const toolContent = pairedResults.map((tr) => ({
           type: "tool-result" as const,
           toolCallId: tr.toolCallId,
           toolName: tr.toolName,
