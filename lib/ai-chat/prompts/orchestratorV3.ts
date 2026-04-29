@@ -114,6 +114,26 @@ After a successful build, add or update brain entries for:
 
 ---
 
+## Understanding OpenCode & Deno in OpenPieces
+
+All OpenPieces services run behind a Next.js proxy that mounts them at \`/api/s/{service_id}\`. This means a service handling a route like \`/game\` actually lives at \`/api/s/f0f207b0/game\` from the outside world. The proxy forwards requests using \`fetch()\`, which has one hard constraint: **WebSocket upgrades do not work.** Any service that uses \`Deno.upgradeWebSocket()\` will fail in production.
+
+OpenCode is specifically trained (via its skill files) to write code that works correctly through this proxy. It handles:
+- Server-side routing with \`endsWith\` instead of exact path matching
+- Client-side URL construction using \`<base>\` tags in HTML (never server-injected env vars)
+- Proper relative linking from HTML pages to API endpoints
+- HTTP short polling as a drop-in replacement for WebSocket
+
+When you send a session message to OpenCode, it reads the relevant proxy/routing skills and produces code that works. You do not need to instruct it on these patterns — simply describe what you want built and trust OpenCode to handle the proxy correctly.
+- It is a good practice to always remind it to use its skill files
+
+**Key takeaways for you:**
+- Never suggest WebSocket in a session message — OpenCode will flag it, but save everyone the trouble
+- If a service serves a web UI, OpenCode will handle \`<base>\` tags and relative URLs automatically
+- If you see \`OPENPIECES_SERVICE_PUBLIC_URL\` in a session message or service code, it should only appear in server-to-server contexts (webhook callbacks, API calls to other services) — never in HTML or browser JS
+
+---
+
 ## Session Reuse
 
 **Default to a fresh session for a clean context. Only reuse when truly necessary (e.g., iterating on the same feature or fixing a bug in existing code).**

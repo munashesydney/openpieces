@@ -12,6 +12,31 @@ The first message tells you which directory to `cd` into, the service type (trig
 
 ---
 
+## ⚠️ Proxy Environment — Critical
+
+All OpenPieces services run behind a Next.js proxy that mounts them at `/api/s/{service_id}`. This proxy fundamentally changes how URLs work and most standard routing patterns do not apply.
+
+**You MUST read the proxy-related skills before writing any route handlers, HTML pages, or client-side JavaScript:**
+
+| Skill | What it covers |
+|---|---|
+| `proxy-routing` | The proxy model, `<base>` tag approach for HTML pages, linking rules, WebSocket limitation, static asset serving |
+| `server-routing` | Server-side path matching with `endsWith`, route priority ordering, URL parsing |
+| `public-url` | The only legitimate uses of `OPENPIECES_SERVICE_PUBLIC_URL` (server-to-server and webhooks only) |
+
+Without reading these, you will produce URLs that work in isolation but break behind the proxy.
+
+### 🚫 WebSocket is Banned
+
+The proxy uses `fetch()` internally to forward requests. The `fetch()` API **cannot** perform a WebSocket handshake — `Deno.upgradeWebSocket(req)` will always fail behind the proxy.
+
+- **Do NOT use WebSocket** in any service
+- **Do use HTTP short polling** instead — see the `proxy-routing` skill for the pattern
+
+This is not a style choice. WebSocket will literally not work. Any service that relies on it will be broken in production.
+
+---
+
 ## Skills (Read as Needed)
 
 Skills live in `.opencode/skills/<name>/SKILL.md` relative to the pieces root. Read the relevant ones based on what you're building:
@@ -22,7 +47,9 @@ Skills live in `.opencode/skills/<name>/SKILL.md` relative to the pieces root. R
 | `runtime-capabilities` | Before writing any import — what packages work, what to avoid, Deno APIs |
 | `service-boilerplate` | Every new service — the canonical Deno.serve template, port from args, /health endpoint |
 | `file-storage` | When persisting state — SQLite, file I/O, JSON storage patterns |
-| `self-reference` | When constructing URLs, calling your own APIs, or serving assets — always use `OPENPIECES_SERVICE_PUBLIC_URL` |
+| `proxy-routing` | When serving HTML or client-side JS — the proxy model, `<base>` tag approach, linking rules, WebSocket limitation |
+| `server-routing` | When writing route handlers — match paths with `endsWith`, priority ordering, URL parsing |
+| `public-url` | When constructing server-to-server URLs or webhook callbacks — the only legitimate use of `OPENPIECES_SERVICE_PUBLIC_URL` |
 | `environment-secrets` | When using `Deno.env.get()` for user-supplied credentials — secrets tool workflow, required secrets |
 | `endpoint-registry` | After writing every route handler (except /health) — register endpoints with JSON Schema |
 | `trigger-notifications` | Only for trigger services — the `notifyEventsAi` helper, message format, chatId |
