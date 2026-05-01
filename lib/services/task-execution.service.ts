@@ -131,7 +131,16 @@ function wallClockToUtc(
   const targetWallUtc = new Date(
     Date.UTC(year, month - 1, day, hours, minutes),
   );
-  return new Date(targetWallUtc.getTime() - offsetMs);
+  const result = new Date(targetWallUtc.getTime() - offsetMs);
+
+  console.log(
+    `[wallClockToUtc] tz=${timezone} y=${year} m=${month} d=${day} h=${hours} min=${minutes} | ` +
+      `guessUtc=${guessUtc.toISOString()} wallStr=${wallStr} wallAsUtc=${wallAsUtc.toISOString()} | ` +
+      `offsetMs=${offsetMs} offsetH=${(offsetMs / 3600000).toFixed(2)} | ` +
+      `targetWallUtc=${targetWallUtc.toISOString()} result=${result.toISOString()}`,
+  );
+
+  return result;
 }
 
 /**
@@ -172,7 +181,13 @@ function addDaysInTimezone(
   days: number,
 ): { year: number; month: number; day: number } {
   const utcDate = new Date(Date.UTC(tzYear, tzMonth - 1, tzDay + days, 12));
-  return getDateInTimezone(timezone, utcDate);
+  const result = getDateInTimezone(timezone, utcDate);
+  console.log(
+    `[addDays] tz=${timezone} input=${tzYear}-${String(tzMonth).padStart(2, "0")}-${String(tzDay).padStart(2, "0")} days=${days} | ` +
+      `utcDate=${utcDate.toISOString()} | ` +
+      `result=${result.year}-${String(result.month).padStart(2, "0")}-${String(result.day).padStart(2, "0")}`,
+  );
+  return result;
 }
 
 /**
@@ -194,6 +209,11 @@ function calculateCalendarRunInTimezone(
     day: tzDay,
   } = getDateInTimezone(timezone, now);
 
+  console.log(
+    `[calendarRun] now=${now.toISOString()} tz=${timezone} tzDate=${tzYear}-${String(tzMonth).padStart(2, "0")}-${String(tzDay).padStart(2, "0")} ` +
+      `interval=${intervalType} h=${hours} m=${minutes}`,
+  );
+
   switch (intervalType) {
     case "daily": {
       // Try today
@@ -205,9 +225,15 @@ function calculateCalendarRunInTimezone(
         hours,
         minutes,
       );
+      console.log(
+        `[calendarRun:daily] todayTarget=${targetUtc.toISOString()} targetUtc<=now=${targetUtc <= now} (target=${targetUtc.getTime()} now=${now.getTime()})`,
+      );
       if (targetUtc <= now) {
         // Move to tomorrow in target timezone
         const next = addDaysInTimezone(timezone, tzYear, tzMonth, tzDay, 1);
+        console.log(
+          `[calendarRun:daily] advancing to tomorrow: nextDate=${next.year}-${String(next.month).padStart(2, "0")}-${String(next.day).padStart(2, "0")}`,
+        );
         targetUtc = wallClockToUtc(
           timezone,
           next.year,
@@ -216,7 +242,13 @@ function calculateCalendarRunInTimezone(
           hours,
           minutes,
         );
+        console.log(
+          `[calendarRun:daily] tomorrowTarget=${targetUtc.toISOString()}`,
+        );
       }
+      console.log(
+        `[calendarRun:daily] FINAL targetUtc=${targetUtc.toISOString()}`,
+      );
       return targetUtc;
     }
 
@@ -583,12 +615,20 @@ export async function processDueTasks(): Promise<void> {
     `[task-execution] processDueTasks: processing ${dueTasks.length} task(s) (${oneTimeCount} one-time, ${recurringCount} recurring)`,
   );
 
+  const skipExecution = process.env.DISABLE_TASK_EXECUTION === "true";
+
   for (const task of dueTasks) {
     try {
       console.log(
         `[task-execution] Processing task ${task.id} (type=${task.type})...`,
       );
-      await enqueueTaskForExecution(task);
+      if (skipExecution) {
+        console.log(
+          `[task-execution] DISABLE_TASK_EXECUTION=true — skipping AI enqueue for task ${task.id}`,
+        );
+      } else {
+        await enqueueTaskForExecution(task);
+      }
       await markTaskAsExecuted(task);
       console.log(`[task-execution] Successfully processed task ${task.id}`);
     } catch (error) {
