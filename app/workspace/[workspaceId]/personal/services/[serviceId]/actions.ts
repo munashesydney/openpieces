@@ -180,3 +180,41 @@ export async function resetSpawnCountAction(
   revalidatePath(`/workspace/${workspaceId}/personal/services/${serviceId}`);
   return { success: true };
 }
+
+
+import { getStoredToken, getAuthorizeUrl, pushPiece } from "@/lib/services/hub.service";
+
+export type HubActionResult = { error: string } | { redirectUrl: string } | { success: true };
+
+export async function pushToHubAction(
+  workspaceId: string,
+  serviceId: string,
+): Promise<HubActionResult> {
+  await requireWorkspaceOwner(workspaceId);
+
+  const service = await getServiceById(serviceId, workspaceId);
+  if (!service) return { error: "Service not found" };
+
+  let token = await getStoredToken();
+  if (!token) {
+    const currentUrl = `/workspace/${workspaceId}/personal/services/${serviceId}`;
+    const authUrl = getAuthorizeUrl();
+    const redirectUrl = `${authUrl}&state=${encodeURIComponent(currentUrl)}`;
+    return { redirectUrl };
+  }
+
+  const code = `const handler = (req) => new Response(JSON.stringify({ ok: true, service: "${service.title}" }), { headers: { "Content-Type": "application/json" } });
+
+if (typeof Deno !== "undefined") { Deno.serve(handler); } else { Bun.serve({ fetch: handler }); }`;
+
+  const result = await pushPiece(token, {
+    title: service.title,
+    description: service.description,
+    code,
+  });
+
+  if (!result.ok) return { error: result.error ?? "Failed to push piece" };
+
+  revalidatePath(`/workspace/${workspaceId}/personal/services/${serviceId}`);
+  return { success: true };
+}

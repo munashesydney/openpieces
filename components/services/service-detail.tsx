@@ -34,6 +34,7 @@ import { Textarea } from "@/components/basic/input/textarea";
 import { Dropdown } from "@/components/basic/input/dropdown";
 import { ActionMenu } from "@/components/basic/input/action-menu";
 import { ServiceLogsPanel } from "./service-logs-panel";
+import { PushToHubButton } from "./push-to-hub-button";
 import {
   type Service,
   type ServiceEndpoint,
@@ -252,7 +253,8 @@ export function ServiceDetail({
                 {service.description || "Service Details & API Reference"}
               </p>
             </div>
-            <div className="shrink-0">
+            <div className="shrink-0 flex items-center gap-3">
+              <PushToHubButton workspaceId={workspaceId} serviceId={service.id} />
               <ActionMenu
                 onSelect={(val) => {
                   if (val === "delete") {
