@@ -7,6 +7,7 @@ const REDIRECT_URI =
   "http://localhost:3141/api/hub/callback";
 
 const COOKIE_NAME = "hub_access_token";
+const USER_COOKIE_NAME = "hub_user_info";
 
 // ── Helpers ────────────────────────────────────
 
@@ -31,7 +32,7 @@ export function getAuthorizeUrl(): string {
 
 export async function exchangeCodeForToken(
   code: string,
-): Promise<string | null> {
+): Promise<{ accessToken: string; email?: string; name?: string } | null> {
   // Server-to-server — use Docker-friendly host
   const res = await fetch(`${serverUrl()}/api/v1/oauth/token`, {
     method: "POST",
@@ -41,8 +42,17 @@ export async function exchangeCodeForToken(
 
   if (!res.ok) return null;
 
-  const data = (await res.json()) as { access_token?: string };
-  return data.access_token ?? null;
+  const data = (await res.json()) as {
+    access_token?: string;
+    user?: { email?: string; name?: string };
+  };
+  if (!data.access_token) return null;
+
+  return {
+    accessToken: data.access_token,
+    email: data.user?.email,
+    name: data.user?.name,
+  };
 }
 
 // ── Token storage (cookie) ─────────────────────
@@ -62,6 +72,46 @@ export async function storeToken(token: string) {
   });
 }
 
+export async function storeHubUserInfo(info: {
+  email?: string;
+  name?: string;
+}) {
+  const jar = await cookies();
+  if (info.email) {
+    jar.set(USER_COOKIE_NAME, JSON.stringify(info), {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      maxAge: 30 * 24 * 60 * 60,
+    });
+  }
+}
+
+export async function getHubUserInfo(): Promise<{
+  email?: string;
+  name?: string;
+} | null> {
+  const jar = await cookies();
+  const raw = jar.get(USER_COOKIE_NAME)?.value;
+  if (!raw) return null;
+  try {
+    return JSON.parse(raw);
+  } catch {
+    return null;
+  }
+}
+
+export async function clearHubUserInfo() {
+  const jar = await cookies();
+  jar.set(USER_COOKIE_NAME, "", {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
+    maxAge: 0,
+    path: "/",
+  });
+}
+
 // ── Push piece ─────────────────────────────────
 
 export async function pushPiece(
@@ -72,6 +122,7 @@ export async function pushPiece(
     zipBuffer: Buffer;
     filename: string;
     category?: string;
+    pieceId?: string;
     endpoints?: Array<{
       method: string;
       path: string;
@@ -80,7 +131,7 @@ export async function pushPiece(
     }>;
     requiredSecrets?: Array<{ secretKey: string }>;
   },
-): Promise<{ ok: boolean; error?: string }> {
+): Promise<{ ok: boolean; error?: string; notOwner?: boolean }> {
   const formData = new FormData();
   formData.append("title", data.title);
   formData.append("description", data.description);
@@ -96,6 +147,9 @@ export async function pushPiece(
   if (data.requiredSecrets) {
     formData.append("requiredSecrets", JSON.stringify(data.requiredSecrets));
   }
+  if (data.pieceId) {
+    formData.append("pieceId", data.pieceId);
+  }
 
   const res = await fetch(`${serverUrl()}/api/v1/oauth/pieces`, {
     method: "POST",
@@ -104,7 +158,13 @@ export async function pushPiece(
   });
 
   if (!res.ok) {
-    const err = (await res.json().catch(() => ({}))) as { error?: string };
+    const err = (await res.json().catch(() => ({}))) as {
+      error?: string;
+      message?: string;
+    };
+    if (err.error === "not_owner") {
+      return { ok: false, notOwner: true, error: err.message };
+    }
     return { ok: false, error: err.error ?? "Failed to push piece" };
   }
 

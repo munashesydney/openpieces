@@ -1,5 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import { exchangeCodeForToken, storeToken } from "@/lib/services/hub.service";
+import {
+  exchangeCodeForToken,
+  storeToken,
+  storeHubUserInfo,
+} from "@/lib/services/hub.service";
 
 export async function GET(request: NextRequest) {
   const url = new URL(request.url);
@@ -16,16 +20,27 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "missing code" }, { status: 400 });
   }
 
-  const token = await exchangeCodeForToken(code);
-  if (!token) {
-    return NextResponse.json({ error: "failed to exchange code" }, { status: 400 });
+  const result = await exchangeCodeForToken(code);
+  if (!result) {
+    return NextResponse.json(
+      { error: "failed to exchange code" },
+      { status: 400 },
+    );
   }
 
-  await storeToken(token);
+  await storeToken(result.accessToken);
+  if (result.email) {
+    await storeHubUserInfo({ email: result.email, name: result.name });
+  }
 
-  // Redirect back to the referring page — we store the original URL in a state param
+  // Redirect back — prefer returnTo (from reconnect flow), fallback to state
+  const returnTo = url.searchParams.get("returnTo");
   const state = url.searchParams.get("state");
-  const redirectTo = state ? decodeURIComponent(state) : "/";
+  const redirectTo = returnTo
+    ? decodeURIComponent(returnTo)
+    : state
+      ? decodeURIComponent(state)
+      : "/";
 
   return NextResponse.redirect(new URL(redirectTo, request.url));
 }

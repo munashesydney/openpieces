@@ -245,6 +245,7 @@ export async function pushToHubAction(
     description: service.description,
     zipBuffer,
     filename: `${service.title.toLowerCase().replace(/[^a-z0-9]+/g, "-")}.zip`,
+    pieceId: service.hubPieceId ?? undefined,
     endpoints: endpoints.map((e) => ({
       method: e.method,
       path: e.path,
@@ -253,6 +254,13 @@ export async function pushToHubAction(
     })),
     requiredSecrets: secrets.map((s) => ({ secretKey: s.secretKey })),
   });
+
+  if (result.notOwner) {
+    return {
+      error:
+        "You don't own this hub piece. Push without a pieceId to create your own version — this will clear the hub link.",
+    };
+  }
 
   if (!result.ok) return { error: result.error ?? "Failed to push piece" };
 
@@ -320,11 +328,12 @@ export async function pullFromHubAction(
     return { error: `Failed to write service code: ${(err as Error).message}` };
   }
 
-  // 4. Update service title and description
+  // 4. Update service title, description, and hub link
   try {
     await updateServiceMetadata(serviceId, workspaceId, {
       title: piece.title,
       description: piece.description,
+      hubPieceId: piece.id,
     });
   } catch (err) {
     return { error: `Failed to update service: ${(err as Error).message}` };

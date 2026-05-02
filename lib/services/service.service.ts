@@ -481,7 +481,7 @@ export async function writeServiceCode(
 export async function updateServiceMetadata(
   serviceId: string,
   workspaceId: string,
-  data: { title?: string; description?: string },
+  data: { title?: string; description?: string; hubPieceId?: string | null },
 ): Promise<Service> {
   const [updated] = await db
     .update(services)
@@ -490,6 +490,7 @@ export async function updateServiceMetadata(
       ...(data.description !== undefined
         ? { description: data.description }
         : {}),
+      ...(data.hubPieceId !== undefined ? { hubPieceId: data.hubPieceId } : {}),
       updatedAt: new Date(),
     })
     .where(
