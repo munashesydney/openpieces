@@ -38,16 +38,6 @@ services:
       db:
         condition: service_healthy
     restart: always
-    healthcheck:
-      test:
-        [
-          "CMD-SHELL",
-          "wget -qO- http://localhost:${APP_PORT:-3141}/api/health || exit 1",
-        ]
-      interval: 30s
-      timeout: 10s
-      retries: 5
-      start_period: 40s
     logging:
       driver: json-file
       options:
@@ -73,7 +63,7 @@ services:
       - AI_GATEWAY_API_KEY=${AI_GATEWAY_API_KEY}
     depends_on:
       app:
-        condition: service_healthy
+        condition: service_started
       db:
         condition: service_healthy
     restart: always
@@ -131,7 +121,7 @@ services:
     restart: always
     depends_on:
       app:
-        condition: service_healthy
+        condition: service_started
       db:
         condition: service_healthy
     logging:

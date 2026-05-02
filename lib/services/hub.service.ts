@@ -66,16 +66,18 @@ export async function storeToken(token: string) {
 
 export async function pushPiece(
   token: string,
-  data: { title: string; description: string; code: string },
+  data: { title: string; description: string; zipBuffer: Buffer; filename: string; category?: string },
 ): Promise<{ ok: boolean; error?: string }> {
-  // Server-to-server — use Docker-friendly host
+  const formData = new FormData();
+  formData.append("title", data.title);
+  formData.append("description", data.description);
+  if (data.category) formData.append("category", data.category);
+  formData.append("file", new Blob([new Uint8Array(data.zipBuffer)], { type: "application/zip" }), data.filename);
+
   const res = await fetch(`${serverUrl()}/api/v1/oauth/pieces`, {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`,
-    },
-    body: JSON.stringify(data),
+    headers: { Authorization: `Bearer ${token}` },
+    body: formData,
   });
 
   if (!res.ok) {

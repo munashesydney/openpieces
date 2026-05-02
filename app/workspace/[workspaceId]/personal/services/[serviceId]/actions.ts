@@ -181,10 +181,17 @@ export async function resetSpawnCountAction(
   return { success: true };
 }
 
+import {
+  getStoredToken,
+  getAuthorizeUrl,
+  pushPiece,
+} from "@/lib/services/hub.service";
+import { downloadServiceCode } from "@/lib/services/service.service";
 
-import { getStoredToken, getAuthorizeUrl, pushPiece } from "@/lib/services/hub.service";
-
-export type HubActionResult = { error: string } | { redirectUrl: string } | { success: true };
+export type HubActionResult =
+  | { error: string }
+  | { redirectUrl: string }
+  | { success: true };
 
 export async function pushToHubAction(
   workspaceId: string,
@@ -203,14 +210,14 @@ export async function pushToHubAction(
     return { redirectUrl };
   }
 
-  const code = `const handler = (req) => new Response(JSON.stringify({ ok: true, service: "${service.title}" }), { headers: { "Content-Type": "application/json" } });
-
-if (typeof Deno !== "undefined") { Deno.serve(handler); } else { Bun.serve({ fetch: handler }); }`;
+  // Zip the actual service directory
+  const zipBuffer = await downloadServiceCode(serviceId, workspaceId);
 
   const result = await pushPiece(token, {
     title: service.title,
     description: service.description,
-    code,
+    zipBuffer,
+    filename: `${service.title.toLowerCase().replace(/[^a-z0-9]+/g, "-")}.zip`,
   });
 
   if (!result.ok) return { error: result.error ?? "Failed to push piece" };
