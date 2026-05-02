@@ -18,6 +18,7 @@ import {
   Link,
   RotateCcw,
   RefreshCw,
+  Download,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import {
@@ -254,14 +255,31 @@ export function ServiceDetail({
               </p>
             </div>
             <div className="shrink-0 flex items-center gap-3">
-              <PushToHubButton workspaceId={workspaceId} serviceId={service.id} />
+              <PushToHubButton
+                workspaceId={workspaceId}
+                serviceId={service.id}
+              />
               <ActionMenu
                 onSelect={(val) => {
                   if (val === "delete") {
                     setIsDeleteModalOpen(true);
+                  } else if (val === "download") {
+                    const url = `/api/services/${service.id}/download?workspaceId=${encodeURIComponent(workspaceId)}`;
+                    const a = document.createElement("a");
+                    a.href = url;
+                    a.download = `service-${service.id.slice(0, 8)}.zip`;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
                   }
                 }}
                 options={[
+                  {
+                    label: "Download Code",
+                    value: "download",
+                    icon: <Download className="h-4 w-4" />,
+                    destructive: false,
+                  },
                   {
                     label: "Delete Service",
                     value: "delete",
