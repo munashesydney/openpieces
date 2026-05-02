@@ -66,13 +66,23 @@ export async function storeToken(token: string) {
 
 export async function pushPiece(
   token: string,
-  data: { title: string; description: string; zipBuffer: Buffer; filename: string; category?: string },
+  data: {
+    title: string;
+    description: string;
+    zipBuffer: Buffer;
+    filename: string;
+    category?: string;
+  },
 ): Promise<{ ok: boolean; error?: string }> {
   const formData = new FormData();
   formData.append("title", data.title);
   formData.append("description", data.description);
   if (data.category) formData.append("category", data.category);
-  formData.append("file", new Blob([new Uint8Array(data.zipBuffer)], { type: "application/zip" }), data.filename);
+  formData.append(
+    "file",
+    new Blob([new Uint8Array(data.zipBuffer)], { type: "application/zip" }),
+    data.filename,
+  );
 
   const res = await fetch(`${serverUrl()}/api/v1/oauth/pieces`, {
     method: "POST",
@@ -86,4 +96,74 @@ export async function pushPiece(
   }
 
   return { ok: true };
+}
+
+// ── Pull piece ─────────────────────────────────
+
+export type HubPiece = {
+  id: string;
+  userId: string;
+  title: string;
+  description: string;
+  category: "TRIGGER" | "ACTION";
+  codeUrl: string;
+  stars: number;
+  installCount: number;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type SearchPiecesResult = {
+  pieces: HubPiece[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+};
+
+/**
+ * Search pieces on the hub by title (public endpoint, no auth required).
+ */
+export async function searchPieces(
+  query: string,
+  options?: { page?: number; limit?: number },
+): Promise<SearchPiecesResult> {
+  const url = new URL("/api/v1/oauth/pieces", serverUrl());
+  url.searchParams.set("search", query);
+  url.searchParams.set("page", String(options?.page ?? 1));
+  url.searchParams.set("limit", String(options?.limit ?? 20));
+
+  const res = await fetch(url.toString());
+  if (!res.ok) {
+    return { pieces: [], total: 0, page: 1, limit: 20, totalPages: 0 };
+  }
+
+  return res.json() as Promise<SearchPiecesResult>;
+}
+
+/**
+ * Fetch a single piece by its UUID (public endpoint, no auth required).
+ */
+export async function fetchPieceById(id: string): Promise<HubPiece | null> {
+  const res = await fetch(`${serverUrl()}/api/v1/oauth/pieces/${id}`);
+  if (!res.ok) return null;
+
+  return res.json() as Promise<HubPiece>;
+}
+
+/**
+ * Download the piece's ZIP archive from its codeUrl.
+ */
+export async function downloadPieceZip(
+  codeUrl: string,
+): Promise<Buffer | null> {
+  try {
+    const res = await fetch(codeUrl);
+    if (!res.ok) return null;
+
+    const arrayBuffer = await res.arrayBuffer();
+    return Buffer.from(arrayBuffer);
+  } catch {
+    return null;
+  }
 }

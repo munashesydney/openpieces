@@ -1,8 +1,9 @@
 import { eq, and, count, sql } from "drizzle-orm";
-import { rm, readdir } from "fs/promises";
+import { rm, readdir, mkdir, writeFile } from "fs/promises";
 import path from "path";
 import { existsSync } from "fs";
 import archiver from "archiver";
+import AdmZip from "adm-zip";
 import { db } from "../db";
 import {
   services,
@@ -448,4 +449,57 @@ export async function decrementQaSpawnCount(serviceId: string): Promise<void> {
   await db.execute(
     sql`UPDATE ${services} SET qa_spawn_count = GREATEST(0, qa_spawn_count - 1) WHERE id = ${serviceId}`,
   );
+}
+
+// ── Write service code from ZIP ───────────────
+
+/**
+ * Extract a ZIP buffer into the service's pieces directory, overwriting any
+ * existing files. Removes existing contents first to keep the directory clean.
+ */
+export async function writeServiceCode(
+  directory: string,
+  zipBuffer: Buffer,
+): Promise<void> {
+  const piecesDir = path.join(process.cwd(), "pieces", directory.trim());
+
+  // Remove existing directory contents
+  if (existsSync(piecesDir)) {
+    await rm(piecesDir, { recursive: true, force: true });
+  }
+
+  // Recreate the directory
+  await mkdir(piecesDir, { recursive: true });
+
+  // Extract ZIP
+  const zip = new AdmZip(zipBuffer);
+  zip.extractAllTo(piecesDir, true /* overwrite */);
+}
+
+// ── Update service metadata ───────────────────
+
+export async function updateServiceMetadata(
+  serviceId: string,
+  workspaceId: string,
+  data: { title?: string; description?: string },
+): Promise<Service> {
+  const [updated] = await db
+    .update(services)
+    .set({
+      ...(data.title !== undefined ? { title: data.title } : {}),
+      ...(data.description !== undefined
+        ? { description: data.description }
+        : {}),
+      updatedAt: new Date(),
+    })
+    .where(
+      and(eq(services.id, serviceId), eq(services.workspaceId, workspaceId)),
+    )
+    .returning();
+
+  if (!updated) {
+    throw new ValidationError(`Service not found: ${serviceId}`);
+  }
+
+  return updated;
 }

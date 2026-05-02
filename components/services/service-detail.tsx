@@ -36,6 +36,7 @@ import { Dropdown } from "@/components/basic/input/dropdown";
 import { ActionMenu } from "@/components/basic/input/action-menu";
 import { ServiceLogsPanel } from "./service-logs-panel";
 import { PushToHubButton } from "./push-to-hub-button";
+import { PullFromHubButton } from "./pull-from-hub-button";
 import {
   type Service,
   type ServiceEndpoint,
@@ -258,6 +259,11 @@ export function ServiceDetail({
               <PushToHubButton
                 workspaceId={workspaceId}
                 serviceId={service.id}
+              />
+              <PullFromHubButton
+                workspaceId={workspaceId}
+                serviceId={service.id}
+                serviceType={service.type}
               />
               <ActionMenu
                 onSelect={(val) => {

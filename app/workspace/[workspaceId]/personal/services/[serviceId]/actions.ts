@@ -185,8 +185,14 @@ import {
   getStoredToken,
   getAuthorizeUrl,
   pushPiece,
+  fetchPieceById,
+  downloadPieceZip,
 } from "@/lib/services/hub.service";
-import { downloadServiceCode } from "@/lib/services/service.service";
+import {
+  downloadServiceCode,
+  writeServiceCode,
+  updateServiceMetadata,
+} from "@/lib/services/service.service";
 
 export type HubActionResult =
   | { error: string }
@@ -221,6 +227,80 @@ export async function pushToHubAction(
   });
 
   if (!result.ok) return { error: result.error ?? "Failed to push piece" };
+
+  revalidatePath(`/workspace/${workspaceId}/personal/services/${serviceId}`);
+  return { success: true };
+}
+
+export type PullFromHubResult =
+  | { error: string }
+  | { redirectUrl: string }
+  | { success: true };
+
+/**
+ * Pull a piece from the hub by its UUID:
+ * 1. Fetches the piece metadata (title, description, codeUrl)
+ * 2. Downloads the ZIP archive
+ * 3. Extracts it into the service's directory
+ * 4. Updates the service's title and description
+ */
+export async function pullFromHubAction(
+  workspaceId: string,
+  serviceId: string,
+  pieceId: string,
+): Promise<PullFromHubResult> {
+  await requireWorkspaceOwner(workspaceId);
+
+  const service = await getServiceById(serviceId, workspaceId);
+  if (!service) return { error: "Service not found" };
+
+  let token = await getStoredToken();
+  if (!token) {
+    const currentUrl = `/workspace/${workspaceId}/personal/services/${serviceId}`;
+    const authUrl = getAuthorizeUrl();
+    const redirectUrl = `${authUrl}&state=${encodeURIComponent(currentUrl)}`;
+    return { redirectUrl };
+  }
+
+  // 1. Fetch the piece from the hub
+  const piece = await fetchPieceById(pieceId);
+  if (!piece) {
+    return { error: "Piece not found on hub" };
+  }
+
+  // Type safety check — hub piece category must match service type
+  if (piece.category.toLowerCase() !== service.type) {
+    return {
+      error: `Type mismatch: service is "${service.type}" but hub piece is "${piece.category.toLowerCase()}"`,
+    };
+  }
+
+  // 2. Download the ZIP
+  const zipBuffer = await downloadPieceZip(piece.codeUrl);
+  if (!zipBuffer) {
+    return { error: "Failed to download piece code" };
+  }
+
+  // 3. Extract ZIP into the service's directory
+  if (!service.directory?.trim()) {
+    return { error: "Service has no directory set" };
+  }
+
+  try {
+    await writeServiceCode(service.directory, zipBuffer);
+  } catch (err) {
+    return { error: `Failed to write service code: ${(err as Error).message}` };
+  }
+
+  // 4. Update service title and description
+  try {
+    await updateServiceMetadata(serviceId, workspaceId, {
+      title: piece.title,
+      description: piece.description,
+    });
+  } catch (err) {
+    return { error: `Failed to update service: ${(err as Error).message}` };
+  }
 
   revalidatePath(`/workspace/${workspaceId}/personal/services/${serviceId}`);
   return { success: true };
