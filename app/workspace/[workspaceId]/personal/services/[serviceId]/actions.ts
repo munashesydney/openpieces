@@ -5,8 +5,12 @@ import {
   createEndpoint,
   updateEndpoint,
   deleteEndpoint,
+  getEndpointsByServiceId,
 } from "../../../../../../lib/services/service-endpoint.service";
-import { requireWorkspaceOwner } from "../../../../../../lib/services/auth.service";
+import {
+  requireWorkspaceOwner,
+  requireUser,
+} from "../../../../../../lib/services/auth.service";
 import {
   getServiceById,
   validateServiceForSpawn,
@@ -19,10 +23,11 @@ import {
 } from "../../../../../../lib/queues/pg-boss";
 import { ValidationError } from "../../../../../../lib/errors/validation-error";
 import {
+  getRequiredSecrets,
   addRequiredSecret,
   removeRequiredSecret,
-  getRequiredSecrets,
 } from "../../../../../../lib/services/service-required-secrets.service";
+import { createSecret } from "../../../../../../lib/services/secret.service";
 
 export type ActionResult = { error: string } | { success: true };
 
@@ -229,11 +234,24 @@ export async function pushToHubAction(
     return { error: message };
   }
 
+  // Fetch endpoints and required secrets to include in the push
+  const [endpoints, secrets] = await Promise.all([
+    getEndpointsByServiceId(serviceId, workspaceId),
+    getRequiredSecrets(serviceId),
+  ]);
+
   const result = await pushPiece(token, {
     title: service.title,
     description: service.description,
     zipBuffer,
     filename: `${service.title.toLowerCase().replace(/[^a-z0-9]+/g, "-")}.zip`,
+    endpoints: endpoints.map((e) => ({
+      method: e.method,
+      path: e.path,
+      description: e.description,
+      inputSchema: e.inputSchema ?? {},
+    })),
+    requiredSecrets: secrets.map((s) => ({ secretKey: s.secretKey })),
   });
 
   if (!result.ok) return { error: result.error ?? "Failed to push piece" };
@@ -310,6 +328,56 @@ export async function pullFromHubAction(
     });
   } catch (err) {
     return { error: `Failed to update service: ${(err as Error).message}` };
+  }
+
+  // 5. Insert endpoints from the hub piece
+  if (piece.endpoints && piece.endpoints.length > 0) {
+    try {
+      await Promise.all(
+        piece.endpoints.map((ep) =>
+          createEndpoint({
+            serviceId,
+            method: ep.method as "GET" | "POST" | "PUT" | "DELETE" | "PATCH",
+            path: ep.path,
+            description: ep.description ?? "",
+            inputSchema: (ep.inputSchema ?? {}) as Record<string, unknown>,
+          }),
+        ),
+      );
+    } catch (err) {
+      return { error: `Failed to add endpoints: ${(err as Error).message}` };
+    }
+  }
+
+  // 6. Insert required secrets from the hub piece
+  if (piece.requiredSecrets && piece.requiredSecrets.length > 0) {
+    try {
+      const user = await requireUser();
+
+      await Promise.all(
+        piece.requiredSecrets.map(async (s) => {
+          // Ensure the secret exists in the workspace (create with empty value if needed)
+          try {
+            await createSecret({
+              workspaceId,
+              userId: user.id,
+              key: s.secretKey,
+              value: "",
+              allowEmptyValue: true,
+            });
+          } catch {
+            // Secret already exists — that's fine, continue
+          }
+
+          // Now add it as a required secret for this service
+          await addRequiredSecret(serviceId, s.secretKey);
+        }),
+      );
+    } catch (err) {
+      return {
+        error: `Failed to add required secrets: ${(err as Error).message}`,
+      };
+    }
   }
 
   revalidatePath(`/workspace/${workspaceId}/personal/services/${serviceId}`);

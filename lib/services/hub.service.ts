@@ -72,6 +72,13 @@ export async function pushPiece(
     zipBuffer: Buffer;
     filename: string;
     category?: string;
+    endpoints?: Array<{
+      method: string;
+      path: string;
+      description: string;
+      inputSchema: Record<string, unknown>;
+    }>;
+    requiredSecrets?: Array<{ secretKey: string }>;
   },
 ): Promise<{ ok: boolean; error?: string }> {
   const formData = new FormData();
@@ -83,6 +90,12 @@ export async function pushPiece(
     new Blob([new Uint8Array(data.zipBuffer)], { type: "application/zip" }),
     data.filename,
   );
+  if (data.endpoints) {
+    formData.append("endpoints", JSON.stringify(data.endpoints));
+  }
+  if (data.requiredSecrets) {
+    formData.append("requiredSecrets", JSON.stringify(data.requiredSecrets));
+  }
 
   const res = await fetch(`${serverUrl()}/api/v1/oauth/pieces`, {
     method: "POST",
@@ -111,6 +124,17 @@ export type HubPiece = {
   installCount: number;
   createdAt: string;
   updatedAt: string;
+  endpoints?: Array<{
+    id?: string;
+    method: string;
+    path: string;
+    description: string;
+    inputSchema?: Record<string, unknown>;
+  }>;
+  requiredSecrets?: Array<{
+    id?: string;
+    secretKey: string;
+  }>;
 };
 
 export type SearchPiecesResult = {
