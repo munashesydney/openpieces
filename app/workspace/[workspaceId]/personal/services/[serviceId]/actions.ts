@@ -17,6 +17,7 @@ import {
   enqueueServiceSpawn,
   enqueueServiceStop,
 } from "../../../../../../lib/queues/pg-boss";
+import { ValidationError } from "../../../../../../lib/errors/validation-error";
 import {
   addRequiredSecret,
   removeRequiredSecret,
@@ -217,7 +218,16 @@ export async function pushToHubAction(
   }
 
   // Zip the actual service directory
-  const zipBuffer = await downloadServiceCode(serviceId, workspaceId);
+  let zipBuffer: Buffer;
+  try {
+    zipBuffer = await downloadServiceCode(serviceId, workspaceId);
+  } catch (err) {
+    const message =
+      err instanceof ValidationError
+        ? err.message
+        : "Failed to read service code";
+    return { error: message };
+  }
 
   const result = await pushPiece(token, {
     title: service.title,
