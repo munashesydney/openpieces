@@ -30,6 +30,7 @@ services:
       - SERVICE_HOST=http://worker
       - PORT=${APP_PORT:-3141}
       - NEXT_PUBLIC_APP_URL=${NEXT_PUBLIC_APP_URL}
+      - OPENPIECES_HUB_REDIRECT_URI=${NEXT_PUBLIC_APP_URL}/api/hub/callback
       - OPENPIECES_INTERNAL_URL=${OPENPIECES_INTERNAL_URL:-http://app:${APP_PORT:-3141}}
       - AI_GATEWAY_API_KEY=${AI_GATEWAY_API_KEY}
     env_file:
