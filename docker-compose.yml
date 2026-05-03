@@ -39,6 +39,13 @@ services:
       db:
         condition: service_healthy
     restart: always
+    healthcheck:
+      test:
+        ["CMD-SHELL", "wget -qO- http://localhost:${APP_PORT:-3141}/ || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 40s
     logging:
       driver: json-file
       options:
@@ -64,10 +71,9 @@ services:
       - AI_GATEWAY_API_KEY=${AI_GATEWAY_API_KEY}
     depends_on:
       app:
-        condition: service_started
+        condition: service_healthy
       db:
         condition: service_healthy
-    command: sh -c "until wget -qO- http://app:${APP_PORT:-3141}/api/health; do sleep 2; done && npx tsx scripts/ai-worker.ts"
     restart: always
     logging:
       driver: json-file
@@ -123,7 +129,7 @@ services:
     restart: always
     depends_on:
       app:
-        condition: service_started
+        condition: service_healthy
       db:
         condition: service_healthy
     logging:

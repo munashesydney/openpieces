@@ -1,2 +1,0 @@
-ALTER TABLE "services" ADD COLUMN "pid" integer;--> statement-breakpoint
-ALTER TABLE "services" ADD COLUMN "status" text NOT NULL DEFAULT 'stopped' CHECK ("status" IN ('stopped', 'running', 'crashed'));
