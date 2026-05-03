@@ -7,6 +7,7 @@ import {
   Settings,
   Shield,
   Monitor,
+  ExternalLink,
   Menu,
   X,
   Puzzle,
@@ -34,7 +35,9 @@ export function Header() {
 
   const personalHref = workspaceId ? `/workspace/${workspaceId}/personal` : "/";
   const brainHref = workspaceId ? `/workspace/${workspaceId}/brain` : "/brain";
-  const settingsHref = workspaceId ? `/workspace/${workspaceId}/settings/general` : "/settings";
+  const settingsHref = workspaceId
+    ? `/workspace/${workspaceId}/settings/general`
+    : "/settings";
 
   const personalActive = pathname.startsWith(personalHref);
   const brainActive = pathname.startsWith(`/workspace/${workspaceId}/brain`);
@@ -51,9 +54,13 @@ export function Header() {
     },
     {
       label: "Activity",
-      href: workspaceId ? `/workspace/${workspaceId}/brain/activity` : "/brain/activity",
+      href: workspaceId
+        ? `/workspace/${workspaceId}/brain/activity`
+        : "/brain/activity",
       icon: Activity,
-      activePattern: workspaceId ? `/workspace/${workspaceId}/brain/activity` : "/brain/activity",
+      activePattern: workspaceId
+        ? `/workspace/${workspaceId}/brain/activity`
+        : "/brain/activity",
     },
   ];
 
@@ -66,58 +73,102 @@ export function Header() {
     },
     {
       label: "Workflows",
-      href: workspaceId ? `/workspace/${workspaceId}/personal/workflows` : "/workflows",
+      href: workspaceId
+        ? `/workspace/${workspaceId}/personal/workflows`
+        : "/workflows",
       icon: Workflow,
-      activePattern: workspaceId ? `/workspace/${workspaceId}/personal/workflows` : "/workflows",
+      activePattern: workspaceId
+        ? `/workspace/${workspaceId}/personal/workflows`
+        : "/workflows",
     },
     {
       label: "Services",
-      href: workspaceId ? `/workspace/${workspaceId}/personal/services` : "/services",
+      href: workspaceId
+        ? `/workspace/${workspaceId}/personal/services`
+        : "/services",
       icon: Puzzle,
-      activePattern: workspaceId ? `/workspace/${workspaceId}/personal/services` : "/services",
+      activePattern: workspaceId
+        ? `/workspace/${workspaceId}/personal/services`
+        : "/services",
     },
     {
       label: "Tasks",
       href: workspaceId ? `/workspace/${workspaceId}/personal/tasks` : "/tasks",
       icon: Calendar,
-      activePattern: workspaceId ? `/workspace/${workspaceId}/personal/tasks` : "/tasks",
+      activePattern: workspaceId
+        ? `/workspace/${workspaceId}/personal/tasks`
+        : "/tasks",
     },
     {
       label: "Secrets",
-      href: workspaceId ? `/workspace/${workspaceId}/personal/secrets` : "/secrets",
+      href: workspaceId
+        ? `/workspace/${workspaceId}/personal/secrets`
+        : "/secrets",
       icon: KeyRound,
-      activePattern: workspaceId ? `/workspace/${workspaceId}/personal/secrets` : "/secrets",
+      activePattern: workspaceId
+        ? `/workspace/${workspaceId}/personal/secrets`
+        : "/secrets",
     },
     {
       label: "OpenCode",
-      href: workspaceId ? `/workspace/${workspaceId}/personal/opencode` : "/opencode",
+      href: workspaceId
+        ? `/workspace/${workspaceId}/personal/opencode`
+        : "/opencode",
       icon: Terminal,
-      activePattern: workspaceId ? `/workspace/${workspaceId}/personal/opencode` : "/opencode",
+      activePattern: workspaceId
+        ? `/workspace/${workspaceId}/personal/opencode`
+        : "/opencode",
     },
   ];
 
   const settingsNavItems = [
     {
       label: "General",
-      href: workspaceId ? `/workspace/${workspaceId}/settings/general` : "/settings/general",
+      href: workspaceId
+        ? `/workspace/${workspaceId}/settings/general`
+        : "/settings/general",
       icon: Settings,
-      activePattern: workspaceId ? `/workspace/${workspaceId}/settings/general` : "/settings/general",
+      activePattern: workspaceId
+        ? `/workspace/${workspaceId}/settings/general`
+        : "/settings/general",
     },
     {
       label: "Security",
-      href: workspaceId ? `/workspace/${workspaceId}/settings/security` : "/settings/security",
+      href: workspaceId
+        ? `/workspace/${workspaceId}/settings/security`
+        : "/settings/security",
       icon: Shield,
-      activePattern: workspaceId ? `/workspace/${workspaceId}/settings/security` : "/settings/security",
+      activePattern: workspaceId
+        ? `/workspace/${workspaceId}/settings/security`
+        : "/settings/security",
     },
     {
       label: "Preferences",
-      href: workspaceId ? `/workspace/${workspaceId}/settings/preferences` : "/settings/preferences",
+      href: workspaceId
+        ? `/workspace/${workspaceId}/settings/preferences`
+        : "/settings/preferences",
       icon: Monitor,
-      activePattern: workspaceId ? `/workspace/${workspaceId}/settings/preferences` : "/settings/preferences",
+      activePattern: workspaceId
+        ? `/workspace/${workspaceId}/settings/preferences`
+        : "/settings/preferences",
+    },
+    {
+      label: "Hub",
+      href: workspaceId
+        ? `/workspace/${workspaceId}/settings/hub`
+        : "/settings/hub",
+      icon: ExternalLink,
+      activePattern: workspaceId
+        ? `/workspace/${workspaceId}/settings/hub`
+        : "/settings/hub",
     },
   ];
 
-  const navItems = isSettingsPage ? settingsNavItems : isBrainPage ? brainNavItems : personalNavItems;
+  const navItems = isSettingsPage
+    ? settingsNavItems
+    : isBrainPage
+      ? brainNavItems
+      : personalNavItems;
 
   const appNavItems = [
     {
@@ -140,7 +191,11 @@ export function Header() {
     },
   ];
 
-  const pageSectionTitle = isSettingsPage ? "Settings" : isBrainPage ? "Brain" : "Personal";
+  const pageSectionTitle = isSettingsPage
+    ? "Settings"
+    : isBrainPage
+      ? "Brain"
+      : "Personal";
 
   useEffect(() => {
     startTransition(() => setMobileMenuOpen(false));
@@ -167,7 +222,9 @@ export function Header() {
         <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-[var(--accent)] to-purple-900">
           <span className="text-lg font-bold text-white">O</span>
         </div>
-        <span className="truncate text-xl font-semibold text-[var(--foreground)]">OpenPieces</span>
+        <span className="truncate text-xl font-semibold text-[var(--foreground)]">
+          OpenPieces
+        </span>
       </Link>
 
       <nav className="hidden flex-1 flex-wrap items-center gap-1 px-6 scrollbar-hide lg:flex">
@@ -188,7 +245,11 @@ export function Header() {
                   : "text-[var(--muted)] hover:bg-[var(--hover-bg)] hover:text-[var(--foreground)]"
               }`}
             >
-              <Icon className="h-4 w-4" strokeWidth={active ? 2.5 : 1.5} fill="none" />
+              <Icon
+                className="h-4 w-4"
+                strokeWidth={active ? 2.5 : 1.5}
+                fill="none"
+              />
               {item.label}
               {active && (
                 <span className="absolute bottom-0 left-4 right-4 h-0.5 rounded-full bg-[var(--accent)] shadow-[0_0_8px_var(--accent-glow)]" />
@@ -208,7 +269,11 @@ export function Header() {
           aria-expanded={mobileMenuOpen}
           aria-label="Menu"
         >
-          {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+          {mobileMenuOpen ? (
+            <X className="h-5 w-5" />
+          ) : (
+            <Menu className="h-5 w-5" />
+          )}
         </button>
       </div>
 
@@ -240,7 +305,10 @@ export function Header() {
                             : "text-[var(--muted)] hover:bg-[var(--hover-bg)] hover:text-[var(--foreground)]"
                         }`}
                       >
-                        <Icon className="h-5 w-5 shrink-0" strokeWidth={item.active ? 2.5 : 1.5} />
+                        <Icon
+                          className="h-5 w-5 shrink-0"
+                          strokeWidth={item.active ? 2.5 : 1.5}
+                        />
                         {item.label}
                       </Link>
                     );
@@ -273,7 +341,10 @@ export function Header() {
                             : "text-[var(--muted)] hover:bg-[var(--hover-bg)] hover:text-[var(--foreground)]"
                         }`}
                       >
-                        <Icon className="h-5 w-5 shrink-0" strokeWidth={active ? 2.5 : 1.5} />
+                        <Icon
+                          className="h-5 w-5 shrink-0"
+                          strokeWidth={active ? 2.5 : 1.5}
+                        />
                         {item.label}
                       </Link>
                     );
@@ -285,7 +356,10 @@ export function Header() {
                 <p className="mb-2 px-1 text-[10px] font-semibold uppercase tracking-wider text-[var(--muted)]">
                   Switch workspace
                 </p>
-                <WorkspaceSwitcher placement="down" activeWorkspaceId={workspaceId} />
+                <WorkspaceSwitcher
+                  placement="down"
+                  activeWorkspaceId={workspaceId}
+                />
               </div>
             </div>
           </div>

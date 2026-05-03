@@ -16,7 +16,9 @@
     "@ai-sdk/gateway": "^3.0.66",
     "@ai-sdk/openai": "^3.0.47",
     "@tavily/core": "^0.6.4",
+    "adm-zip": "^0.5.17",
     "ai": "^6.0.116",
+    "archiver": "^7.0.1",
     "bcryptjs": "^3.0.3",
     "drizzle-orm": "^0.45.1",
     "lightningcss": "^1.32.0",
@@ -35,6 +37,8 @@
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
+    "@types/adm-zip": "^0.5.8",
+    "@types/archiver": "^7.0.0",
     "@types/bcryptjs": "^2.4.6",
     "@types/node": "^20",
     "@types/react": "^19",

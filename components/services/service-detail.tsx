@@ -18,6 +18,7 @@ import {
   Link,
   RotateCcw,
   RefreshCw,
+  Download,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import {
@@ -34,6 +35,9 @@ import { Textarea } from "@/components/basic/input/textarea";
 import { Dropdown } from "@/components/basic/input/dropdown";
 import { ActionMenu } from "@/components/basic/input/action-menu";
 import { ServiceLogsPanel } from "./service-logs-panel";
+import { PushToHubButton } from "./push-to-hub-button";
+import { PullFromHubButton } from "./pull-from-hub-button";
+import { HubBadge } from "./hub-badge";
 import {
   type Service,
   type ServiceEndpoint,
@@ -248,18 +252,44 @@ export function ServiceDetail({
               <h1 className="text-2xl font-semibold text-[var(--foreground)]">
                 {service.title}
               </h1>
-              <p className="text-sm text-[var(--muted)]">
-                {service.description || "Service Details & API Reference"}
-              </p>
+              <div className="flex items-center gap-2">
+                <HubBadge hubPieceId={service.hubPieceId} />
+                <p className="text-sm text-[var(--muted)]">
+                  {service.description || "Service Details & API Reference"}
+                </p>
+              </div>
             </div>
-            <div className="shrink-0">
+            <div className="shrink-0 flex items-center gap-3">
+              <PushToHubButton
+                workspaceId={workspaceId}
+                serviceId={service.id}
+              />
+              <PullFromHubButton
+                workspaceId={workspaceId}
+                serviceId={service.id}
+                serviceType={service.type}
+              />
               <ActionMenu
                 onSelect={(val) => {
                   if (val === "delete") {
                     setIsDeleteModalOpen(true);
+                  } else if (val === "download") {
+                    const url = `/api/services/${service.id}/download?workspaceId=${encodeURIComponent(workspaceId)}`;
+                    const a = document.createElement("a");
+                    a.href = url;
+                    a.download = `service-${service.id.slice(0, 8)}.zip`;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
                   }
                 }}
                 options={[
+                  {
+                    label: "Download Code",
+                    value: "download",
+                    icon: <Download className="h-4 w-4" />,
+                    destructive: false,
+                  },
                   {
                     label: "Delete Service",
                     value: "delete",

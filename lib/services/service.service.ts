@@ -1,6 +1,9 @@
 import { eq, and, count, sql } from "drizzle-orm";
-import { rm } from "fs/promises";
+import { rm, readdir, mkdir, writeFile } from "fs/promises";
 import path from "path";
+import { existsSync } from "fs";
+import archiver from "archiver";
+import AdmZip from "adm-zip";
 import { db } from "../db";
 import {
   services,
@@ -351,6 +354,94 @@ export async function resetSpawnFailCount(
 }
 
 /**
+ * Recursively walk a directory and collect all file paths,
+ * excluding log files, node_modules, .git, and hidden directories.
+ */
+async function walkDirectory(
+  dirPath: string,
+  basePath: string,
+): Promise<{ filePath: string; absolutePath: string }[]> {
+  const results: { filePath: string; absolutePath: string }[] = [];
+
+  async function walk(currentPath: string) {
+    const entries = await readdir(currentPath, { withFileTypes: true });
+    for (const entry of entries) {
+      const fullPath = path.join(currentPath, entry.name);
+
+      // Skip hidden files/directories, node_modules, logs, and .git
+      if (
+        entry.name.startsWith(".") ||
+        entry.name === "node_modules" ||
+        entry.name === "logs"
+      ) {
+        continue;
+      }
+
+      if (entry.isDirectory()) {
+        await walk(fullPath);
+      } else if (entry.isFile()) {
+        // Store relative path from basePath
+        const relativePath = path.relative(basePath, fullPath);
+        results.push({ filePath: relativePath, absolutePath: fullPath });
+      }
+    }
+  }
+
+  await walk(dirPath);
+  return results;
+}
+
+/**
+ * Download the full service code as a zip buffer.
+ */
+export async function downloadServiceCode(
+  serviceId: string,
+  workspaceId: string,
+): Promise<Buffer> {
+  const service = await getServiceById(serviceId, workspaceId);
+  if (!service) {
+    throw new ValidationError(`Service not found: ${serviceId}`);
+  }
+  if (!service.directory?.trim()) {
+    throw new ValidationError(`Service has no directory set: ${serviceId}`);
+  }
+
+  const piecesDir = path.join(
+    process.cwd(),
+    "pieces",
+    service.directory.trim(),
+  );
+
+  if (!existsSync(piecesDir)) {
+    throw new ValidationError(
+      `Service directory not found on disk: ${service.directory}`,
+    );
+  }
+
+  const files = await walkDirectory(piecesDir, piecesDir);
+
+  // Create zip archive in memory
+  const archive = archiver("zip", { zlib: { level: 9 } });
+  const chunks: Buffer[] = [];
+
+  archive.on("data", (chunk: Buffer) => chunks.push(chunk));
+
+  return new Promise<Buffer>((resolve, reject) => {
+    archive.on("end", () => {
+      resolve(Buffer.concat(chunks));
+    });
+    archive.on("error", (err) => reject(err));
+
+    // Add each file to the archive
+    for (const { filePath, absolutePath } of files) {
+      archive.file(absolutePath, { name: filePath });
+    }
+
+    archive.finalize();
+  });
+}
+
+/**
  * Atomically decrement qa_spawn_count (floor at 0).
  * Called when a user or AI explicitly triggers a redeploy, freeing one QA slot.
  */
@@ -358,4 +449,66 @@ export async function decrementQaSpawnCount(serviceId: string): Promise<void> {
   await db.execute(
     sql`UPDATE ${services} SET qa_spawn_count = GREATEST(0, qa_spawn_count - 1) WHERE id = ${serviceId}`,
   );
+}
+
+// ── Write service code from ZIP ───────────────
+
+/**
+ * Extract a ZIP buffer into the service's pieces directory, overwriting any
+ * existing files. Removes existing contents first to keep the directory clean.
+ */
+export async function writeServiceCode(
+  directory: string,
+  zipBuffer: Buffer,
+): Promise<void> {
+  const piecesDir = path.join(process.cwd(), "pieces", directory.trim());
+
+  // Remove existing directory contents
+  if (existsSync(piecesDir)) {
+    await rm(piecesDir, { recursive: true, force: true });
+  }
+
+  // Recreate the directory
+  await mkdir(piecesDir, { recursive: true });
+
+  // Extract ZIP
+  const zip = new AdmZip(zipBuffer);
+  zip.extractAllTo(piecesDir, true /* overwrite */);
+}
+
+// ── Update service metadata ───────────────────
+
+export async function updateServiceMetadata(
+  serviceId: string,
+  workspaceId: string,
+  data: {
+    title?: string;
+    description?: string;
+    hubPieceId?: string | null;
+    hubUpdatedAt?: Date | null;
+  },
+): Promise<Service> {
+  const [updated] = await db
+    .update(services)
+    .set({
+      ...(data.title !== undefined ? { title: data.title } : {}),
+      ...(data.description !== undefined
+        ? { description: data.description }
+        : {}),
+      ...(data.hubPieceId !== undefined ? { hubPieceId: data.hubPieceId } : {}),
+      ...(data.hubUpdatedAt !== undefined
+        ? { hubUpdatedAt: data.hubUpdatedAt }
+        : {}),
+      updatedAt: new Date(),
+    })
+    .where(
+      and(eq(services.id, serviceId), eq(services.workspaceId, workspaceId)),
+    )
+    .returning();
+
+  if (!updated) {
+    throw new ValidationError(`Service not found: ${serviceId}`);
+  }
+
+  return updated;
 }

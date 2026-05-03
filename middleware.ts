@@ -19,6 +19,6 @@ export const config = {
      * - /_next/* (Next.js internals)
      * - Static files with extensions (e.g. .ico, .png, .svg)
      */
-    "/((?!login|setup|api/auth|api/setup|api/opencode/health|api/opencode/webhook|api/s/|api/internal/secrets|api/internal/service-endpoints|api/internal/service-required-secrets|api/internal/chat|api/health|_next/static|_next/image|favicon.ico|.*\\..*).*)",
+    "/((?!login|setup|api/auth|api/setup|api/hub|api/opencode/health|api/opencode/webhook|api/s/|api/internal/secrets|api/internal/service-endpoints|api/internal/service-required-secrets|api/internal/chat|api/health|_next/static|_next/image|favicon.ico|.*\\..*).*)",
   ],
 };

@@ -30,6 +30,7 @@ services:
       - SERVICE_HOST=http://worker
       - PORT=${APP_PORT:-3141}
       - NEXT_PUBLIC_APP_URL=${NEXT_PUBLIC_APP_URL}
+      - OPENPIECES_HUB_REDIRECT_URI=${NEXT_PUBLIC_APP_URL}/api/hub/callback
       - OPENPIECES_INTERNAL_URL=${OPENPIECES_INTERNAL_URL:-http://app:${APP_PORT:-3141}}
       - AI_GATEWAY_API_KEY=${AI_GATEWAY_API_KEY}
     env_file:
@@ -38,13 +39,6 @@ services:
       db:
         condition: service_healthy
     restart: always
-    healthcheck:
-      test:
-        ["CMD-SHELL", "wget -qO- http://localhost:${APP_PORT:-3141}/ || exit 1"]
-      interval: 30s
-      timeout: 10s
-      retries: 5
-      start_period: 40s
     logging:
       driver: json-file
       options:
@@ -70,7 +64,7 @@ services:
       - AI_GATEWAY_API_KEY=${AI_GATEWAY_API_KEY}
     depends_on:
       app:
-        condition: service_healthy
+        condition: service_started
       db:
         condition: service_healthy
     restart: always
@@ -128,7 +122,7 @@ services:
     restart: always
     depends_on:
       app:
-        condition: service_healthy
+        condition: service_started
       db:
         condition: service_healthy
     logging:
