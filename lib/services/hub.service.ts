@@ -131,7 +131,13 @@ export async function pushPiece(
     }>;
     requiredSecrets?: Array<{ secretKey: string }>;
   },
-): Promise<{ ok: boolean; error?: string; notOwner?: boolean }> {
+): Promise<{
+  ok: boolean;
+  error?: string;
+  notOwner?: boolean;
+  hubUpdatedAt?: string;
+  hubPieceId?: string;
+}> {
   const formData = new FormData();
   formData.append("title", data.title);
   formData.append("description", data.description);
@@ -168,7 +174,12 @@ export async function pushPiece(
     return { ok: false, error: err.error ?? "Failed to push piece" };
   }
 
-  return { ok: true };
+  // Get the hub piece's id and updatedAt from the response
+  const body = (await res.json().catch(() => ({}))) as {
+    id?: string;
+    updatedAt?: string;
+  };
+  return { ok: true, hubUpdatedAt: body.updatedAt, hubPieceId: body.id };
 }
 
 // ── Pull piece ─────────────────────────────────

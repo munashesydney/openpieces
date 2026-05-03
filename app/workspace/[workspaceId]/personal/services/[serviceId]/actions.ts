@@ -203,11 +203,13 @@ import {
 export type HubActionResult =
   | { error: string }
   | { redirectUrl: string }
-  | { success: true };
+  | { success: true; hubPieceId?: string }
+  | { notOwner: true };
 
 export async function pushToHubAction(
   workspaceId: string,
   serviceId: string,
+  asFork?: boolean,
 ): Promise<HubActionResult> {
   await requireWorkspaceOwner(workspaceId);
 
@@ -240,12 +242,25 @@ export async function pushToHubAction(
     getRequiredSecrets(serviceId),
   ]);
 
+  const title =
+    asFork && service.hubPieceId ? `${service.title} - Copy` : service.title;
+
+  let cleanHubPieceId = service.hubPieceId;
+  if (asFork) {
+    cleanHubPieceId = null;
+    // Update local service title + clear hub link
+    await updateServiceMetadata(serviceId, workspaceId, {
+      title,
+      hubPieceId: null,
+    });
+  }
+
   const result = await pushPiece(token, {
-    title: service.title,
+    title,
     description: service.description,
     zipBuffer,
-    filename: `${service.title.toLowerCase().replace(/[^a-z0-9]+/g, "-")}.zip`,
-    pieceId: service.hubPieceId ?? undefined,
+    filename: `${title.toLowerCase().replace(/[^a-z0-9]+/g, "-")}.zip`,
+    pieceId: cleanHubPieceId ?? undefined,
     endpoints: endpoints.map((e) => ({
       method: e.method,
       path: e.path,
@@ -256,13 +271,18 @@ export async function pushToHubAction(
   });
 
   if (result.notOwner) {
-    return {
-      error:
-        "You don't own this hub piece. Push without a pieceId to create your own version — this will clear the hub link.",
-    };
+    return { notOwner: true };
   }
 
   if (!result.ok) return { error: result.error ?? "Failed to push piece" };
+
+  // Store the hub piece id and timestamp back on the local service
+  await updateServiceMetadata(serviceId, workspaceId, {
+    hubPieceId: result.hubPieceId ?? null,
+    hubUpdatedAt: result.hubUpdatedAt
+      ? new Date(result.hubUpdatedAt)
+      : undefined,
+  });
 
   revalidatePath(`/workspace/${workspaceId}/personal/services/${serviceId}`);
   return { success: true };
@@ -334,6 +354,7 @@ export async function pullFromHubAction(
       title: piece.title,
       description: piece.description,
       hubPieceId: piece.id,
+      hubUpdatedAt: piece.updatedAt ? new Date(piece.updatedAt) : undefined,
     });
   } catch (err) {
     return { error: `Failed to update service: ${(err as Error).message}` };

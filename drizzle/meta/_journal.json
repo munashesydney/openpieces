@@ -288,6 +288,13 @@
       "when": 1746213405341,
       "tag": "0043_services_hub_piece_id",
       "breakpoints": true
+    },
+    {
+      "idx": 44,
+      "version": "7",
+      "when": 1746213600000,
+      "tag": "0044_services_hub_updated_at",
+      "breakpoints": true
     }
   ]
 }

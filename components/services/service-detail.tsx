@@ -37,6 +37,7 @@ import { ActionMenu } from "@/components/basic/input/action-menu";
 import { ServiceLogsPanel } from "./service-logs-panel";
 import { PushToHubButton } from "./push-to-hub-button";
 import { PullFromHubButton } from "./pull-from-hub-button";
+import { HubBadge } from "./hub-badge";
 import {
   type Service,
   type ServiceEndpoint,
@@ -251,9 +252,12 @@ export function ServiceDetail({
               <h1 className="text-2xl font-semibold text-[var(--foreground)]">
                 {service.title}
               </h1>
-              <p className="text-sm text-[var(--muted)]">
-                {service.description || "Service Details & API Reference"}
-              </p>
+              <div className="flex items-center gap-2">
+                <HubBadge hubPieceId={service.hubPieceId} />
+                <p className="text-sm text-[var(--muted)]">
+                  {service.description || "Service Details & API Reference"}
+                </p>
+              </div>
             </div>
             <div className="shrink-0 flex items-center gap-3">
               <PushToHubButton
