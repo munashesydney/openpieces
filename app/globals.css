@@ -1,101 +1,107 @@
 @import "tailwindcss";
 
 :root {
-  --background: #0a0a0a;
-  --foreground: #ededed;
-  --sidebar-bg: #111111;
-  --card-bg: rgba(30, 30, 40, 0.6);
-  --accent: #a855f7;
-  --accent-glow: rgba(168, 85, 247, 0.4);
-  --border: rgba(255, 255, 255, 0.08);
-  --muted: #71717a;
-  --success: #22c55e;
-  --dot-grid: rgba(255, 255, 255, 0.06);
-  --hover-bg: rgba(255, 255, 255, 0.06);
-  --hover-bg-strong: rgba(255, 255, 255, 0.1);
-  --input-bg: rgba(0, 0, 0, 0.2);
+    --background: #0a0a0a;
+    --foreground: #ededed;
+    --sidebar-bg: #111111;
+    --card-bg: rgba(30, 30, 40, 0.6);
+    --accent: #a855f7;
+    --accent-glow: rgba(168, 85, 247, 0.4);
+    --border: rgba(255, 255, 255, 0.08);
+    --muted: #71717a;
+    --success: #22c55e;
+    --dot-grid: rgba(255, 255, 255, 0.06);
+    --hover-bg: rgba(255, 255, 255, 0.06);
+    --hover-bg-strong: rgba(255, 255, 255, 0.1);
+    --input-bg: rgba(0, 0, 0, 0.2);
 }
 
 .light {
-  --background: #fafafa;
-  --foreground: #171717;
-  --sidebar-bg: #ffffff;
-  --card-bg: #ffffff;
-  --accent: #7c3aed;
-  --accent-glow: rgba(124, 58, 237, 0.3);
-  --border: rgba(0, 0, 0, 0.12);
-  --muted: #52525b;
-  --success: #16a34a;
-  --dot-grid: rgba(0, 0, 0, 0.08);
-  --hover-bg: rgba(0, 0, 0, 0.06);
-  --hover-bg-strong: rgba(0, 0, 0, 0.1);
-  --input-bg: #f4f4f5;
+    --background: #fafafa;
+    --foreground: #171717;
+    --sidebar-bg: #ffffff;
+    --card-bg: #ffffff;
+    --accent: #7c3aed;
+    --accent-glow: rgba(124, 58, 237, 0.3);
+    --border: rgba(0, 0, 0, 0.12);
+    --muted: #52525b;
+    --success: #16a34a;
+    --dot-grid: rgba(0, 0, 0, 0.08);
+    --hover-bg: rgba(0, 0, 0, 0.06);
+    --hover-bg-strong: rgba(0, 0, 0, 0.1);
+    --input-bg: #f4f4f5;
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+    --color-background: var(--background);
+    --color-foreground: var(--foreground);
+    --font-sans: var(--font-geist-sans);
+    --font-mono: var(--font-geist-mono);
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: var(--font-sans), system-ui, sans-serif;
+    background: var(--background);
+    color: var(--foreground);
+    font-family: var(--font-sans), system-ui, sans-serif;
 }
 
 /* Dot grid pattern for main area */
 .dot-grid {
-  background-image: radial-gradient(circle, var(--dot-grid) 1px, transparent 1px);
-  background-size: 20px 20px;
+    background-image: radial-gradient(
+        circle,
+        var(--dot-grid) 1px,
+        transparent 1px
+    );
+    background-size: 20px 20px;
 }
 
 @keyframes messageIn {
-  from {
-    opacity: 0;
-    transform: translateY(-8px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+    from {
+        opacity: 0;
+        transform: translateY(-8px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
 @keyframes slideDown {
-  from {
-    opacity: 0;
-    transform: translateY(-40px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+    from {
+        opacity: 0;
+        transform: translateY(-40px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
 @keyframes thinkingLabel {
-  from {
-    opacity: 0;
-    transform: translateY(4px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+    from {
+        opacity: 0;
+        transform: translateY(4px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
 /* Typing indicator dots — sequential fade in/out */
 @keyframes thinkingDot {
-  0%, 20% {
-    opacity: 0;
-    transform: translateY(0);
-  }
-  50% {
-    opacity: 1;
-    transform: translateY(-1.5px);
-  }
-  80%, 100% {
-    opacity: 0;
-    transform: translateY(0);
-  }
+    0%,
+    20% {
+        opacity: 0;
+        transform: translateY(0);
+    }
+    50% {
+        opacity: 1;
+        transform: translateY(-1.5px);
+    }
+    80%,
+    100% {
+        opacity: 0;
+        transform: translateY(0);
+    }
 }
