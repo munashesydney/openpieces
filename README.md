@@ -102,6 +102,13 @@ docker compose -f docker-compose.dev.yml up --build
 docker compose -f docker-compose.dev.yml down -v
 ```
 
+**Database migrations:**
+```bash
+npm run db:generate   # edit schema.ts first — generates migration SQL
+npm run migrate       # applies migrations to the database
+```
+Triggers and functions can't be auto-generated — create a `.sql` manually, copy the previous snapshot (update `id`/`prevId`), add a journal entry, then `npm run migrate`.
+
 ---
 
 ## Managing
