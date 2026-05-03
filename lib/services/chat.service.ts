@@ -8,6 +8,11 @@ import { ARCHITECTURE_CHAT_SYSTEM_PROMPT } from "@/lib/ai-chat/prompts/architect
 import { BRAIN_CHAT_SYSTEM_PROMPT } from "@/lib/ai-chat/prompts/brain";
 import { QA_CHAT_SYSTEM_PROMPT } from "@/lib/ai-chat/prompts/qa";
 import { COMPACTOR_PROMPT } from "@/lib/ai-chat/prompts/compactor";
+import {
+  WORKSPACE_CONTEXT_PLACEHOLDER,
+  buildWorkspaceContext,
+  type WorkspaceContextData,
+} from "@/lib/ai-chat/prompts/universal";
 import { getContextInfo } from "@/lib/ai-chat/context-manager";
 import { getModelLimits } from "@/lib/ai-chat/model-context";
 import { truncateToolOutput } from "@/lib/ai-chat/tool-truncation";
@@ -23,6 +28,9 @@ import { db } from "@/lib/db";
 import {
   aiChats,
   aiMessages,
+  users,
+  workspaces,
+  workspaceSettings,
   type AiChat,
   type AiMessage,
   type NewAiChat,
@@ -738,9 +746,63 @@ export async function executeAiChatJob(
             ? QA_CHAT_SYSTEM_PROMPT
             : OPENPIECES_CHAT_SYSTEM_PROMPT;
 
+  // Inject workspace context at the {{WORKSPACE_CONTEXT}} placeholder
+  let injectedPrompt = systemPrompt;
+  if (systemPrompt.includes(WORKSPACE_CONTEXT_PLACEHOLDER)) {
+    try {
+      const [workspaceRows, settingsRows, userRows] = await Promise.all([
+        db
+          .select({
+            name: workspaces.name,
+            agentName: workspaces.agentName,
+            userNickname: workspaces.userNickname,
+          })
+          .from(workspaces)
+          .where(eq(workspaces.id, input.workspaceId))
+          .limit(1),
+        db
+          .select({ timezone: workspaceSettings.timezone })
+          .from(workspaceSettings)
+          .where(eq(workspaceSettings.workspaceId, input.workspaceId))
+          .limit(1),
+        db
+          .select({ name: users.name })
+          .from(users)
+          .where(eq(users.id, input.userId))
+          .limit(1),
+      ]);
+
+      const workspace = workspaceRows[0];
+      const settings = settingsRows[0];
+      const user = userRows[0];
+
+      if (workspace && user) {
+        const timezone = settings?.timezone ?? "UTC";
+        const contextData: WorkspaceContextData = {
+          workspaceName: workspace.name,
+          timezone,
+          currentTime: new Intl.DateTimeFormat("en-US", {
+            timeZone: timezone,
+            dateStyle: "full",
+            timeStyle: "long",
+          }).format(new Date()),
+          agentName: workspace.agentName ?? "Assistant",
+          userNickname: workspace.userNickname ?? "User",
+          userName: user.name,
+        };
+        injectedPrompt = systemPrompt.replace(
+          WORKSPACE_CONTEXT_PLACEHOLDER,
+          buildWorkspaceContext(contextData),
+        );
+      }
+    } catch (err) {
+      console.error("[chat.service] Failed to inject workspace context:", err);
+    }
+  }
+
   // HACK: Strip leading markdown heading artifacts to reduce model's tendency to
   // "continue" the system prompt text as if it were a prefix completion.
-  const cleanedSystemPrompt = systemPrompt.replace(/^#+\s*/m, "").trimStart();
+  const cleanedSystemPrompt = injectedPrompt.replace(/^#+\s*/m, "").trimStart();
 
   let attempt = 0;
   const MAX_ATTEMPTS = 3;

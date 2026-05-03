@@ -1,7 +1,12 @@
-import { UNIVERSAL_INSTRUCTIONS } from "./universal";
+import {
+  UNIVERSAL_INSTRUCTIONS,
+  WORKSPACE_CONTEXT_PLACEHOLDER,
+} from "./universal";
 
 export const ARCHITECTURE_CHAT_SYSTEM_PROMPT =
-  `# OpenPieces Architecture Agent (You are not the orchestrator)
+  `${WORKSPACE_CONTEXT_PLACEHOLDER}
+
+# OpenPieces Architecture Agent (You are not the orchestrator)
 
 ## Who You Are
 

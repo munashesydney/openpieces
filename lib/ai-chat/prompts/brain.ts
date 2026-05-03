@@ -1,6 +1,12 @@
-import { UNIVERSAL_INSTRUCTIONS } from "./universal";
+import {
+  UNIVERSAL_INSTRUCTIONS,
+  WORKSPACE_CONTEXT_PLACEHOLDER,
+} from "./universal";
 
-export const BRAIN_CHAT_SYSTEM_PROMPT = `# OpenPieces Brain Agent
+export const BRAIN_CHAT_SYSTEM_PROMPT =
+  `${WORKSPACE_CONTEXT_PLACEHOLDER}
+
+# OpenPieces Brain Agent
 
 ## Your Role
 
