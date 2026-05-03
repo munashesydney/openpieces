@@ -1,11 +1,18 @@
 "use client";
 
-import { ExternalLink, CopyPlus, Loader2 } from "lucide-react";
+import {
+  ExternalLink,
+  CopyPlus,
+  Loader2,
+  Settings,
+  KeyRound,
+} from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Modal } from "../ui/modal";
 import { Button } from "@/components/basic/buttons/button";
 import { pushToHubAction } from "@/app/workspace/[workspaceId]/personal/services/[serviceId]/actions";
+import { checkHubSetup } from "@/lib/services/hub-setup.service";
 
 export function PushToHubButton({
   workspaceId,
@@ -20,11 +27,22 @@ export function PushToHubButton({
   >("idle");
   const [message, setMessage] = useState("");
   const [showForkModal, setShowForkModal] = useState(false);
+  const [showSetupModal, setShowSetupModal] = useState(false);
+  const [setupHubUrl, setSetupHubUrl] = useState("");
   const [forking, setForking] = useState(false);
 
   const handlePush = async () => {
     setStatus("connecting");
     setMessage("");
+
+    // Check hub is configured first
+    const setup = await checkHubSetup();
+    if (!setup.configured) {
+      setStatus("idle");
+      setSetupHubUrl(setup.hubUrl);
+      setShowSetupModal(true);
+      return;
+    }
 
     const result = await pushToHubAction(workspaceId, serviceId);
 
@@ -53,6 +71,16 @@ export function PushToHubButton({
   const handleFork = async () => {
     setForking(true);
     setShowForkModal(false);
+
+    // Check hub is configured first (again, in case they dismissed and came back)
+    const setup = await checkHubSetup();
+    if (!setup.configured) {
+      setStatus("idle");
+      setSetupHubUrl(setup.hubUrl);
+      setShowSetupModal(true);
+      setForking(false);
+      return;
+    }
 
     setStatus("pushing");
     setMessage("");
@@ -104,6 +132,7 @@ export function PushToHubButton({
         )}
       </div>
 
+      {/* Fork modal */}
       <Modal
         isOpen={showForkModal}
         onClose={() => setShowForkModal(false)}
@@ -141,6 +170,66 @@ export function PushToHubButton({
             <li>- The hub link will be cleared from this service</li>
             <li>- Future pushes will update your new copy</li>
           </ul>
+        </div>
+      </Modal>
+
+      {/* Hub not configured modal */}
+      <Modal
+        isOpen={showSetupModal}
+        onClose={() => setShowSetupModal(false)}
+        title="Hub not configured"
+        description="Set up your hub API key to push and pull pieces."
+        footer={
+          <div className="flex justify-end gap-3">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setShowSetupModal(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="primary"
+              size="sm"
+              onClick={() => {
+                setShowSetupModal(false);
+                router.push(`/workspace/${workspaceId}/settings/hub`);
+              }}
+            >
+              <Settings size={12} />
+              Open Hub Settings
+            </Button>
+          </div>
+        }
+      >
+        <div className="space-y-4">
+          <div className="flex items-start gap-3 rounded-lg border border-amber-500/15 bg-amber-500/5 p-3">
+            <KeyRound size={16} className="mt-0.5 shrink-0 text-amber-400" />
+            <div>
+              <p className="text-xs font-semibold text-amber-300/90">
+                API key missing
+              </p>
+              <p className="mt-1 text-[12px] text-amber-200/60">
+                You need an API key from{" "}
+                <a
+                  href="https://openpieces.com/profile"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-amber-300/80 underline underline-offset-2 hover:text-amber-200"
+                >
+                  openpieces.com/profile
+                </a>{" "}
+                configured in your{" "}
+                <code className="rounded bg-white/[0.06] px-1 py-0.5 font-mono text-[10px]">
+                  .env
+                </code>{" "}
+                file.
+              </p>
+            </div>
+          </div>
+          <p className="text-[12px] text-[var(--muted)]">
+            Go to Hub Settings for step-by-step instructions.
+          </p>
         </div>
       </Modal>
     </>

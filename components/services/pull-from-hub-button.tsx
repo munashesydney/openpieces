@@ -1,12 +1,19 @@
 "use client";
 
-import { Download, Loader2, AlertTriangle } from "lucide-react";
+import {
+  Download,
+  Loader2,
+  AlertTriangle,
+  Settings,
+  KeyRound,
+} from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState, useEffect, useRef } from "react";
 import { Sheet } from "../ui/sheet";
 import { Modal } from "../ui/modal";
 import { Button } from "@/components/basic/buttons/button";
 import { pullFromHubAction } from "@/app/workspace/[workspaceId]/personal/services/[serviceId]/actions";
+import { checkHubSetup } from "@/lib/services/hub-setup.service";
 
 type HubPiece = {
   id: string;
@@ -28,6 +35,7 @@ export function PullFromHubButton({
 
   // Sheet state
   const [isSheetOpen, setIsSheetOpen] = useState(false);
+  const [showSetupModal, setShowSetupModal] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [directUuid, setDirectUuid] = useState("");
   const useDirectId = directUuid.trim().length > 0;
@@ -198,7 +206,14 @@ export function PullFromHubButton({
     <>
       <button
         type="button"
-        onClick={() => setIsSheetOpen(true)}
+        onClick={async () => {
+          const setup = await checkHubSetup();
+          if (!setup.configured) {
+            setShowSetupModal(true);
+          } else {
+            setIsSheetOpen(true);
+          }
+        }}
         className="inline-flex items-center gap-1.5 rounded border border-white/[0.08] bg-white/[0.03] px-3 py-1.5 text-[11px] font-medium text-white/60 transition-colors hover:border-white/20 hover:text-white"
       >
         <Download size={12} />
@@ -465,6 +480,66 @@ export function PullFromHubButton({
           <p className="text-xs text-[var(--muted)]">
             Make sure you have pushed or backed up any changes before
             continuing. This action cannot be undone.
+          </p>
+        </div>
+      </Modal>
+
+      {/* Hub not configured modal */}
+      <Modal
+        isOpen={showSetupModal}
+        onClose={() => setShowSetupModal(false)}
+        title="Hub not configured"
+        description="Set up your hub API key to push and pull pieces."
+        footer={
+          <div className="flex justify-end gap-3">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setShowSetupModal(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="primary"
+              size="sm"
+              onClick={() => {
+                setShowSetupModal(false);
+                router.push(`/workspace/${workspaceId}/settings/hub`);
+              }}
+            >
+              <Settings size={12} />
+              Open Hub Settings
+            </Button>
+          </div>
+        }
+      >
+        <div className="space-y-4">
+          <div className="flex items-start gap-3 rounded-lg border border-amber-500/15 bg-amber-500/5 p-3">
+            <KeyRound size={16} className="mt-0.5 shrink-0 text-amber-400" />
+            <div>
+              <p className="text-xs font-semibold text-amber-300/90">
+                API key missing
+              </p>
+              <p className="mt-1 text-[12px] text-amber-200/60">
+                You need an API key from{" "}
+                <a
+                  href="https://openpieces.com/profile"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-amber-300/80 underline underline-offset-2 hover:text-amber-200"
+                >
+                  openpieces.com/profile
+                </a>{" "}
+                configured in your{" "}
+                <code className="rounded bg-white/[0.06] px-1 py-0.5 font-mono text-[10px]">
+                  .env
+                </code>{" "}
+                file.
+              </p>
+            </div>
+          </div>
+          <p className="text-[12px] text-[var(--muted)]">
+            Go to Hub Settings for step-by-step instructions.
           </p>
         </div>
       </Modal>

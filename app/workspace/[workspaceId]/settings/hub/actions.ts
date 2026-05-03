@@ -1,6 +1,7 @@
 "use server";
 
 import { cookies } from "next/headers";
+import { checkHubSetup } from "@/lib/services/hub-setup.service";
 
 const COOKIE_NAME = "hub_access_token";
 const USER_COOKIE_NAME = "hub_user_info";
@@ -10,6 +11,7 @@ export async function getHubConnectionStatus(): Promise<{
   hubUrl: string;
   email?: string;
   name?: string;
+  clientIdConfigured: boolean;
 }> {
   const jar = await cookies();
   const token = jar.get(COOKIE_NAME)?.value;
@@ -25,11 +27,15 @@ export async function getHubConnectionStatus(): Promise<{
   } catch {
     // ignore
   }
+
+  const hubSetup = await checkHubSetup();
+
   return {
     connected: !!token,
-    hubUrl: process.env.OPENPIECES_HUB_URL ?? "http://localhost:3000",
+    hubUrl: hubSetup.hubUrl,
     email,
     name,
+    clientIdConfigured: hubSetup.configured,
   };
 }
 
