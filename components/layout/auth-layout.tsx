@@ -1,15 +1,24 @@
 "use client";
 
 import { ReactNode } from "react";
+import { ChevronLeft } from "lucide-react";
 import { ThemeToggle } from "../theme-toggle";
 
 interface AuthLayoutProps {
   children: ReactNode;
   title: string;
   subtitle: string;
+  backHref?: string;
+  onBack?: () => void;
 }
 
-export function AuthLayout({ children, title, subtitle }: AuthLayoutProps) {
+export function AuthLayout({
+  children,
+  title,
+  subtitle,
+  backHref,
+  onBack,
+}: AuthLayoutProps) {
   return (
     <div className="flex min-h-screen">
       {/* Left — Brand Panel */}
@@ -64,6 +73,21 @@ export function AuthLayout({ children, title, subtitle }: AuthLayoutProps) {
         </div>
 
         <div className="w-full max-w-sm">
+          {(backHref || onBack) && (
+            <a
+              href={backHref}
+              onClick={(e) => {
+                if (onBack) {
+                  e.preventDefault();
+                  onBack();
+                }
+              }}
+              className="mb-6 flex items-center gap-1.5 text-xs text-[var(--muted)] transition-colors hover:text-[var(--foreground)]"
+            >
+              <ChevronLeft className="h-3.5 w-3.5" />
+              Back
+            </a>
+          )}
           <div className="mb-8 text-center lg:text-left">
             <h1 className="text-2xl font-semibold text-[var(--foreground)]">
               {title}
