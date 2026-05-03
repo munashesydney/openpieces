@@ -14,17 +14,22 @@ const serviceHost = process.env.SERVICE_HOST ?? "http://localhost";
 export async function proxyToService(
   request: NextRequest,
   serviceId: string,
-  upstreamPath: string
+  upstreamPath: string,
 ): Promise<NextResponse> {
   const service = await getServiceByIdOnly(serviceId);
   if (!service) {
     return NextResponse.json({ error: "Service not found" }, { status: 404 });
   }
   if (!service.port) {
-    return NextResponse.json({ error: "Service is not running" }, { status: 503 });
+    return NextResponse.json(
+      { error: "Service is not running" },
+      { status: 503 },
+    );
   }
 
-  const normalizedPath = upstreamPath.startsWith("/") ? upstreamPath : `/${upstreamPath}`;
+  const normalizedPath = upstreamPath.startsWith("/")
+    ? upstreamPath
+    : `/${upstreamPath}`;
   const upstreamSearch = request.nextUrl.search;
   const upstreamUrl = `${serviceHost}:${service.port}${normalizedPath}${upstreamSearch}`;
 
@@ -40,6 +45,7 @@ export async function proxyToService(
       headers,
       body: ["GET", "HEAD"].includes(request.method) ? undefined : request.body,
       signal: controller.signal,
+      redirect: "manual",
       // @ts-expect-error - needed for streaming bodies
       duplex: "half",
     });
@@ -64,9 +70,11 @@ export async function proxyToService(
     });
   } catch (err: any) {
     if (err?.name === "AbortError") {
-      return NextResponse.json({ error: "Upstream request timed out" }, { status: 504 });
+      return NextResponse.json(
+        { error: "Upstream request timed out" },
+        { status: 504 },
+      );
     }
     return NextResponse.json({ error: "Service unreachable" }, { status: 502 });
   }
 }
-
