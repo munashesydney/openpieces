@@ -122,6 +122,34 @@ Once `<base href="/api/s/ID/">` is set, use only **bare names** or `./` in `<a h
 
 ---
 
+## Redirect `Location` headers (⚠️ not resolved against `<base>`)
+
+`<base>` tags affect `<a href>`, `<form action>`, `fetch()`, and `window.location` — but **NOT** HTTP `Location` headers from a server redirect (3xx response).
+
+When your service returns a 302 with `Location: ./route/page`, the browser resolves it against the **current request URL**, not the `<base>` tag. If `route` is already part of the current path, it gets duplicated:
+
+| Request URL | `Location` header | Browser resolves to | Why? |
+|---|---|---|---|
+| `/api/s/ID/route/login` | `./route/dashboard` | `/api/s/ID/route/route/dashboard` | ❌ `./route/` appends another `route/` |
+| `/api/s/ID/route/login` | `dashboard` | `/api/s/ID/route/dashboard` | ✅ just the page name |
+| `/api/s/ID/route/dashboard` | `./route/login` | `/api/s/ID/route/route/login` | ❌ same duplication |
+| `/api/s/ID/route/dashboard` | `login` | `/api/s/ID/route/login` | ✅ |
+| `/api/s/ID/route/dashboard` | `./` | `/api/s/ID/route/` | ❌ stays inside `route/` |
+| `/api/s/ID/route/dashboard` | `../` | `/api/s/ID/` | ✅ one level up, back to root |
+
+### Rule of thumb
+
+In a `Location` header, **use only the page/resource name, not `./parent/` prefix**. If the target is at the same level as the current page, just name it directly.
+
+| If current page is | And you want to redirect to | Use | Not |
+|---|---|---|---|
+| `.../route/login` | `.../route/dashboard` | `dashboard` | `./route/dashboard` |
+| `.../route/dashboard` | `.../route/settings` | `settings` | `./route/settings` |
+| `.../route/dashboard` | `.../` (root) | `../` | `./` |
+| `.../sub/dashboard` | `.../route/home` | `../route/home` | `./sub/../route/home` |
+
+**Think of it like files in a folder:** if you're in `/route/` and want `/route/dashboard`, just say `dashboard` — not `./route/dashboard` which repeats the folder name.
+
 ## WebSocket limitation
 
 The Next.js proxy uses `fetch()` internally, which **cannot perform a WebSocket handshake**. `Deno.upgradeWebSocket(req)` will fail behind the proxy.
