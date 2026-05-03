@@ -67,6 +67,7 @@ services:
         condition: service_started
       db:
         condition: service_healthy
+    command: sh -c "until wget -qO- http://app:${APP_PORT:-3141}/api/health; do sleep 2; done && npx tsx scripts/ai-worker.ts"
     restart: always
     logging:
       driver: json-file

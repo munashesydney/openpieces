@@ -66,7 +66,7 @@ services:
       - /app/.next
       - ./pieces:/app/pieces
     entrypoint: ["entrypoint.sh"]
-    command: sh -c "node_modules/.bin/tsx scripts/ai-worker.ts"
+    command: sh -c "until wget -qO- http://app:${APP_PORT:-3141}/api/health; do sleep 2; done && node_modules/.bin/tsx scripts/ai-worker.ts"
     environment:
       - WATCHPACK_POLLING=true
       - DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
