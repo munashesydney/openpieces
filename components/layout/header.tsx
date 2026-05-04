@@ -8,6 +8,7 @@ import {
   Shield,
   Monitor,
   ExternalLink,
+  Bot,
   Menu,
   X,
   Puzzle,
@@ -131,6 +132,16 @@ export function Header() {
       activePattern: workspaceId
         ? `/workspace/${workspaceId}/settings/general`
         : "/settings/general",
+    },
+    {
+      label: "Your Open Pieces",
+      href: workspaceId
+        ? `/workspace/${workspaceId}/settings/agent`
+        : "/settings/agent",
+      icon: Bot,
+      activePattern: workspaceId
+        ? `/workspace/${workspaceId}/settings/agent`
+        : "/settings/agent",
     },
     {
       label: "Security",
