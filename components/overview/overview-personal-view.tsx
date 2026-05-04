@@ -243,6 +243,16 @@ export function OverviewPersonalView({
       toolResults: [],
     };
 
+    const optimisticAssistant: ChatMessage = {
+      id: crypto.randomUUID(),
+      content: "",
+      reasoning: null,
+      role: "assistant",
+      status: "pending",
+      toolCalls: [],
+      toolResults: [],
+    };
+
     setIsSending(true);
 
     if (currentChatId) {
@@ -251,6 +261,7 @@ export function OverviewPersonalView({
         [currentChatId]: [
           ...(currentMessages[currentChatId] ?? []),
           optimisticMessage,
+          optimisticAssistant,
         ],
       }));
 
@@ -279,10 +290,10 @@ export function OverviewPersonalView({
       setSelectedChatId(chat.id);
 
       if (!currentChatId) {
-        // Add the optimistic message immediately so the thinking UI shows right away
+        // Add the optimistic messages immediately so the thinking UI shows right away
         setMessages((currentMessages) => ({
           ...currentMessages,
-          [chat.id]: [optimisticMessage],
+          [chat.id]: [optimisticMessage, optimisticAssistant],
         }));
       }
 

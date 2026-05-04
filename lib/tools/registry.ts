@@ -1,23 +1,42 @@
 import { tool, type Tool } from "ai";
-import { createWorkflowTool } from "@/lib/tools/workflows";
-import { createServiceTool } from "@/lib/tools/services";
-import { createTaskTool } from "@/lib/tools/tasks";
-import { createSessionsTool } from "@/lib/tools/sessions";
-import { createMessagesTool } from "@/lib/tools/messages";
-import { createSecretsTool } from "@/lib/tools/secrets";
-import { createEndpointsTool } from "@/lib/tools/service-endpoints";
-import { createCallEndpointTool } from "@/lib/tools/call-endpoint";
-import { createWorkflowActionLinksTool } from "@/lib/tools/workflow-action-links";
-import { createBrainTool } from "@/lib/tools/brain";
 import { createRuntimeTool } from "@/lib/tools/runtime";
-import { createWebSearchTool } from "@/lib/tools/web-search";
+import {
+  getAllowedActions,
+  restrictToolActions,
+} from "@/lib/tools/agent-tools";
 import { truncateToolOutput } from "@/lib/ai-chat/tool-truncation";
+
+// ── Tool definitions ──
+import { workflowToolDefinition } from "@/lib/tools/workflows/definition";
+import { serviceToolDefinition } from "@/lib/tools/services/definition";
+import { taskToolDefinition } from "@/lib/tools/tasks/definition";
+import { sessionsToolDefinition } from "@/lib/tools/sessions/definition";
+import { messagesToolDefinition } from "@/lib/tools/messages/definition";
+import { secretsToolDefinition } from "@/lib/tools/secrets/definition";
+import { endpointsToolDefinition } from "@/lib/tools/service-endpoints/definition";
+import { callEndpointToolDefinition } from "@/lib/tools/call-endpoint/definition";
+import { workflowActionLinksToolDefinition } from "@/lib/tools/workflow-action-links/definition";
+import { brainToolDefinition } from "@/lib/tools/brain/definition";
+import { webSearchToolDefinition } from "@/lib/tools/web-search/definition";
+
+// ── Tool execute functions ──
+import { executeWorkflow } from "@/lib/tools/workflows/execute";
+import { executeService } from "@/lib/tools/services/execute";
+import { executeTask } from "@/lib/tools/tasks/execute";
+import { executeSessions } from "@/lib/tools/sessions/execute";
+import { executeMessages } from "@/lib/tools/messages/execute";
+import { executeSecrets } from "@/lib/tools/secrets/execute";
+import { executeEndpoints } from "@/lib/tools/service-endpoints/execute";
+import { executeCallEndpoint } from "@/lib/tools/call-endpoint/execute";
+import { executeWorkflowActionLinks } from "@/lib/tools/workflow-action-links/execute";
+import { executeBrainTool } from "@/lib/tools/brain/execute";
+import { executeWebSearchTool } from "@/lib/tools/web-search/execute";
 
 export type ToolContext = {
   workspaceId: string;
   userId: string;
   chatId: string;
-  /** Agent type for the current chat; used to restrict tools like runtime spawn_agent. */
+  /** Agent type for the current chat; used to restrict tools. */
   agentType: string;
   /** Tracks tool calls across the current execution attempt to prevent infinite repetition loops. */
   loopState?: {
@@ -25,12 +44,20 @@ export type ToolContext = {
   };
 };
 
+// ──────────────────────────────────────────
+//  Execution strategy wrapper
+// ──────────────────────────────────────────
+
 /**
  * Wraps a tool to:
  * 1. Automatically truncate results to prevent blowing up the model context.
  * 2. Track tool calls to prevent infinite repeat loops (exact same name + args).
  */
-function withExecutionStrategy<T extends Tool>(toolName: string, t: T, context: ToolContext): T {
+function withExecutionStrategy<T extends Tool>(
+  toolName: string,
+  t: T,
+  context: ToolContext,
+): T {
   const originalExecute = (t as any).execute;
   if (!originalExecute) return t;
 
@@ -46,7 +73,8 @@ function withExecutionStrategy<T extends Tool>(toolName: string, t: T, context: 
 
         counts.set(callHash, timesCalled + 1);
 
-        const isPollingTool = toolName === "runtime" || toolName === "manage_opencode_sessions";
+        const isPollingTool =
+          toolName === "runtime" || toolName === "manage_opencode_sessions";
         const warningThreshold = isPollingTool ? 15 : 2;
         const errorThreshold = isPollingTool ? 20 : 3;
 
@@ -68,19 +96,133 @@ function withExecutionStrategy<T extends Tool>(toolName: string, t: T, context: 
   } as T;
 }
 
+// ──────────────────────────────────────────
+//  Policy-aware tool creation
+// ──────────────────────────────────────────
+
+/**
+ * Creates a tool IF the agent is allowed to use it, otherwise returns `null`.
+ * When only a subset of actions are allowed, the action ZodEnum is restricted
+ * so the model never sees forbidden options.
+ */
+function createToolIfAllowed(
+  toolName: string,
+  definition: { name: string; description: string; inputSchema: any },
+  executeFn: (input: any, context: ToolContext) => any,
+  context: ToolContext,
+): Tool | null {
+  const allowed = getAllowedActions(context.agentType, toolName);
+  if (!allowed) return null;
+
+  const restrictedDef = restrictToolActions(definition, allowed);
+  return tool({
+    ...restrictedDef,
+    execute: (input: any) => executeFn(input, context),
+  });
+}
+
+/** Shorthand: checks policy, creates (if allowed), wraps with execution strategy. */
+function addIfAllowed(
+  registry: Record<string, Tool>,
+  toolName: string,
+  definition: { name: string; description: string; inputSchema: any },
+  executeFn: (input: any, context: ToolContext) => any,
+  context: ToolContext,
+): void {
+  const t = createToolIfAllowed(toolName, definition, executeFn, context);
+  if (t) {
+    registry[toolName] = withExecutionStrategy(toolName, t, context);
+  }
+}
+
+// ──────────────────────────────────────────
+//  Tool factory
+// ──────────────────────────────────────────
+
 export function createTools(context: ToolContext) {
-  return {
-    manage_workflows: withExecutionStrategy("manage_workflows", createWorkflowTool(context), context),
-    manage_services: withExecutionStrategy("manage_services", createServiceTool(context), context),
-    manage_tasks: withExecutionStrategy("manage_tasks", createTaskTool(context), context),
-    manage_opencode_sessions: withExecutionStrategy("manage_opencode_sessions", createSessionsTool(context), context),
-    manage_opencode_messages: withExecutionStrategy("manage_opencode_messages", createMessagesTool(context), context),
-    manage_secrets: withExecutionStrategy("manage_secrets", createSecretsTool(context), context),
-    manage_service_endpoints: withExecutionStrategy("manage_service_endpoints", createEndpointsTool(context), context),
-    call_endpoint: withExecutionStrategy("call_endpoint", createCallEndpointTool(context), context),
-    manage_workflow_action_links: withExecutionStrategy("manage_workflow_action_links", createWorkflowActionLinksTool(context), context),
-    manage_brain: withExecutionStrategy("manage_brain", createBrainTool(context), context),
-    runtime: withExecutionStrategy("runtime", createRuntimeTool(context), context),
-    web_search: withExecutionStrategy("web_search", createWebSearchTool(context), context),
-  };
+  const tools: Record<string, Tool> = {};
+
+  // ── Policy-governed tools (skipped entirely if not in the agent's policy) ──
+  addIfAllowed(
+    tools,
+    "manage_workflows",
+    workflowToolDefinition,
+    executeWorkflow,
+    context,
+  );
+  addIfAllowed(
+    tools,
+    "manage_services",
+    serviceToolDefinition,
+    executeService,
+    context,
+  );
+  addIfAllowed(tools, "manage_tasks", taskToolDefinition, executeTask, context);
+  addIfAllowed(
+    tools,
+    "manage_opencode_sessions",
+    sessionsToolDefinition,
+    executeSessions,
+    context,
+  );
+  addIfAllowed(
+    tools,
+    "manage_opencode_messages",
+    messagesToolDefinition,
+    executeMessages,
+    context,
+  );
+  addIfAllowed(
+    tools,
+    "manage_secrets",
+    secretsToolDefinition,
+    executeSecrets,
+    context,
+  );
+  addIfAllowed(
+    tools,
+    "manage_service_endpoints",
+    endpointsToolDefinition,
+    executeEndpoints,
+    context,
+  );
+  addIfAllowed(
+    tools,
+    "call_endpoint",
+    callEndpointToolDefinition,
+    executeCallEndpoint,
+    context,
+  );
+  addIfAllowed(
+    tools,
+    "manage_workflow_action_links",
+    workflowActionLinksToolDefinition,
+    executeWorkflowActionLinks,
+    context,
+  );
+  addIfAllowed(
+    tools,
+    "manage_brain",
+    brainToolDefinition,
+    executeBrainTool,
+    context,
+  );
+  addIfAllowed(
+    tools,
+    "web_search",
+    webSearchToolDefinition,
+    executeWebSearchTool,
+    context,
+  );
+
+  // ── Runtime tool (agent-aware internally) ──
+  // Always created; the runtime tool's own definition handles agent-specific
+  // restrictions (e.g. who can spawn_agent, who can spawn whom).
+  tools.runtime = withExecutionStrategy(
+    "runtime",
+    createRuntimeTool(context),
+    context,
+  );
+
+  return tools;
 }
