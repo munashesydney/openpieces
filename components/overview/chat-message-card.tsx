@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { ChevronDown, ChevronRight } from "lucide-react";
@@ -58,15 +58,39 @@ export function ChatMessageCard({
     (tc) => (tc.input as { action?: string })?.action !== "ask_question",
   );
 
-  const showThinkingSection =
-    isStreaming || hasReasoning || nonQuestionToolCalls.length > 0;
+  // ── Thinking section visibility ──
+  // Debounce the hide to prevent flicker when streaming ends before
+  // reasoning text / tool call data arrives in the next render tick.
+  const [showThinking, setShowThinking] = useState(false);
+  const hideTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(
+    undefined,
+  );
+
+  useEffect(() => {
+    if (isStreaming || hasReasoning || nonQuestionToolCalls.length > 0) {
+      if (hideTimerRef.current) clearTimeout(hideTimerRef.current);
+      setShowThinking(true);
+    } else if (!isStreaming) {
+      // Small grace period for reasoning/tool data to catch up
+      hideTimerRef.current = setTimeout(() => setShowThinking(false), 80);
+      return () => {
+        if (hideTimerRef.current) clearTimeout(hideTimerRef.current);
+      };
+    }
+  }, [isStreaming, hasReasoning, nonQuestionToolCalls.length]);
+
+  const showThinkingSection = showThinking;
 
   // Auto-collapse once streaming finishes
   const [autoCollapsed, setAutoCollapsed] = useState(false);
   const [expanded, setExpanded] = useState(true);
 
   useEffect(() => {
-    if (!isStreaming && (hasReasoning || nonQuestionToolCalls.length > 0) && !autoCollapsed) {
+    if (
+      !isStreaming &&
+      (hasReasoning || nonQuestionToolCalls.length > 0) &&
+      !autoCollapsed
+    ) {
       setAutoCollapsed(true);
       setExpanded(false);
     }
@@ -88,7 +112,7 @@ export function ChatMessageCard({
       data-role="assistant"
     >
       {/* Thinking / thought process section — includes reasoning and tool calls */}
-      {showThinkingSection ? (
+      {showThinkingSection && (
         <div className="mb-3">
           {/* Header row: entire row is clickable, chevron sits right next to the label */}
           <button
@@ -159,7 +183,7 @@ export function ChatMessageCard({
             </div>
           ) : null}
         </div>
-      ) : null}
+      )}
 
       {hasBody ? (
         <div
