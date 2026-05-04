@@ -886,7 +886,8 @@ export async function executeAiChatJob(
           agentType: chat.agentType,
           loopState,
         }),
-        maxOutputTokens: modelLimits.output,
+        //maxOutputTokens: modelLimits.output,
+        maxOutputTokens: 32000,
         temperature: isAnthropicModel ? undefined : 0.5,
         abortSignal: signal,
         onAbort: async () => {
