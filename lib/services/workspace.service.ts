@@ -3,7 +3,11 @@ import { db } from "../db";
 import { workspaces, type NewWorkspace, type Workspace } from "../db/schema";
 
 export async function createWorkspace(
-  data: Pick<NewWorkspace, "name" | "userId"> & { description?: string }
+  data: Pick<NewWorkspace, "name" | "userId"> & {
+    description?: string;
+    agentName?: string;
+    userNickname?: string;
+  },
 ): Promise<Workspace> {
   const result = await db
     .insert(workspaces)
@@ -11,6 +15,8 @@ export async function createWorkspace(
       name: data.name.trim(),
       description: data.description?.trim() ?? "",
       userId: data.userId,
+      agentName: data.agentName?.trim() ?? "Assistant",
+      userNickname: data.userNickname?.trim() ?? "User",
     })
     .returning();
 
@@ -27,7 +33,7 @@ export async function getUserWorkspaces(userId: string): Promise<Workspace[]> {
 
 export async function getWorkspaceOwnedByUser(
   workspaceId: string,
-  userId: string
+  userId: string,
 ): Promise<Workspace | null> {
   const result = await db
     .select()
@@ -38,7 +44,7 @@ export async function getWorkspaceOwnedByUser(
 }
 
 export async function getDefaultWorkspace(
-  userId: string
+  userId: string,
 ): Promise<Workspace | null> {
   const result = await db
     .select()
@@ -49,7 +55,7 @@ export async function getDefaultWorkspace(
 }
 
 export async function getWorkspaceOwnerId(
-  workspaceId: string
+  workspaceId: string,
 ): Promise<string | null> {
   const result = await db
     .select({ userId: workspaces.userId })

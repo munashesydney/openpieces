@@ -2,6 +2,7 @@
 
 import { cookies } from "next/headers";
 import { checkHubSetup } from "@/lib/services/hub-setup.service";
+import { REDIRECT_URI } from "@/lib/services/hub.service";
 
 const COOKIE_NAME = "hub_access_token";
 const USER_COOKIE_NAME = "hub_user_info";
@@ -69,7 +70,7 @@ export async function reconnectHubAction(
   url.searchParams.set("client_id", process.env.OPENPIECES_HUB_CLIENT_ID ?? "");
   url.searchParams.set(
     "redirect_uri",
-    `http://localhost:3141/api/hub/callback?returnTo=${encodeURIComponent(returnTo)}`,
+    `${REDIRECT_URI}?returnTo=${encodeURIComponent(returnTo)}`,
   );
   return { redirectUrl: url.toString() };
 }

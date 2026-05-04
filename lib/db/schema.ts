@@ -32,6 +32,8 @@ export const workspaces = pgTable("workspaces", {
   userId: uuid("user_id")
     .notNull()
     .references(() => users.id, { onDelete: "cascade" }),
+  agentName: text("agent_name").notNull().default("Assistant"),
+  userNickname: text("user_nickname").notNull().default("User"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
