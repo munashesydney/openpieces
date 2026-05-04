@@ -1,4 +1,10 @@
-import { CHAT_EXECUTION_QUEUE, AGENT_CHAT_EXECUTION_QUEUE, type ChatExecutionJob, getPgBoss, PG_BOSS_CONCURRENCY } from "@/lib/queues/pg-boss";
+import {
+  CHAT_EXECUTION_QUEUE,
+  AGENT_CHAT_EXECUTION_QUEUE,
+  type ChatExecutionJob,
+  getPgBoss,
+  PG_BOSS_CONCURRENCY,
+} from "@/lib/queues/pg-boss";
 import { executeAiChatJob, setChatStopped } from "@/lib/services/chat.service";
 import {
   registerChatController,
@@ -12,25 +18,33 @@ export async function startChatWorker() {
     console.error("[ai-worker] pg-boss error:", error);
   });
 
-  await boss.work(CHAT_EXECUTION_QUEUE, { localConcurrency: PG_BOSS_CONCURRENCY }, async (jobs) => {
-    const job = jobs[0];
-    if (!job) {
-      return;
-    }
+  await boss.work(
+    CHAT_EXECUTION_QUEUE,
+    { localConcurrency: PG_BOSS_CONCURRENCY },
+    async (jobs) => {
+      const job = jobs[0];
+      if (!job) {
+        return;
+      }
 
-    const { chatId, workspaceId, userId } = job.data as ChatExecutionJob;
+      const { chatId, workspaceId, userId, mode } =
+        job.data as ChatExecutionJob;
 
-    // Reset stopped flag so a re-sent message can run
-    await setChatStopped(chatId, false);
+      // Reset stopped flag so a re-sent message can run
+      await setChatStopped(chatId, false);
 
-    const abortController = registerChatController(chatId, job.id);
+      const abortController = registerChatController(chatId, job.id);
 
-    try {
-      await executeAiChatJob({ chatId, workspaceId, userId }, abortController.signal);
-    } finally {
-      removeChatController(chatId);
-    }
-  });
+      try {
+        await executeAiChatJob(
+          { chatId, workspaceId, userId, mode },
+          abortController.signal,
+        );
+      } finally {
+        removeChatController(chatId);
+      }
+    },
+  );
 
   return boss;
 }
@@ -42,24 +56,31 @@ export async function startAgentChatWorker() {
     console.error("[agent-worker] pg-boss error:", error);
   });
 
-  await boss.work(AGENT_CHAT_EXECUTION_QUEUE, { localConcurrency: PG_BOSS_CONCURRENCY }, async (jobs) => {
-    const job = jobs[0];
-    if (!job) {
-      return;
-    }
+  await boss.work(
+    AGENT_CHAT_EXECUTION_QUEUE,
+    { localConcurrency: PG_BOSS_CONCURRENCY },
+    async (jobs) => {
+      const job = jobs[0];
+      if (!job) {
+        return;
+      }
 
-    const { chatId, workspaceId, userId } = job.data as ChatExecutionJob;
+      const { chatId, workspaceId, userId } = job.data as ChatExecutionJob;
 
-    await setChatStopped(chatId, false);
+      await setChatStopped(chatId, false);
 
-    const abortController = registerChatController(chatId, job.id);
+      const abortController = registerChatController(chatId, job.id);
 
-    try {
-      await executeAiChatJob({ chatId, workspaceId, userId }, abortController.signal);
-    } finally {
-      removeChatController(chatId);
-    }
-  });
+      try {
+        await executeAiChatJob(
+          { chatId, workspaceId, userId },
+          abortController.signal,
+        );
+      } finally {
+        removeChatController(chatId);
+      }
+    },
+  );
 
   return boss;
 }

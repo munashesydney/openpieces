@@ -711,7 +711,12 @@ export async function replaceMessagesWithSummary(
 }
 
 export async function executeAiChatJob(
-  input: { chatId: string; workspaceId: string; userId: string },
+  input: {
+    chatId: string;
+    workspaceId: string;
+    userId: string;
+    mode?: "agent" | "chat";
+  },
   signal?: AbortSignal,
 ) {
   const chat = await getAiChatRecordById(input.chatId, input.userId);
@@ -884,6 +889,7 @@ export async function executeAiChatJob(
           userId: input.userId,
           chatId: input.chatId,
           agentType: chat.agentType,
+          mode: input.mode ?? "agent",
           loopState,
         }),
         //maxOutputTokens: modelLimits.output,

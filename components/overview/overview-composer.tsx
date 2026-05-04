@@ -20,6 +20,8 @@ type OverviewComposerProps = {
   contextInfo?: ContextInfo | null;
   model?: string | null;
   onModelChange?: (model: string) => void;
+  mode?: ComposerMode;
+  onModeChange?: (mode: ComposerMode) => void;
 };
 
 export function OverviewComposer({
@@ -33,12 +35,17 @@ export function OverviewComposer({
   contextInfo,
   model,
   onModelChange,
+  mode: externalMode,
+  onModeChange,
 }: OverviewComposerProps) {
-  const [mode, setMode] = useState<ComposerMode>("agent");
+  const [internalMode, setInternalMode] = useState<ComposerMode>("agent");
+  const mode = externalMode ?? internalMode;
+  const setMode = onModeChange ?? setInternalMode;
   const [value, setValue] = useState("");
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  const canCompact = contextInfo && contextInfo.percentage >= 50 && onCompact && !isCompacting;
+  const canCompact =
+    contextInfo && contextInfo.percentage >= 50 && onCompact && !isCompacting;
 
   const handleSend = () => {
     const trimmed = value.trim();
@@ -105,32 +112,27 @@ export function OverviewComposer({
 
           <div className="flex flex-wrap items-center justify-between gap-2 gap-y-3 px-3 pb-3 sm:gap-3 sm:px-4 sm:pb-4">
             <div className="flex min-w-0 flex-wrap items-center gap-2">
-              <Button
-                variant="secondary"
-                size="icon"
-                aria-label="Attach"
-              >
+              <Button variant="secondary" size="icon" aria-label="Attach">
                 <Paperclip className="h-4 w-4" />
               </Button>
 
               {contextInfo ? (
-                <ContextProgressRing 
-                  info={contextInfo} 
+                <ContextProgressRing
+                  info={contextInfo}
                   onClick={canCompact ? onCompact : undefined}
                   disabled={isCompacting}
                 />
               ) : null}
 
-              <ModelPicker initialModel={model ?? undefined} onModelChange={onModelChange} />
+              <ModelPicker
+                initialModel={model ?? undefined}
+                onModelChange={onModelChange}
+              />
             </div>
 
             <div className="flex shrink-0 items-center gap-2">
               {isRunning ? (
-                <Button
-                  size="icon"
-                  aria-label="Stop"
-                  onClick={onStop}
-                >
+                <Button size="icon" aria-label="Stop" onClick={onStop}>
                   <Square className="h-4 w-4" />
                 </Button>
               ) : (
@@ -150,13 +152,11 @@ export function OverviewComposer({
 
         {/* Dynamic background gradient based on mode */}
         <div
-          className={`pointer-events-none absolute -inset-x-16 -top-14 h-[420px] transition-opacity duration-1000 ${mode === "agent" ? "opacity-60" : "opacity-0"
-            } bg-[radial-gradient(ellipse_at_top,rgba(124,58,237,0.18)_0%,transparent_55%)] dark:bg-[radial-gradient(ellipse_at_top,rgba(168,85,247,0.2)_0%,transparent_55%)]`}
+          className={`pointer-events-none absolute -inset-x-16 -top-14 h-[420px] transition-opacity duration-1000 ${
+            mode === "agent" ? "opacity-60" : "opacity-0"
+          } bg-[radial-gradient(ellipse_at_top,rgba(124,58,237,0.18)_0%,transparent_55%)] dark:bg-[radial-gradient(ellipse_at_top,rgba(168,85,247,0.2)_0%,transparent_55%)]`}
         />
       </div>
     </div>
   );
 }
-
-
-

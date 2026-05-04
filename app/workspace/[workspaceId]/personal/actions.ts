@@ -21,7 +21,8 @@ export type SendAiMessageActionResult = {
 export async function sendAiMessageAction(
   workspaceId: string,
   chatId: string | null,
-  content: string
+  content: string,
+  mode?: "agent" | "chat",
 ): Promise<SendAiMessageActionResult> {
   const trimmedContent = content.trim();
   if (!trimmedContent) {
@@ -37,10 +38,13 @@ export async function sendAiMessageAction(
       throw new Error("Chat not found.");
     }
   } else {
-    const chat = await createAiChat({
-      workspaceId,
-      userId: user.id,
-    }, "orchestrator");
+    const chat = await createAiChat(
+      {
+        workspaceId,
+        userId: user.id,
+      },
+      "orchestrator",
+    );
     effectiveChatId = chat.id;
   }
 
@@ -53,6 +57,7 @@ export async function sendAiMessageAction(
     chatId: effectiveChatId,
     workspaceId,
     userId: user.id,
+    mode,
   });
 
   const chat = await getAiChatById(effectiveChatId, user.id);
@@ -65,7 +70,7 @@ export async function sendAiMessageAction(
 
 export async function updateWorkspaceModelAction(
   workspaceId: string,
-  model: string
+  model: string,
 ) {
   await requireWorkspaceOwner(workspaceId);
   await updateWorkspaceDefaultModel(workspaceId, model);
@@ -74,10 +79,10 @@ export async function updateWorkspaceModelAction(
 export async function updateChatModelAction(
   workspaceId: string,
   chatId: string,
-  model: string
+  model: string,
 ) {
   const { user } = await requireWorkspaceOwner(workspaceId);
-  
+
   await db
     .update(aiChats)
     .set({ model, updatedAt: new Date() })

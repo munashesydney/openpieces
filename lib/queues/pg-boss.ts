@@ -14,9 +14,14 @@ declare global {
 
 // pg-boss manages its own connection pool — cap it to avoid exhausting PostgreSQL connections.
 const PG_BOSS_POOL_SIZE = parseInt(process.env.PG_BOSS_POOL_SIZE ?? "5", 10);
-export const PG_BOSS_CONCURRENCY = parseInt(process.env.PG_BOSS_CONCURRENCY ?? "10", 10);
+export const PG_BOSS_CONCURRENCY = parseInt(
+  process.env.PG_BOSS_CONCURRENCY ?? "10",
+  10,
+);
 if (isNaN(PG_BOSS_POOL_SIZE) || PG_BOSS_POOL_SIZE < 1) {
-  throw new Error(`Invalid PG_BOSS_POOL_SIZE value: ${process.env.PG_BOSS_POOL_SIZE}. Must be a positive integer.`);
+  throw new Error(
+    `Invalid PG_BOSS_POOL_SIZE value: ${process.env.PG_BOSS_POOL_SIZE}. Must be a positive integer.`,
+  );
 }
 
 function createBoss() {
@@ -45,7 +50,9 @@ export async function getPgBoss(): Promise<PgBoss> {
         await boss.createQueue(CHAT_EXECUTION_QUEUE);
       }
 
-      const existingAgentQueue = await boss.getQueue(AGENT_CHAT_EXECUTION_QUEUE);
+      const existingAgentQueue = await boss.getQueue(
+        AGENT_CHAT_EXECUTION_QUEUE,
+      );
       if (!existingAgentQueue) {
         await boss.createQueue(AGENT_CHAT_EXECUTION_QUEUE);
       }
@@ -82,15 +89,21 @@ export type ChatExecutionJob = {
   chatId: string;
   workspaceId: string;
   userId: string;
+  /** Chat mode: defaults to "agent" if omitted. */
+  mode?: "agent" | "chat";
 };
 
-export async function enqueueChatExecution(job: ChatExecutionJob): Promise<string> {
+export async function enqueueChatExecution(
+  job: ChatExecutionJob,
+): Promise<string> {
   const boss = await getPgBoss();
   const jobId = await boss.send(CHAT_EXECUTION_QUEUE, job);
   return jobId ?? "";
 }
 
-export async function enqueueAgentChatExecution(job: ChatExecutionJob): Promise<string> {
+export async function enqueueAgentChatExecution(
+  job: ChatExecutionJob,
+): Promise<string> {
   const boss = await getPgBoss();
   const jobId = await boss.send(AGENT_CHAT_EXECUTION_QUEUE, job);
   return jobId ?? "";
@@ -110,7 +123,12 @@ export type ServiceSpawnJob = {
 export async function enqueueServiceSpawn(job: ServiceSpawnJob) {
   const boss = await getPgBoss();
   const { updateService } = await import("../services/service.service");
-  await updateService(job.serviceId, job.workspaceId, { status: "deploying" }, "system");
+  await updateService(
+    job.serviceId,
+    job.workspaceId,
+    { status: "deploying" },
+    "system",
+  );
   return boss.send(SERVICE_SPAWN_QUEUE, job);
 }
 

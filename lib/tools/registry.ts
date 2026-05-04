@@ -2,6 +2,7 @@ import { tool, type Tool } from "ai";
 import { createRuntimeTool } from "@/lib/tools/runtime";
 import {
   getAllowedActions,
+  isDoAction,
   restrictToolActions,
 } from "@/lib/tools/agent-tools";
 import { truncateToolOutput } from "@/lib/ai-chat/tool-truncation";
@@ -38,6 +39,8 @@ export type ToolContext = {
   chatId: string;
   /** Agent type for the current chat; used to restrict tools. */
   agentType: string;
+  /** Chat mode: "agent" (full access) or "chat" (read-only + blocked DO actions). */
+  mode?: "agent" | "chat";
   /** Tracks tool calls across the current execution attempt to prevent infinite repetition loops. */
   loopState?: {
     callCounts: Map<string, number>;
@@ -101,9 +104,37 @@ function withExecutionStrategy<T extends Tool>(
 // ──────────────────────────────────────────
 
 /**
+ * When in chat mode, intercepts DO actions and returns a permission error
+ * instead of executing them.
+ */
+function withModeGuard(
+  toolName: string,
+  executeFn: (input: any) => any,
+  context: ToolContext,
+): (input: any) => any {
+  if (context.mode !== "chat") return executeFn;
+
+  return async (input: any) => {
+    const action = input?.action;
+    if (isDoAction(toolName, action)) {
+      return {
+        permissionDenied: true,
+        message:
+          "Permission denied: this action is not available in chat mode. " +
+          "If the user asked you to do this, remind them they are in chat mode " +
+          "and ask them to switch to agent mode.",
+      };
+    }
+    return executeFn(input);
+  };
+}
+
+/**
  * Creates a tool IF the agent is allowed to use it, otherwise returns `null`.
  * When only a subset of actions are allowed, the action ZodEnum is restricted
  * so the model never sees forbidden options.
+ *
+ * When in chat mode, DO actions are intercepted and return a permission error.
  */
 function createToolIfAllowed(
   toolName: string,
@@ -115,9 +146,17 @@ function createToolIfAllowed(
   if (!allowed) return null;
 
   const restrictedDef = restrictToolActions(definition, allowed);
+
+  // In chat mode, DO actions are soft-blocked with a permission error
+  const guardedExecute = withModeGuard(
+    toolName,
+    (input: any) => executeFn(input, context),
+    context,
+  );
+
   return tool({
     ...restrictedDef,
-    execute: (input: any) => executeFn(input, context),
+    execute: guardedExecute,
   });
 }
 
@@ -215,12 +254,22 @@ export function createTools(context: ToolContext) {
     context,
   );
 
-  // ── Runtime tool (agent-aware internally) ──
+  // ── Runtime tool (agent-aware internally + mode-guarded) ──
   // Always created; the runtime tool's own definition handles agent-specific
   // restrictions (e.g. who can spawn_agent, who can spawn whom).
+  // The mode guard additionally blocks spawn_agent in chat mode.
+  const runtimeTool = createRuntimeTool(context);
+  const guardedRuntimeExecute = withModeGuard(
+    "runtime",
+    (runtimeTool as any).execute,
+    context,
+  );
   tools.runtime = withExecutionStrategy(
     "runtime",
-    createRuntimeTool(context),
+    {
+      ...runtimeTool,
+      execute: guardedRuntimeExecute,
+    } as Tool,
     context,
   );
 

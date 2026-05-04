@@ -43,6 +43,7 @@ type OverviewPersonalViewProps = {
   sendMessageAction: (
     chatId: string | null,
     content: string,
+    mode?: "agent" | "chat",
   ) => Promise<SendAiMessageActionResult>;
   updateWorkspaceModelAction: (model: string) => Promise<void>;
   updateChatModelAction: (chatId: string, model: string) => Promise<void>;
@@ -104,6 +105,7 @@ export function OverviewPersonalView({
   const [selectedAgentType, setSelectedAgentType] = useState<AgentType | null>(
     "orchestrator",
   );
+  const [mode, setMode] = useState<"agent" | "chat">("agent");
   const pageSize = 20;
   const [messages, setMessages] = useState<Record<string, ChatMessage[]>>(() =>
     Object.fromEntries(
@@ -314,7 +316,7 @@ export function OverviewPersonalView({
     }
 
     try {
-      const { chat } = await sendMessageAction(currentChatId, text);
+      const { chat } = await sendMessageAction(currentChatId, text, mode);
       const mappedChat = mapChat(chat);
 
       setChats((currentChats) => upsertChat(currentChats, mappedChat));
@@ -596,6 +598,8 @@ export function OverviewPersonalView({
                 contextInfo={contextInfo}
                 model={selectedChat.model ?? workspaceModel}
                 onModelChange={handleModelChange}
+                mode={mode}
+                onModeChange={setMode}
               />
             </div>
           </>
@@ -610,6 +614,8 @@ export function OverviewPersonalView({
               isSending={isSending}
               model={workspaceModel}
               onModelChange={handleModelChange}
+              mode={mode}
+              onModeChange={setMode}
             />
           </div>
         )}

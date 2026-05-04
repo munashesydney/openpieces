@@ -114,6 +114,49 @@ export const AGENT_TOOL_POLICY: Record<
 };
 
 // ──────────────────────────────────────────
+//  DO actions (blocked in chat mode)
+// ──────────────────────────────────────────
+
+/**
+ * Map of tool names → set of actions that are considered "DO" operations.
+ * These are blocked when the chat is in "chat" mode and return a permission
+ * error instead of executing.
+ *
+ * Tools not listed here (or with an empty set) are entirely read-only.
+ * Use `"__all__"` for tools that have no `action` field but are entirely DO
+ * (e.g. call_endpoint).
+ */
+export const DO_ACTIONS: Record<string, Set<string> | "__all__"> = {
+  manage_workflows: new Set(["create", "update", "delete"]),
+  manage_services: new Set([
+    "create",
+    "update",
+    "delete",
+    "redeploy",
+    "reset_spawn_count",
+  ]),
+  manage_tasks: new Set(["create", "update", "delete"]),
+  manage_opencode_sessions: new Set(["create"]),
+  manage_opencode_messages: new Set(["send"]),
+  manage_secrets: new Set(["update", "delete"]),
+  call_endpoint: "__all__",
+  manage_workflow_action_links: new Set(["link", "unlink"]),
+  manage_brain: new Set(["create", "update", "delete"]),
+  runtime: new Set(["spawn_agent"]),
+};
+
+/**
+ * Returns true if the given tool + action is a DO operation.
+ */
+export function isDoAction(toolName: string, action?: string): boolean {
+  const policy = DO_ACTIONS[toolName];
+  if (!policy) return false;
+  if (policy === "__all__") return true;
+  if (!action) return false;
+  return policy.has(action);
+}
+
+// ──────────────────────────────────────────
 //  Helpers
 // ──────────────────────────────────────────
 
