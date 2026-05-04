@@ -153,10 +153,41 @@ export function OverviewPersonalView({
         throw new Error(data.error ?? "Failed to load messages.");
       }
 
-      setMessages((currentMessages) => ({
-        ...currentMessages,
-        [chatId]: (data.messages ?? []).map(mapMessage),
-      }));
+      const fetched = (data.messages ?? []).map(mapMessage);
+
+      setMessages((currentMessages) => {
+        const current = currentMessages[chatId] ?? [];
+
+        // Check if there's already a streaming/pending assistant in the fetched list
+        const hasLiveAssistant = fetched.some(
+          (m) =>
+            m.role === "assistant" &&
+            (m.status === "pending" || m.status === "streaming"),
+        );
+
+        // Check if the current (optimistic) list has a pending assistant at the end
+        const lastCurrent = current[current.length - 1];
+        const hasOptimisticAssistant =
+          lastCurrent &&
+          lastCurrent.role === "assistant" &&
+          lastCurrent.status === "pending" &&
+          lastCurrent.content === "" &&
+          !fetched.find((m) => m.id === lastCurrent.id);
+
+        // If the backend hasn't created the assistant message yet,
+        // keep the optimistic one so the ChatMessageCard doesn't unmount/remount
+        if (!hasLiveAssistant && hasOptimisticAssistant) {
+          return {
+            ...currentMessages,
+            [chatId]: [...fetched, lastCurrent],
+          };
+        }
+
+        return {
+          ...currentMessages,
+          [chatId]: fetched,
+        };
+      });
     } finally {
       setLoadingMessages(false);
     }
