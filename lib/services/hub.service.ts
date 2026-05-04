@@ -2,7 +2,7 @@ import { cookies } from "next/headers";
 
 const HUB_URL = process.env.OPENPIECES_HUB_URL ?? "http://localhost:3000";
 const CLIENT_ID = process.env.OPENPIECES_HUB_CLIENT_ID ?? "";
-const REDIRECT_URI =
+export const REDIRECT_URI =
   process.env.OPENPIECES_HUB_REDIRECT_URI ??
   "http://localhost:3141/api/hub/callback";
 
