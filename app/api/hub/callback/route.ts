@@ -10,9 +10,11 @@ export async function GET(request: NextRequest) {
   const code = url.searchParams.get("code");
   const error = url.searchParams.get("error");
 
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3141";
+
   if (error) {
     // User denied or an error occurred
-    const dashboardUrl = new URL("/", request.url);
+    const dashboardUrl = new URL("/", baseUrl);
     return NextResponse.redirect(dashboardUrl);
   }
 
@@ -42,5 +44,5 @@ export async function GET(request: NextRequest) {
       ? decodeURIComponent(state)
       : "/";
 
-  return NextResponse.redirect(new URL(redirectTo, request.url));
+  return NextResponse.redirect(new URL(redirectTo, baseUrl));
 }
