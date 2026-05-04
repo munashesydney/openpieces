@@ -21,7 +21,7 @@ type ChatMessageCardProps = {
 };
 
 const assistantMarkdownClass =
-  "text-[15px] leading-[1.65] text-[var(--foreground)] [&_p]:mb-3 [&_p:last-child]:mb-0 [&_p]:whitespace-pre-wrap [&_ul]:my-2 [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:my-2 [&_ol]:list-decimal [&_ol]:pl-5 [&_li]:my-0.5 [&_strong]:font-semibold [&_a]:text-[var(--accent)] [&_a]:underline [&_code]:rounded [&_code]:bg-[var(--hover-bg)] [&_code]:px-1 [&_code]:py-0.5 [&_code]:font-mono [&_code]:text-[13px] [&_pre]:my-3 [&_pre]:overflow-x-auto [&_pre]:rounded-lg [&_pre]:border [&_pre]:border-[var(--border)] [&_pre]:bg-[var(--sidebar-bg)] [&_pre]:p-3";
+  "text-[15px] leading-[1.65] text-[var(--foreground)] break-words [&_p]:mb-3 [&_p:last-child]:mb-0 [&_p]:whitespace-pre-wrap [&_ul]:my-2 [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:my-2 [&_ol]:list-decimal [&_ol]:pl-5 [&_li]:my-0.5 [&_strong]:font-semibold [&_a]:text-[var(--accent)] [&_a]:underline [&_code]:rounded [&_code]:bg-[var(--hover-bg)] [&_code]:px-1 [&_code]:py-0.5 [&_code]:font-mono [&_code]:text-[13px] [&_pre]:my-3 [&_pre]:overflow-x-auto [&_pre]:rounded-lg [&_pre]:border [&_pre]:border-[var(--border)] [&_pre]:bg-[var(--sidebar-bg)] [&_pre]:p-3";
 
 export function ChatMessageCard({
   content,
@@ -39,7 +39,7 @@ export function ChatMessageCard({
         className="max-w-[min(85%,520px)] rounded-[1.35rem] border border-[var(--border)] bg-[var(--sidebar-bg)] px-4 py-2.5 shadow-sm"
         data-role="user"
       >
-        <p className="text-[15px] leading-relaxed text-[var(--foreground)] whitespace-pre-wrap">
+        <p className="text-[15px] leading-relaxed text-[var(--foreground)] whitespace-pre-wrap break-words">
           {content}
         </p>
       </div>
@@ -160,7 +160,7 @@ export function ChatMessageCard({
             <div className="border-l-2 border-[var(--border)] pl-3 py-0.5 space-y-1.5">
               {/* Reasoning text or waiting spinner */}
               {hasReasoning ? (
-                <p className="text-[13px] leading-[1.6] text-[var(--muted)] whitespace-pre-wrap">
+                <p className="text-[13px] leading-[1.6] text-[var(--muted)] whitespace-pre-wrap break-words">
                   {reasoning}
                 </p>
               ) : isStreaming ? (
