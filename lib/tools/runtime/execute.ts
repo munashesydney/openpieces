@@ -8,19 +8,25 @@ import {
 } from "@/lib/services/chat.service";
 import { enqueueAgentChatExecution } from "@/lib/queues/pg-boss";
 
-function assertSpawnAllowed(callerAgentType: string, targetAgentType: string): void {
+function assertSpawnAllowed(
+  callerAgentType: string,
+  targetAgentType: string,
+): void {
   const policy = getSpawnPolicy(callerAgentType);
   if (!policy.canSpawn) {
     throw new Error("This agent cannot spawn sub-agents.");
   }
   if (policy.allowedTarget !== targetAgentType) {
     throw new Error(
-      `This agent can only spawn "${policy.allowedTarget}", not "${targetAgentType}".`
+      `This agent can only spawn "${policy.allowedTarget}", not "${targetAgentType}".`,
     );
   }
 }
 
-export async function executeRuntime(input: RuntimeToolInput, context: ToolContext) {
+export async function executeRuntime(
+  input: RuntimeToolInput,
+  context: ToolContext,
+) {
   const { action, seconds, prompt, chatId } = input;
   const agentType = "agentType" in input ? input.agentType : undefined;
 
@@ -42,22 +48,38 @@ export async function executeRuntime(input: RuntimeToolInput, context: ToolConte
         throw new Error("prompt is required for spawn_agent action");
       }
       assertSpawnAllowed(context.agentType, agentType);
-      const chat = await createAiChat(
-        { workspaceId: context.workspaceId, userId: context.userId },
-        agentType
-      );
+
+      // Use existing chat if chatId provided, otherwise create a new one
+      let targetChatId: string;
+      if (input.chatId) {
+        const existing = await getAiChatRecordById(
+          input.chatId,
+          context.userId,
+        );
+        if (!existing) {
+          throw new Error(`Chat ${input.chatId} not found`);
+        }
+        targetChatId = existing.id;
+      } else {
+        const chat = await createAiChat(
+          { workspaceId: context.workspaceId, userId: context.userId },
+          agentType,
+        );
+        targetChatId = chat.id;
+      }
+
       const finalPrompt = `[YOU HAVE BEEN SPAWNED BY ${context.agentType.toUpperCase()} AI]\n${prompt}`;
-      
+
       await appendUserMessageAndMarkPending({
-        chatId: chat.id,
+        chatId: targetChatId,
         content: finalPrompt,
       });
       await enqueueAgentChatExecution({
-        chatId: chat.id,
+        chatId: targetChatId,
         workspaceId: context.workspaceId,
         userId: context.userId,
       });
-      return { chatId: chat.id, status: "queued" };
+      return { chatId: targetChatId, status: "queued" };
     }
 
     case "ask_question": {

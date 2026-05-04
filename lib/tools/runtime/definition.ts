@@ -2,7 +2,11 @@ import { z } from "zod";
 
 const questionSchema = z.object({
   question: z.string().describe("The question text to display to the user"),
-  suggestedAnswers: z.array(z.string()).max(3).optional().describe("Optional selectable answer options, max 3"),
+  suggestedAnswers: z
+    .array(z.string())
+    .max(3)
+    .optional()
+    .describe("Optional selectable answer options, max 3"),
 });
 
 const sharedFields = z.object({
@@ -12,18 +16,21 @@ const sharedFields = z.object({
     .optional()
     .describe("Number of seconds to sleep"),
   prompt: z.string().optional().describe("Prompt to send to the agent"),
-  questions: z.array(questionSchema).optional().describe("Array of questions to ask the user"),
+  questions: z
+    .array(questionSchema)
+    .optional()
+    .describe("Array of questions to ask the user"),
   chatId: z
     .string()
     .uuid()
     .optional()
-    .describe("Chat ID to check progress for"),
+    .describe(
+      "Chat ID to check progress for, or to continue an existing chat via spawn_agent",
+    ),
 });
 
 const runtimeNoSpawnInputSchema = sharedFields.extend({
-  action: z
-    .enum(["sleep", "ask_question"])
-    .describe("The action to perform"),
+  action: z.enum(["sleep", "ask_question"]).describe("The action to perform"),
 });
 
 const runtimeOrchestratorInputSchema = sharedFields.extend({
@@ -33,7 +40,9 @@ const runtimeOrchestratorInputSchema = sharedFields.extend({
   agentType: z
     .enum(["architecture"])
     .optional()
-    .describe("For spawn_agent: must be architecture (you cannot spawn another orchestrator)"),
+    .describe(
+      "For spawn_agent: must be architecture (you cannot spawn another orchestrator)",
+    ),
 });
 
 const runtimeEventsInputSchema = sharedFields.extend({
@@ -70,7 +79,9 @@ export type RuntimeToolDefinition = {
     | typeof runtimeEventsInputSchema;
 };
 
-export function createRuntimeToolDefinition(callerAgentType: string): RuntimeToolDefinition {
+export function createRuntimeToolDefinition(
+  callerAgentType: string,
+): RuntimeToolDefinition {
   const policy = getSpawnPolicy(callerAgentType);
 
   if (!policy.canSpawn) {
