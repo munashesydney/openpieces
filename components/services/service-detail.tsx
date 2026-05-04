@@ -117,6 +117,19 @@ export function ServiceDetail({
   }, [checkHealth]);
 
   const handleSpawn = () => {
+    // Local check: ensure all required secrets are set before calling the server
+    const missingSecrets = localRequiredSecrets
+      .filter((req) => {
+        const secret = workspaceSecrets.find((s) => s.key === req.secretKey);
+        return !(secret && secret.value?.trim());
+      })
+      .map((req) => req.secretKey);
+
+    if (missingSecrets.length > 0) {
+      setSpawnError(`Missing required secrets: ${missingSecrets.join(", ")}`);
+      return;
+    }
+
     setIsSpawning(true);
     setSpawnError(null);
     startTransition(async () => {
