@@ -160,12 +160,10 @@ export function OverviewPersonalView({
       setMessages((currentMessages) => {
         const current = currentMessages[chatId] ?? [];
 
-        // Check if there's already a streaming/pending assistant in the fetched list
-        const hasLiveAssistant = fetched.some(
-          (m) =>
-            m.role === "assistant" &&
-            (m.status === "pending" || m.status === "streaming"),
-        );
+        // If the fetched list already ends with an assistant message (any status),
+        // the backend has created the real response — no need to keep the optimistic one.
+        const lastFetched = fetched[fetched.length - 1];
+        const hasAssistantInFetched = lastFetched?.role === "assistant";
 
         // Check if the current (optimistic) list has a pending assistant at the end
         const lastCurrent = current[current.length - 1];
@@ -176,9 +174,9 @@ export function OverviewPersonalView({
           lastCurrent.content === "" &&
           !fetched.find((m) => m.id === lastCurrent.id);
 
-        // If the backend hasn't created the assistant message yet,
-        // keep the optimistic one so the ChatMessageCard doesn't unmount/remount
-        if (!hasLiveAssistant && hasOptimisticAssistant) {
+        // Keep the optimistic message until a real assistant lands in the fetched list.
+        // This gives instant "Thinking" UX while the backend processes.
+        if (!hasAssistantInFetched && hasOptimisticAssistant) {
           return {
             ...currentMessages,
             [chatId]: [...fetched, lastCurrent],
