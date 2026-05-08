@@ -14,16 +14,14 @@ import {
   CheckCircle2,
   ChevronLeft,
   ChevronRight,
+  Pencil,
 } from "lucide-react";
 import { Card } from "../ui/card";
 import { Button } from "@/components/basic/buttons/button";
-import { Sheet } from "../ui/sheet";
-import { Input } from "@/components/basic/input/input";
 import { ActionMenu } from "@/components/basic/input/action-menu";
-import { Dropdown } from "@/components/basic/input/dropdown";
-import { Textarea } from "@/components/basic/input/textarea";
 import {
   createTaskAction,
+  updateTaskAction,
   pauseTaskAction,
   resumeTaskAction,
   completeTaskAction,
@@ -31,6 +29,7 @@ import {
 } from "@/app/workspace/[workspaceId]/personal/tasks/actions";
 import { type Task, type Workflow } from "@/lib/db/schema";
 import { TaskDeleteModal } from "./task-delete-modal";
+import { TaskAddEditSheet } from "./task-add-edit-sheet";
 
 const WEEKDAYS = [
   { label: "Sunday", value: 0 },
@@ -40,14 +39,6 @@ const WEEKDAYS = [
   { label: "Thursday", value: 4 },
   { label: "Friday", value: 5 },
   { label: "Saturday", value: 6 },
-];
-
-const INTERVAL_OPTIONS = [
-  { label: "Every N minutes", value: "minutes" },
-  { label: "Every N hours", value: "hours" },
-  { label: "Daily at specific time", value: "daily" },
-  { label: "Weekly on specific day", value: "weekly" },
-  { label: "Monthly on specific date", value: "monthly" },
 ];
 
 function formatSchedule(task: Task): string {
@@ -135,6 +126,8 @@ export function TasksList({
   const [timeWindowStart, setTimeWindowStart] = useState("09:00");
   const [timeWindowEnd, setTimeWindowEnd] = useState("17:00");
   const [taskToDelete, setTaskToDelete] = useState<Task | null>(null);
+  const [editingTask, setEditingTask] = useState<Task | null>(null);
+  const [isEditSheetOpen, setIsEditSheetOpen] = useState(false);
 
   const recurringTasks = initialTasks.filter((t) => t.type === "recurring");
   const upcomingTasks = initialTasks.filter(
@@ -219,6 +212,122 @@ export function TasksList({
     });
   };
 
+  // ── Edit state ────────────────────────────────────────────────────────────
+  const [editTitle, setEditTitle] = useState("");
+  const [editDescription, setEditDescription] = useState("");
+  const [editWorkflowId, setEditWorkflowId] = useState("");
+  const [editTaskType, setEditTaskType] = useState<"one-time" | "recurring">(
+    "one-time",
+  );
+  const [editScheduledDate, setEditScheduledDate] = useState("");
+  const [editScheduledTime, setEditScheduledTime] = useState("");
+  const [editIntervalType, setEditIntervalType] = useState<string>("daily");
+  const [editIntervalValue, setEditIntervalValue] = useState(1);
+  const [editDayOfWeek, setEditDayOfWeek] = useState(0);
+  const [editDayOfMonth, setEditDayOfMonth] = useState(1);
+  const [editTimeOfDay, setEditTimeOfDay] = useState("09:00");
+  const [editTimeWindowEnabled, setEditTimeWindowEnabled] = useState(false);
+  const [editTimeWindowStart, setEditTimeWindowStart] = useState("09:00");
+  const [editTimeWindowEnd, setEditTimeWindowEnd] = useState("17:00");
+  const [editFormError, setEditFormError] = useState<string | null>(null);
+
+  const openEditSheet = (task: Task) => {
+    setEditingTask(task);
+    setEditTitle(task.title);
+    setEditDescription(task.description ?? "");
+    setEditWorkflowId(task.workflowId ?? "");
+    setEditTaskType(task.type);
+
+    // One-time fields
+    if (task.type === "one-time" && task.scheduledAt) {
+      const d = new Date(task.scheduledAt);
+      setEditScheduledDate(d.toISOString().slice(0, 10));
+      setEditScheduledTime(d.toISOString().slice(11, 16));
+    } else {
+      setEditScheduledDate("");
+      setEditScheduledTime("");
+    }
+
+    // Recurring fields
+    if (task.type === "recurring") {
+      setEditIntervalType(task.intervalType ?? "daily");
+      setEditIntervalValue(task.intervalValue ?? 1);
+      setEditDayOfWeek(task.dayOfWeek ?? 0);
+      setEditDayOfMonth(task.dayOfMonth ?? 1);
+      setEditTimeOfDay(task.timeOfDay ?? "09:00");
+      const hasWindow = !!(task.timeWindowStart && task.timeWindowEnd);
+      setEditTimeWindowEnabled(hasWindow);
+      setEditTimeWindowStart(task.timeWindowStart ?? "09:00");
+      setEditTimeWindowEnd(task.timeWindowEnd ?? "17:00");
+    } else {
+      setEditIntervalType("daily");
+      setEditIntervalValue(1);
+      setEditDayOfWeek(0);
+      setEditDayOfMonth(1);
+      setEditTimeOfDay("09:00");
+      setEditTimeWindowEnabled(false);
+      setEditTimeWindowStart("09:00");
+      setEditTimeWindowEnd("17:00");
+    }
+
+    setEditFormError(null);
+    setIsEditSheetOpen(true);
+  };
+
+  const handleEditTask = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (!editingTask || !editTitle || !editWorkflowId) return;
+
+    setEditFormError(null);
+    const formData = new FormData(e.currentTarget);
+    formData.set("type", editTaskType);
+
+    if (editTaskType === "one-time") {
+      if (editScheduledDate && editScheduledTime) {
+        const scheduledAt = new Date(
+          `${editScheduledDate}T${editScheduledTime}:00`,
+        ).toISOString();
+        formData.set("scheduledAt", scheduledAt);
+      }
+    } else {
+      formData.set("intervalType", editIntervalType);
+      formData.set("timeOfDay", editTimeOfDay);
+      formData.set(
+        "timezone",
+        Intl.DateTimeFormat().resolvedOptions().timeZone,
+      );
+      if (editIntervalType === "minutes" || editIntervalType === "hours") {
+        formData.set("intervalValue", editIntervalValue.toString());
+      }
+      if (editIntervalType === "weekly") {
+        formData.set("dayOfWeek", editDayOfWeek.toString());
+      }
+      if (editIntervalType === "monthly") {
+        formData.set("dayOfMonth", editDayOfMonth.toString());
+      }
+      formData.set("timeWindowEnabled", String(editTimeWindowEnabled));
+      if (editTimeWindowEnabled) {
+        formData.set("timeWindowStart", editTimeWindowStart);
+        formData.set("timeWindowEnd", editTimeWindowEnd);
+      }
+    }
+
+    startTransition(async () => {
+      const result = await updateTaskAction(
+        workspaceId,
+        editingTask.id,
+        formData,
+      );
+      if ("error" in result) {
+        setEditFormError(result.error);
+        return;
+      }
+      setIsEditSheetOpen(false);
+      setEditingTask(null);
+      setEditFormError(null);
+    });
+  };
+
   const StatusAction = ({
     task,
     onDeleteRequest,
@@ -233,6 +342,10 @@ export function TasksList({
             onDeleteRequest(task);
             return;
           }
+          if (val === "edit") {
+            openEditSheet(task);
+            return;
+          }
           startTransition(async () => {
             if (val === "pause") await pauseTaskAction(workspaceId, task.id);
             if (val === "resume") await resumeTaskAction(workspaceId, task.id);
@@ -241,6 +354,11 @@ export function TasksList({
           });
         }}
         options={[
+          {
+            label: "Edit",
+            value: "edit",
+            icon: <Pencil className="h-4 w-4" />,
+          },
           ...(task.status === "active"
             ? [
                 {
@@ -299,277 +417,99 @@ export function TasksList({
         </div>
 
         {/* New Task Sheet */}
-        <Sheet
+        <TaskAddEditSheet
+          mode="add"
           isOpen={isSheetOpen}
           onClose={() => {
             setIsSheetOpen(false);
             setFormError(null);
           }}
-          title="Create New Task"
-          description="Schedule a new action or recurring workflow."
-          footer={<></>} // Handled inside form
-        >
-          <form className="space-y-6" onSubmit={handleCreateTask}>
-            <div className="space-y-6">
-              <Input
-                name="title"
-                label="Task Title"
-                placeholder="e.g. Weekly Sync"
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                required
-              />
-              <Dropdown
-                label="Workflow (Required)"
-                value={selectedWorkflow}
-                onChange={setSelectedWorkflow}
-                options={[
-                  { label: "Select a workflow...", value: "" },
-                  ...workflows.map((w) => ({ label: w.title, value: w.id })),
-                ]}
-              />
-              <input type="hidden" name="workflowId" value={selectedWorkflow} />
-              <Textarea
-                name="description"
-                label="Description"
-                placeholder="What should this task do?"
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-              />
+          values={{
+            title,
+            description,
+            workflowId: selectedWorkflow,
+            taskType,
+            scheduledDate,
+            scheduledTime,
+            intervalType,
+            intervalValue,
+            dayOfWeek,
+            dayOfMonth,
+            timeOfDay,
+            timeWindowEnabled,
+            timeWindowStart,
+            timeWindowEnd,
+          }}
+          onChange={{
+            title: setTitle,
+            description: setDescription,
+            workflowId: setSelectedWorkflow,
+            taskType: setTaskType as (val: "one-time" | "recurring") => void,
+            scheduledDate: setScheduledDate,
+            scheduledTime: setScheduledTime,
+            intervalType: setIntervalType,
+            intervalValue: setIntervalValue,
+            dayOfWeek: setDayOfWeek,
+            dayOfMonth: setDayOfMonth,
+            timeOfDay: setTimeOfDay,
+            timeWindowEnabled: setTimeWindowEnabled,
+            timeWindowStart: setTimeWindowStart,
+            timeWindowEnd: setTimeWindowEnd,
+          }}
+          onSubmit={handleCreateTask}
+          formError={formError}
+          isPending={isPending}
+          workflows={workflows}
+        />
 
-              {/* Task Type Selector */}
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-[var(--foreground)]">
-                  Task Type
-                </label>
-                <div className="flex gap-4">
-                  <label className="flex items-center gap-2 cursor-pointer">
-                    <input
-                      type="radio"
-                      name="taskType"
-                      value="one-time"
-                      checked={taskType === "one-time"}
-                      onChange={() => setTaskType("one-time")}
-                      className="accent-[var(--accent)]"
-                    />
-                    <span className="text-sm text-[var(--foreground)]">
-                      One-time
-                    </span>
-                  </label>
-                  <label className="flex items-center gap-2 cursor-pointer">
-                    <input
-                      type="radio"
-                      name="taskType"
-                      value="recurring"
-                      checked={taskType === "recurring"}
-                      onChange={() => setTaskType("recurring")}
-                      className="accent-[var(--accent)]"
-                    />
-                    <span className="text-sm text-[var(--foreground)]">
-                      Recurring
-                    </span>
-                  </label>
-                </div>
-              </div>
-
-              {/* One-time Scheduling */}
-              {taskType === "one-time" && (
-                <div className="grid grid-cols-2 gap-4">
-                  <Input
-                    type="date"
-                    label="Date"
-                    value={scheduledDate}
-                    onChange={(e) => setScheduledDate(e.target.value)}
-                    required={taskType === "one-time"}
-                  />
-                  <Input
-                    type="time"
-                    label="Time"
-                    value={scheduledTime}
-                    onChange={(e) => setScheduledTime(e.target.value)}
-                    required={taskType === "one-time"}
-                  />
-                </div>
-              )}
-
-              {/* Recurring Scheduling */}
-              {taskType === "recurring" && (
-                <div className="space-y-4">
-                  <Dropdown
-                    label="Repeat"
-                    value={intervalType}
-                    onChange={setIntervalType}
-                    options={INTERVAL_OPTIONS}
-                  />
-
-                  {/* Every N minutes/hours */}
-                  {intervalType === "minutes" && (
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm text-[var(--muted)]">Every</span>
-                      <input
-                        type="number"
-                        min="1"
-                        max="59"
-                        value={intervalValue}
-                        onChange={(e) =>
-                          setIntervalValue(parseInt(e.target.value) || 1)
-                        }
-                        className="w-20 rounded-lg border border-[var(--border)] bg-[var(--card-bg)] px-3 py-2 text-sm text-[var(--foreground)]"
-                      />
-                      <span className="text-sm text-[var(--muted)]">
-                        minute(s)
-                      </span>
-                    </div>
-                  )}
-
-                  {intervalType === "hours" && (
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm text-[var(--muted)]">Every</span>
-                      <input
-                        type="number"
-                        min="1"
-                        max="23"
-                        value={intervalValue}
-                        onChange={(e) =>
-                          setIntervalValue(parseInt(e.target.value) || 1)
-                        }
-                        className="w-20 rounded-lg border border-[var(--border)] bg-[var(--card-bg)] px-3 py-2 text-sm text-[var(--foreground)]"
-                      />
-                      <span className="text-sm text-[var(--muted)]">
-                        hour(s)
-                      </span>
-                    </div>
-                  )}
-
-                  {/* Time window toggle (for minutes/hours) */}
-                  {(intervalType === "minutes" || intervalType === "hours") && (
-                    <div className="space-y-3 rounded-lg border border-[var(--border)] bg-[var(--sidebar-bg)]/40 p-4">
-                      <label className="flex items-center gap-2 cursor-pointer">
-                        <input
-                          type="checkbox"
-                          checked={timeWindowEnabled}
-                          onChange={(e) =>
-                            setTimeWindowEnabled(e.target.checked)
-                          }
-                          className="accent-[var(--accent)]"
-                        />
-                        <span className="text-sm font-medium text-[var(--foreground)]">
-                          Restrict to time window
-                        </span>
-                      </label>
-                      {timeWindowEnabled && (
-                        <div className="grid grid-cols-2 gap-4 pl-6">
-                          <Input
-                            type="time"
-                            label="From"
-                            value={timeWindowStart}
-                            onChange={(e) => setTimeWindowStart(e.target.value)}
-                          />
-                          <Input
-                            type="time"
-                            label="To"
-                            value={timeWindowEnd}
-                            onChange={(e) => setTimeWindowEnd(e.target.value)}
-                          />
-                        </div>
-                      )}
-                      {timeWindowEnabled && (
-                        <p className="pl-6 text-xs text-[var(--muted)]">
-                          Task will only run between{" "}
-                          <strong>{timeWindowStart}</strong> and{" "}
-                          <strong>{timeWindowEnd}</strong>, respecting your
-                          workspace timezone.
-                        </p>
-                      )}
-                    </div>
-                  )}
-
-                  {/* Daily - just time */}
-                  {intervalType === "daily" && (
-                    <Input
-                      type="time"
-                      label="Time of day"
-                      value={timeOfDay}
-                      onChange={(e) => setTimeOfDay(e.target.value)}
-                    />
-                  )}
-
-                  {/* Weekly - day of week + time */}
-                  {intervalType === "weekly" && (
-                    <div className="space-y-4">
-                      <Dropdown
-                        label="Day of week"
-                        value={dayOfWeek.toString()}
-                        onChange={(v) => setDayOfWeek(parseInt(v))}
-                        options={WEEKDAYS.map((d) => ({
-                          label: d.label,
-                          value: d.value.toString(),
-                        }))}
-                      />
-                      <Input
-                        type="time"
-                        label="Time of day"
-                        value={timeOfDay}
-                        onChange={(e) => setTimeOfDay(e.target.value)}
-                      />
-                    </div>
-                  )}
-
-                  {/* Monthly - day of month + time */}
-                  {intervalType === "monthly" && (
-                    <div className="space-y-4">
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm text-[var(--muted)]">
-                          On day
-                        </span>
-                        <input
-                          type="number"
-                          min="1"
-                          max="31"
-                          value={dayOfMonth}
-                          onChange={(e) =>
-                            setDayOfMonth(parseInt(e.target.value) || 1)
-                          }
-                          className="w-20 rounded-lg border border-[var(--border)] bg-[var(--card-bg)] px-3 py-2 text-sm text-[var(--foreground)]"
-                        />
-                        <span className="text-sm text-[var(--muted)]">
-                          of each month
-                        </span>
-                      </div>
-                      <Input
-                        type="time"
-                        label="Time of day"
-                        value={timeOfDay}
-                        onChange={(e) => setTimeOfDay(e.target.value)}
-                      />
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-            {formError && (
-              <div className="rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-500">
-                {formError}
-              </div>
-            )}
-            <div className="mt-6 flex justify-end gap-3 border-t border-[var(--border)] pt-4">
-              <Button
-                type="button"
-                variant="ghost"
-                onClick={() => setIsSheetOpen(false)}
-                disabled={isPending}
-              >
-                Cancel
-              </Button>
-              <Button
-                type="submit"
-                disabled={isPending || !title || !selectedWorkflow}
-              >
-                {isPending ? "Creating..." : "Create Task"}
-              </Button>
-            </div>
-          </form>
-        </Sheet>
+        {/* Edit Task Sheet */}
+        <TaskAddEditSheet
+          mode="edit"
+          isOpen={isEditSheetOpen}
+          onClose={() => {
+            setIsEditSheetOpen(false);
+            setEditingTask(null);
+            setEditFormError(null);
+          }}
+          values={{
+            title: editTitle,
+            description: editDescription,
+            workflowId: editWorkflowId,
+            taskType: editTaskType,
+            scheduledDate: editScheduledDate,
+            scheduledTime: editScheduledTime,
+            intervalType: editIntervalType,
+            intervalValue: editIntervalValue,
+            dayOfWeek: editDayOfWeek,
+            dayOfMonth: editDayOfMonth,
+            timeOfDay: editTimeOfDay,
+            timeWindowEnabled: editTimeWindowEnabled,
+            timeWindowStart: editTimeWindowStart,
+            timeWindowEnd: editTimeWindowEnd,
+          }}
+          onChange={{
+            title: setEditTitle,
+            description: setEditDescription,
+            workflowId: setEditWorkflowId,
+            taskType: setEditTaskType as (
+              val: "one-time" | "recurring",
+            ) => void,
+            scheduledDate: setEditScheduledDate,
+            scheduledTime: setEditScheduledTime,
+            intervalType: setEditIntervalType,
+            intervalValue: setEditIntervalValue,
+            dayOfWeek: setEditDayOfWeek,
+            dayOfMonth: setEditDayOfMonth,
+            timeOfDay: setEditTimeOfDay,
+            timeWindowEnabled: setEditTimeWindowEnabled,
+            timeWindowStart: setEditTimeWindowStart,
+            timeWindowEnd: setEditTimeWindowEnd,
+          }}
+          onSubmit={handleEditTask}
+          formError={editFormError}
+          isPending={isPending}
+          workflows={workflows}
+        />
 
         {/* Recurring Tasks */}
         <section className="space-y-4">
