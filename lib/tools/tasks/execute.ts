@@ -77,6 +77,7 @@ export async function executeTask(input: TaskToolInput, context: ToolContext) {
         timeOfDay: createDetails.timeOfDay ?? null,
         timeWindowStart: createDetails.timeWindowStart ?? null,
         timeWindowEnd: createDetails.timeWindowEnd ?? null,
+        runOnDays: createDetails.runOnDays ?? [],
         timezone: createDetails.timezone ?? "UTC",
       });
     }
@@ -129,6 +130,9 @@ export async function executeTask(input: TaskToolInput, context: ToolContext) {
         }),
         ...(updateDetails.timeWindowEnd !== undefined && {
           timeWindowEnd: updateDetails.timeWindowEnd || null,
+        }),
+        ...(updateDetails.runOnDays !== undefined && {
+          runOnDays: updateDetails.runOnDays,
         }),
         ...(updateDetails.timezone !== undefined && {
           timezone: updateDetails.timezone || "UTC",

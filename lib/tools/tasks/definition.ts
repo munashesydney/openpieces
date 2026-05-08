@@ -98,6 +98,12 @@ export const taskToolDefinition = {
           .describe(
             "End of time window in HH:MM format (e.g. '17:00'). Only applies to minutes/hours intervals. Restricts recurrence to within this window.",
           ),
+        runOnDays: z
+          .array(z.number().min(0).max(6))
+          .optional()
+          .describe(
+            "Days of week the task is allowed to run on (0=Sun..6=Sat). Empty or omitted = every day.",
+          ),
         timezone: z
           .string()
           .optional()
@@ -147,6 +153,10 @@ export const taskToolDefinition = {
           .string()
           .optional()
           .describe("New time window end in HH:MM format"),
+        runOnDays: z
+          .array(z.number().min(0).max(6))
+          .optional()
+          .describe("New days of week (0=Sun..6=Sat). Empty = every day."),
         timezone: z.string().optional().describe("New timezone"),
       })
       .optional()

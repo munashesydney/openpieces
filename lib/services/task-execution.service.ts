@@ -308,6 +308,44 @@ function calculateCalendarRunInTimezone(
 }
 
 /**
+ * If the task has `runOnDays` restrictions, advance the candidate date to the
+ * next allowed day of the week, preserving the time-of-day.
+ */
+function enforceRunOnDays(
+  candidate: Date,
+  runOnDays: number[] | null | undefined,
+  timezone: string | null | undefined,
+): Date {
+  if (!runOnDays || runOnDays.length === 0) return candidate;
+
+  const tz = timezone || "UTC";
+
+  // Determine the day-of-week of the candidate in the target timezone
+  let dayOfWeek: number;
+  if (tz === "UTC") {
+    dayOfWeek = candidate.getUTCDay();
+  } else {
+    const { year, month, day } = getDateInTimezone(tz, candidate);
+    const dowDate = new Date(Date.UTC(year, month - 1, day));
+    dayOfWeek = dowDate.getUTCDay();
+  }
+
+  if (runOnDays.includes(dayOfWeek)) return candidate;
+
+  // Advance to the next allowed day
+  for (let d = 1; d <= 7; d++) {
+    const nextDay = (dayOfWeek + d) % 7;
+    if (runOnDays.includes(nextDay)) {
+      const result = new Date(candidate);
+      result.setDate(result.getDate() + d);
+      return result;
+    }
+  }
+
+  return candidate; // fallback (shouldn't happen)
+}
+
+/**
  * Calculate the next run time for a recurring task based on its interval settings.
  *
  * - For minutes/hours intervals, timezone doesn't matter (relative durations).
@@ -323,11 +361,16 @@ export function calculateNextRunTime(task: Task): Date {
     dayOfMonth,
     timeOfDay,
     timezone,
+    runOnDays,
   } = task;
 
   // Default to 1 hour from now if no interval info
   if (!intervalType) {
-    return new Date(now.getTime() + 60 * 60 * 1000);
+    return enforceRunOnDays(
+      new Date(now.getTime() + 60 * 60 * 1000),
+      runOnDays,
+      timezone,
+    );
   }
 
   // Parse timeOfDay if present (format: "HH:MM")
@@ -352,7 +395,11 @@ export function calculateNextRunTime(task: Task): Date {
 
     // No time window → simple interval from now
     if (!timeWindowStart || !timeWindowEnd) {
-      return new Date(now.getTime() + intervalMs);
+      return enforceRunOnDays(
+        new Date(now.getTime() + intervalMs),
+        runOnDays,
+        timezone,
+      );
     }
 
     // ── Time window is active ───────────────────────────────────────────────
@@ -385,12 +432,12 @@ export function calculateNextRunTime(task: Task): Date {
       if (now >= todayEnd) {
         const tomorrow = new Date(todayStart);
         tomorrow.setUTCDate(tomorrow.getUTCDate() + 1);
-        return tomorrow;
+        return enforceRunOnDays(tomorrow, runOnDays, timezone);
       }
 
       // Before the start → start of window today
       if (now < todayStart) {
-        return todayStart;
+        return enforceRunOnDays(todayStart, runOnDays, timezone);
       }
 
       // Within the window
@@ -398,9 +445,9 @@ export function calculateNextRunTime(task: Task): Date {
       if (next >= todayEnd) {
         const tomorrow = new Date(todayStart);
         tomorrow.setUTCDate(tomorrow.getUTCDate() + 1);
-        return tomorrow;
+        return enforceRunOnDays(tomorrow, runOnDays, timezone);
       }
-      return next;
+      return enforceRunOnDays(next, runOnDays, timezone);
     }
 
     // ── Non-UTC timezone: use timezone-aware helpers ────────────────────────
@@ -439,47 +486,59 @@ export function calculateNextRunTime(task: Task): Date {
     // Past the end → start of window tomorrow
     if (now >= windowEndUtc) {
       const tomorrow = addDaysInTimezone(tz, tzYear, tzMonth, tzDay, 1);
-      return wallClockToUtc(
-        tz,
-        tomorrow.year,
-        tomorrow.month,
-        tomorrow.day,
-        startH,
-        startM,
+      return enforceRunOnDays(
+        wallClockToUtc(
+          tz,
+          tomorrow.year,
+          tomorrow.month,
+          tomorrow.day,
+          startH,
+          startM,
+        ),
+        runOnDays,
+        timezone,
       );
     }
 
     // Before the start → start of window today
     if (now < windowStartUtc) {
-      return windowStartUtc;
+      return enforceRunOnDays(windowStartUtc, runOnDays, timezone);
     }
 
     // Within the window
     const next = new Date(now.getTime() + intervalMs);
     if (next >= windowEndUtc) {
       const tomorrow = addDaysInTimezone(tz, tzYear, tzMonth, tzDay, 1);
-      return wallClockToUtc(
-        tz,
-        tomorrow.year,
-        tomorrow.month,
-        tomorrow.day,
-        startH,
-        startM,
+      return enforceRunOnDays(
+        wallClockToUtc(
+          tz,
+          tomorrow.year,
+          tomorrow.month,
+          tomorrow.day,
+          startH,
+          startM,
+        ),
+        runOnDays,
+        timezone,
       );
     }
-    return next;
+    return enforceRunOnDays(next, runOnDays, timezone);
   }
 
   // Calendar-based intervals with a timezone — use timezone-aware logic
   if (timezone && timezone !== "UTC") {
-    return calculateCalendarRunInTimezone(
-      now,
+    return enforceRunOnDays(
+      calculateCalendarRunInTimezone(
+        now,
+        timezone,
+        intervalType,
+        hours,
+        minutes,
+        dayOfWeek,
+        dayOfMonth,
+      ),
+      runOnDays,
       timezone,
-      intervalType,
-      hours,
-      minutes,
-      dayOfWeek,
-      dayOfMonth,
     );
   }
 
@@ -515,7 +574,7 @@ export function calculateNextRunTime(task: Task): Date {
       next.setTime(next.getTime() + 60 * 60 * 1000);
   }
 
-  return next;
+  return enforceRunOnDays(next, runOnDays, timezone);
 }
 
 /**

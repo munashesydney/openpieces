@@ -167,6 +167,17 @@ export async function createTask(data: NewTask): Promise<Task> {
         );
       }
     }
+
+    // Validate runOnDays
+    if (data.runOnDays && data.runOnDays.length > 0) {
+      if (
+        !data.runOnDays.every((d) => Number.isInteger(d) && d >= 0 && d <= 6)
+      ) {
+        throw new ValidationError(
+          "runOnDays must contain only integers between 0 (Sunday) and 6 (Saturday).",
+        );
+      }
+    }
   }
 
   // ── Validate workflowId — always required for tasks ───────────────────────
@@ -297,6 +308,17 @@ export async function updateTask(
         );
       }
     }
+
+    // Validate runOnDays
+    if (data.runOnDays && data.runOnDays.length > 0) {
+      if (
+        !data.runOnDays.every((d) => Number.isInteger(d) && d >= 0 && d <= 6)
+      ) {
+        throw new ValidationError(
+          "runOnDays must contain only integers between 0 (Sunday) and 6 (Saturday).",
+        );
+      }
+    }
   }
 
   // If updating scheduling fields on a recurring task, recalculate nextRunAt
@@ -309,6 +331,7 @@ export async function updateTask(
     data.timezone !== undefined ||
     data.timeWindowStart !== undefined ||
     data.timeWindowEnd !== undefined ||
+    data.runOnDays !== undefined ||
     data.status !== undefined;
 
   const mergedData = { ...data };

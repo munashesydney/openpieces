@@ -1,0 +1,1 @@
+ALTER TABLE "tasks" ADD COLUMN "run_on_days" jsonb DEFAULT '[]'::jsonb;

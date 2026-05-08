@@ -92,6 +92,10 @@ export const tasks = pgTable("tasks", {
   // Optional time window to restrict recurrence to specific hours of the day
   timeWindowStart: text("time_window_start"),
   timeWindowEnd: text("time_window_end"),
+  // Days of week this task is allowed to run on (0=Sun..6=Sat). Empty = all days.
+  runOnDays: jsonb("run_on_days")
+    .$type<number[]>()
+    .default(sql`'[]'::jsonb`),
   // Execution tracking
   lastRunAt: timestamp("last_run_at"),
   nextRunAt: timestamp("next_run_at"),

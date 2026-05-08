@@ -40,6 +40,7 @@ export interface TaskFormValues {
   timeWindowEnabled: boolean;
   timeWindowStart: string;
   timeWindowEnd: string;
+  runOnDays: number[];
 }
 
 interface TaskAddEditSheetProps {
@@ -64,6 +65,7 @@ interface TaskAddEditSheetProps {
     timeWindowEnabled: (val: boolean) => void;
     timeWindowStart: (val: string) => void;
     timeWindowEnd: (val: string) => void;
+    runOnDays: (val: number[]) => void;
   };
   onSubmit: (e: React.FormEvent<HTMLFormElement>) => void;
   formError: string | null;
@@ -204,9 +206,7 @@ export function TaskAddEditSheet({
                     }
                     className="w-20 rounded-lg border border-[var(--border)] bg-[var(--card-bg)] px-3 py-2 text-sm text-[var(--foreground)]"
                   />
-                  <span className="text-sm text-[var(--muted)]">
-                    minute(s)
-                  </span>
+                  <span className="text-sm text-[var(--muted)]">minute(s)</span>
                 </div>
               )}
 
@@ -257,9 +257,7 @@ export function TaskAddEditSheet({
                         type="time"
                         label="To"
                         value={v.timeWindowEnd}
-                        onChange={(e) =>
-                          onChange.timeWindowEnd(e.target.value)
-                        }
+                        onChange={(e) => onChange.timeWindowEnd(e.target.value)}
                       />
                     </div>
                   )}
@@ -273,6 +271,42 @@ export function TaskAddEditSheet({
                   )}
                 </div>
               )}
+
+              {/* Day-of-week toggles */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-[var(--foreground)]">
+                  Only run on
+                </label>
+                <div className="flex flex-wrap gap-1.5">
+                  {WEEKDAYS.map((day) => {
+                    const selected = v.runOnDays.includes(day.value);
+                    return (
+                      <button
+                        key={day.value}
+                        type="button"
+                        onClick={() => {
+                          const next = selected
+                            ? v.runOnDays.filter((d) => d !== day.value)
+                            : [...v.runOnDays, day.value].sort();
+                          onChange.runOnDays(next);
+                        }}
+                        className={`rounded-lg px-2.5 py-1.5 text-xs font-semibold uppercase tracking-wider transition-all ${
+                          selected
+                            ? "bg-emerald-500/15 text-emerald-500 shadow-sm"
+                            : "bg-[var(--sidebar-bg)] text-[var(--muted)] hover:bg-[var(--hover-bg)] hover:text-[var(--foreground)]"
+                        }`}
+                      >
+                        {day.label.slice(0, 3)}
+                      </button>
+                    );
+                  })}
+                </div>
+                {v.runOnDays.length === 0 && (
+                  <p className="text-xs text-[var(--muted)]">
+                    No selection = runs every day
+                  </p>
+                )}
+              </div>
 
               {/* Daily - just time */}
               {v.intervalType === "daily" && (
@@ -309,9 +343,7 @@ export function TaskAddEditSheet({
               {v.intervalType === "monthly" && (
                 <div className="space-y-4">
                   <div className="flex items-center gap-2">
-                    <span className="text-sm text-[var(--muted)]">
-                      On day
-                    </span>
+                    <span className="text-sm text-[var(--muted)]">On day</span>
                     <input
                       type="number"
                       min="1"
@@ -344,7 +376,12 @@ export function TaskAddEditSheet({
           </div>
         )}
         <div className="mt-6 flex justify-end gap-3 border-t border-[var(--border)] pt-4">
-          <Button type="button" variant="ghost" onClick={onClose} disabled={isPending}>
+          <Button
+            type="button"
+            variant="ghost"
+            onClick={onClose}
+            disabled={isPending}
+          >
             Cancel
           </Button>
           <Button

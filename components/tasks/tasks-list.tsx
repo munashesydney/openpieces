@@ -41,6 +41,14 @@ const WEEKDAYS = [
   { label: "Saturday", value: 6 },
 ];
 
+function formatDays(runOnDays: number[] | null | undefined): string {
+  if (!runOnDays || runOnDays.length === 0) return "";
+  const labels = runOnDays
+    .sort()
+    .map((d) => WEEKDAYS.find((w) => w.value === d)?.label.slice(0, 3) ?? "");
+  return ` [${labels.join(", ")}]`;
+}
+
 function formatSchedule(task: Task): string {
   if (task.type === "one-time" && task.scheduledAt) {
     const date = new Date(task.scheduledAt);
@@ -49,31 +57,35 @@ function formatSchedule(task: Task): string {
   if (task.type === "recurring") {
     const { intervalType, intervalValue, dayOfWeek, dayOfMonth, timeOfDay } =
       task;
+    const daysSuffix = formatDays(task.runOnDays);
     if (intervalType === "minutes" && intervalValue) {
-      const base = `Every ${intervalValue} minute${intervalValue > 1 ? "s" : ""}`;
+      let s = `Every ${intervalValue} minute${intervalValue > 1 ? "s" : ""}`;
       if (task.timeWindowStart && task.timeWindowEnd) {
-        return `${base} (${task.timeWindowStart}–${task.timeWindowEnd})`;
+        s += ` (${task.timeWindowStart}–${task.timeWindowEnd})`;
       }
-      return base;
+      return s + daysSuffix;
     }
     if (intervalType === "hours" && intervalValue) {
-      const base = `Every ${intervalValue} hour${intervalValue > 1 ? "s" : ""}`;
+      let s = `Every ${intervalValue} hour${intervalValue > 1 ? "s" : ""}`;
       if (task.timeWindowStart && task.timeWindowEnd) {
-        return `${base} (${task.timeWindowStart}–${task.timeWindowEnd})`;
+        s += ` (${task.timeWindowStart}–${task.timeWindowEnd})`;
       }
-      return base;
+      return s + daysSuffix;
     }
     if (intervalType === "daily" && timeOfDay) {
-      return `Daily at ${timeOfDay}`;
+      return `Daily at ${timeOfDay}` + daysSuffix;
     }
     if (intervalType === "weekly" && dayOfWeek !== null && timeOfDay) {
       const day = WEEKDAYS.find((d) => d.value === dayOfWeek)?.label || "";
-      return `Every ${day} at ${timeOfDay}`;
+      return `Every ${day} at ${timeOfDay}` + daysSuffix;
     }
     if (intervalType === "monthly" && dayOfMonth && timeOfDay) {
-      return `Monthly on the ${dayOfMonth}${getOrdinalSuffix(dayOfMonth)} at ${timeOfDay}`;
+      return (
+        `Monthly on the ${dayOfMonth}${getOrdinalSuffix(dayOfMonth)} at ${timeOfDay}` +
+        daysSuffix
+      );
     }
-    return "Recurring";
+    return "Recurring" + daysSuffix;
   }
   return "Unknown";
 }
@@ -125,6 +137,7 @@ export function TasksList({
   const [timeWindowEnabled, setTimeWindowEnabled] = useState(false);
   const [timeWindowStart, setTimeWindowStart] = useState("09:00");
   const [timeWindowEnd, setTimeWindowEnd] = useState("17:00");
+  const [runOnDays, setRunOnDays] = useState<number[]>([]);
   const [taskToDelete, setTaskToDelete] = useState<Task | null>(null);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [isEditSheetOpen, setIsEditSheetOpen] = useState(false);
@@ -175,6 +188,9 @@ export function TasksList({
         formData.append("timeWindowStart", timeWindowStart);
         formData.append("timeWindowEnd", timeWindowEnd);
       }
+
+      // Days of week
+      formData.append("runOnDays", JSON.stringify(runOnDays));
     }
 
     formData.append("status", "active");
@@ -200,6 +216,7 @@ export function TasksList({
       setTimeWindowEnabled(false);
       setTimeWindowStart("09:00");
       setTimeWindowEnd("17:00");
+      setRunOnDays([]);
       setFormError(null);
     });
   };
@@ -229,6 +246,7 @@ export function TasksList({
   const [editTimeWindowEnabled, setEditTimeWindowEnabled] = useState(false);
   const [editTimeWindowStart, setEditTimeWindowStart] = useState("09:00");
   const [editTimeWindowEnd, setEditTimeWindowEnd] = useState("17:00");
+  const [editRunOnDays, setEditRunOnDays] = useState<number[]>([]);
   const [editFormError, setEditFormError] = useState<string | null>(null);
 
   const openEditSheet = (task: Task) => {
@@ -259,6 +277,9 @@ export function TasksList({
       setEditTimeWindowEnabled(hasWindow);
       setEditTimeWindowStart(task.timeWindowStart ?? "09:00");
       setEditTimeWindowEnd(task.timeWindowEnd ?? "17:00");
+      setEditRunOnDays(
+        Array.isArray(task.runOnDays) ? [...task.runOnDays] : [],
+      );
     } else {
       setEditIntervalType("daily");
       setEditIntervalValue(1);
@@ -268,6 +289,7 @@ export function TasksList({
       setEditTimeWindowEnabled(false);
       setEditTimeWindowStart("09:00");
       setEditTimeWindowEnd("17:00");
+      setEditRunOnDays([]);
     }
 
     setEditFormError(null);
@@ -310,6 +332,9 @@ export function TasksList({
         formData.set("timeWindowStart", editTimeWindowStart);
         formData.set("timeWindowEnd", editTimeWindowEnd);
       }
+
+      // Days of week
+      formData.set("runOnDays", JSON.stringify(editRunOnDays));
     }
 
     startTransition(async () => {
@@ -439,6 +464,7 @@ export function TasksList({
             timeWindowEnabled,
             timeWindowStart,
             timeWindowEnd,
+            runOnDays,
           }}
           onChange={{
             title: setTitle,
@@ -455,6 +481,7 @@ export function TasksList({
             timeWindowEnabled: setTimeWindowEnabled,
             timeWindowStart: setTimeWindowStart,
             timeWindowEnd: setTimeWindowEnd,
+            runOnDays: setRunOnDays,
           }}
           onSubmit={handleCreateTask}
           formError={formError}
@@ -486,6 +513,7 @@ export function TasksList({
             timeWindowEnabled: editTimeWindowEnabled,
             timeWindowStart: editTimeWindowStart,
             timeWindowEnd: editTimeWindowEnd,
+            runOnDays: editRunOnDays,
           }}
           onChange={{
             title: setEditTitle,
@@ -504,6 +532,7 @@ export function TasksList({
             timeWindowEnabled: setEditTimeWindowEnabled,
             timeWindowStart: setEditTimeWindowStart,
             timeWindowEnd: setEditTimeWindowEnd,
+            runOnDays: setEditRunOnDays,
           }}
           onSubmit={handleEditTask}
           formError={editFormError}

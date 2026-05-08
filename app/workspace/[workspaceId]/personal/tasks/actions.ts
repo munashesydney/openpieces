@@ -46,6 +46,9 @@ export async function createTaskAction(
   const timeWindowEnd = timeWindowEnabled
     ? (formData.get("timeWindowEnd") as string)
     : null;
+  // Days of week
+  const runOnDaysRaw = formData.get("runOnDays") as string | null;
+  const runOnDays = runOnDaysRaw ? (JSON.parse(runOnDaysRaw) as number[]) : [];
 
   try {
     await createTask({
@@ -82,6 +85,7 @@ export async function createTaskAction(
         (intervalType === "minutes" || intervalType === "hours")
           ? timeWindowEnd
           : null,
+      runOnDays: type === "recurring" ? runOnDays : [],
       timezone: (formData.get("timezone") as string) || "UTC",
     });
   } catch (err) {
@@ -160,6 +164,9 @@ export async function updateTaskAction(
   const timeWindowEnd = timeWindowEnabled
     ? (formData.get("timeWindowEnd") as string)
     : null;
+  // Days of week
+  const runOnDaysRaw = formData.get("runOnDays") as string | null;
+  const runOnDays = runOnDaysRaw ? (JSON.parse(runOnDaysRaw) as number[]) : [];
   const status = formData.get("status") as string | null;
 
   try {
@@ -194,6 +201,7 @@ export async function updateTaskAction(
               intervalType === "minutes" || intervalType === "hours"
                 ? timeWindowEnd
                 : null,
+            runOnDays: runOnDays,
           }
         : {
             intervalType: null,
@@ -203,6 +211,7 @@ export async function updateTaskAction(
             timeOfDay: null,
             timeWindowStart: null,
             timeWindowEnd: null,
+            runOnDays: [],
           }),
     });
   } catch (err) {
