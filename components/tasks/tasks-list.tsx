@@ -59,10 +59,18 @@ function formatSchedule(task: Task): string {
     const { intervalType, intervalValue, dayOfWeek, dayOfMonth, timeOfDay } =
       task;
     if (intervalType === "minutes" && intervalValue) {
-      return `Every ${intervalValue} minute${intervalValue > 1 ? "s" : ""}`;
+      const base = `Every ${intervalValue} minute${intervalValue > 1 ? "s" : ""}`;
+      if (task.timeWindowStart && task.timeWindowEnd) {
+        return `${base} (${task.timeWindowStart}–${task.timeWindowEnd})`;
+      }
+      return base;
     }
     if (intervalType === "hours" && intervalValue) {
-      return `Every ${intervalValue} hour${intervalValue > 1 ? "s" : ""}`;
+      const base = `Every ${intervalValue} hour${intervalValue > 1 ? "s" : ""}`;
+      if (task.timeWindowStart && task.timeWindowEnd) {
+        return `${base} (${task.timeWindowStart}–${task.timeWindowEnd})`;
+      }
+      return base;
     }
     if (intervalType === "daily" && timeOfDay) {
       return `Daily at ${timeOfDay}`;
@@ -123,6 +131,9 @@ export function TasksList({
   const [dayOfWeek, setDayOfWeek] = useState(0);
   const [dayOfMonth, setDayOfMonth] = useState(1);
   const [timeOfDay, setTimeOfDay] = useState("09:00");
+  const [timeWindowEnabled, setTimeWindowEnabled] = useState(false);
+  const [timeWindowStart, setTimeWindowStart] = useState("09:00");
+  const [timeWindowEnd, setTimeWindowEnd] = useState("17:00");
   const [taskToDelete, setTaskToDelete] = useState<Task | null>(null);
 
   const recurringTasks = initialTasks.filter((t) => t.type === "recurring");
@@ -164,6 +175,13 @@ export function TasksList({
       if (intervalType === "monthly") {
         formData.append("dayOfMonth", dayOfMonth.toString());
       }
+
+      // Time window (for minutes/hours intervals)
+      formData.append("timeWindowEnabled", String(timeWindowEnabled));
+      if (timeWindowEnabled) {
+        formData.append("timeWindowStart", timeWindowStart);
+        formData.append("timeWindowEnd", timeWindowEnd);
+      }
     }
 
     formData.append("status", "active");
@@ -186,6 +204,9 @@ export function TasksList({
       setDayOfWeek(0);
       setDayOfMonth(1);
       setTimeOfDay("09:00");
+      setTimeWindowEnabled(false);
+      setTimeWindowStart("09:00");
+      setTimeWindowEnd("17:00");
       setFormError(null);
     });
   };
@@ -417,6 +438,49 @@ export function TasksList({
                       <span className="text-sm text-[var(--muted)]">
                         hour(s)
                       </span>
+                    </div>
+                  )}
+
+                  {/* Time window toggle (for minutes/hours) */}
+                  {(intervalType === "minutes" || intervalType === "hours") && (
+                    <div className="space-y-3 rounded-lg border border-[var(--border)] bg-[var(--sidebar-bg)]/40 p-4">
+                      <label className="flex items-center gap-2 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={timeWindowEnabled}
+                          onChange={(e) =>
+                            setTimeWindowEnabled(e.target.checked)
+                          }
+                          className="accent-[var(--accent)]"
+                        />
+                        <span className="text-sm font-medium text-[var(--foreground)]">
+                          Restrict to time window
+                        </span>
+                      </label>
+                      {timeWindowEnabled && (
+                        <div className="grid grid-cols-2 gap-4 pl-6">
+                          <Input
+                            type="time"
+                            label="From"
+                            value={timeWindowStart}
+                            onChange={(e) => setTimeWindowStart(e.target.value)}
+                          />
+                          <Input
+                            type="time"
+                            label="To"
+                            value={timeWindowEnd}
+                            onChange={(e) => setTimeWindowEnd(e.target.value)}
+                          />
+                        </div>
+                      )}
+                      {timeWindowEnabled && (
+                        <p className="pl-6 text-xs text-[var(--muted)]">
+                          Task will only run between{" "}
+                          <strong>{timeWindowStart}</strong> and{" "}
+                          <strong>{timeWindowEnd}</strong>, respecting your
+                          workspace timezone.
+                        </p>
+                      )}
                     </div>
                   )}
 

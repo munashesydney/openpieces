@@ -2,7 +2,13 @@ import { z } from "zod";
 
 const taskTypeEnum = z.enum(["one-time", "recurring"]);
 const taskStatusEnum = z.enum(["active", "paused", "completed"]);
-const intervalTypeEnum = z.enum(["minutes", "hours", "daily", "weekly", "monthly"]);
+const intervalTypeEnum = z.enum([
+  "minutes",
+  "hours",
+  "daily",
+  "weekly",
+  "monthly",
+]);
 
 export const taskToolDefinition = {
   name: "manage_tasks",
@@ -19,7 +25,9 @@ export const taskToolDefinition = {
     workflowId: z
       .string()
       .optional()
-      .describe("Workflow ID. Optional for list (filter by workflow). Required in createDetails."),
+      .describe(
+        "Workflow ID. Optional for list (filter by workflow). Required in createDetails.",
+      ),
     page: z
       .number()
       .optional()
@@ -38,16 +46,64 @@ export const taskToolDefinition = {
         workflowId: z.string().describe("Workflow ID. Required for all tasks."),
         status: taskStatusEnum
           .optional()
-          .describe("Status: active, paused, or completed. Defaults to active."),
+          .describe(
+            "Status: active, paused, or completed. Defaults to active.",
+          ),
         // One-time scheduling
-        scheduledAt: z.string().optional().describe("ISO datetime for one-time tasks (e.g. '2024-12-25T14:30:00Z')"),
+        scheduledAt: z
+          .string()
+          .optional()
+          .describe(
+            "ISO datetime for one-time tasks (e.g. '2024-12-25T14:30:00Z')",
+          ),
         // Recurring scheduling
-        intervalType: intervalTypeEnum.optional().describe("Interval type: minutes, hours, daily, weekly, monthly"),
-        intervalValue: z.number().optional().describe("N in 'every N intervalType' (e.g., 2 for 'every 2 hours'). Required for minutes/hours."),
-        dayOfWeek: z.number().min(0).max(6).optional().describe("Day of week (0=Sunday, 1=Monday, etc.). Required for weekly."),
-        dayOfMonth: z.number().min(1).max(31).optional().describe("Day of month (1-31). Required for monthly."),
-        timeOfDay: z.string().optional().describe("Time of day in HH:MM format (e.g., '14:30'). Required for daily/weekly/monthly."),
-        timezone: z.string().optional().describe("Timezone (e.g., 'UTC', 'America/New_York'). Defaults to UTC."),
+        intervalType: intervalTypeEnum
+          .optional()
+          .describe("Interval type: minutes, hours, daily, weekly, monthly"),
+        intervalValue: z
+          .number()
+          .optional()
+          .describe(
+            "N in 'every N intervalType' (e.g., 2 for 'every 2 hours'). Required for minutes/hours.",
+          ),
+        dayOfWeek: z
+          .number()
+          .min(0)
+          .max(6)
+          .optional()
+          .describe(
+            "Day of week (0=Sunday, 1=Monday, etc.). Required for weekly.",
+          ),
+        dayOfMonth: z
+          .number()
+          .min(1)
+          .max(31)
+          .optional()
+          .describe("Day of month (1-31). Required for monthly."),
+        timeOfDay: z
+          .string()
+          .optional()
+          .describe(
+            "Time of day in HH:MM format (e.g., '14:30'). Required for daily/weekly/monthly.",
+          ),
+        timeWindowStart: z
+          .string()
+          .optional()
+          .describe(
+            "Start of time window in HH:MM format (e.g. '09:00'). Only applies to minutes/hours intervals. Restricts recurrence to within this window.",
+          ),
+        timeWindowEnd: z
+          .string()
+          .optional()
+          .describe(
+            "End of time window in HH:MM format (e.g. '17:00'). Only applies to minutes/hours intervals. Restricts recurrence to within this window.",
+          ),
+        timezone: z
+          .string()
+          .optional()
+          .describe(
+            "Timezone (e.g., 'UTC', 'America/New_York'). Defaults to UTC.",
+          ),
       })
       .optional()
       .describe("Details for create action"),
@@ -55,17 +111,42 @@ export const taskToolDefinition = {
       .object({
         title: z.string().optional().describe("New title"),
         description: z.string().optional().describe("New description"),
-        type: taskTypeEnum.optional().describe("New type: one-time or recurring"),
-        status: taskStatusEnum.optional().describe("New status: active, paused, or completed"),
+        type: taskTypeEnum
+          .optional()
+          .describe("New type: one-time or recurring"),
+        status: taskStatusEnum
+          .optional()
+          .describe("New status: active, paused, or completed"),
         workflowId: z.string().optional().describe("New workflow ID"),
         // One-time scheduling
-        scheduledAt: z.string().optional().describe("ISO datetime for one-time tasks"),
+        scheduledAt: z
+          .string()
+          .optional()
+          .describe("ISO datetime for one-time tasks"),
         // Recurring scheduling
         intervalType: intervalTypeEnum.optional().describe("New interval type"),
         intervalValue: z.number().optional().describe("New interval value"),
-        dayOfWeek: z.number().min(0).max(6).optional().describe("New day of week"),
-        dayOfMonth: z.number().min(1).max(31).optional().describe("New day of month"),
+        dayOfWeek: z
+          .number()
+          .min(0)
+          .max(6)
+          .optional()
+          .describe("New day of week"),
+        dayOfMonth: z
+          .number()
+          .min(1)
+          .max(31)
+          .optional()
+          .describe("New day of month"),
         timeOfDay: z.string().optional().describe("New time of day"),
+        timeWindowStart: z
+          .string()
+          .optional()
+          .describe("New time window start in HH:MM format"),
+        timeWindowEnd: z
+          .string()
+          .optional()
+          .describe("New time window end in HH:MM format"),
         timezone: z.string().optional().describe("New timezone"),
       })
       .optional()

@@ -136,6 +136,37 @@ export async function createTask(data: NewTask): Promise<Task> {
         throw new ValidationError("dayOfMonth is required for monthly tasks.");
       }
     }
+
+    // Validate time window
+    if (data.timeWindowStart && !data.timeWindowEnd) {
+      throw new ValidationError(
+        "timeWindowEnd is required when timeWindowStart is set.",
+      );
+    }
+    if (data.timeWindowEnd && !data.timeWindowStart) {
+      throw new ValidationError(
+        "timeWindowStart is required when timeWindowEnd is set.",
+      );
+    }
+    if (data.timeWindowStart && data.timeWindowEnd) {
+      const twStartRegex = /^([01]\d|2[0-3]):([0-5]\d)$/;
+      const twEndRegex = /^([01]\d|2[0-3]):([0-5]\d)$/;
+      if (!twStartRegex.test(data.timeWindowStart)) {
+        throw new ValidationError(
+          `timeWindowStart "${data.timeWindowStart}" is not in HH:MM format.`,
+        );
+      }
+      if (!twEndRegex.test(data.timeWindowEnd)) {
+        throw new ValidationError(
+          `timeWindowEnd "${data.timeWindowEnd}" is not in HH:MM format.`,
+        );
+      }
+      if (data.timeWindowStart >= data.timeWindowEnd) {
+        throw new ValidationError(
+          "timeWindowStart must be before timeWindowEnd.",
+        );
+      }
+    }
   }
 
   // ── Validate workflowId — always required for tasks ───────────────────────
@@ -235,6 +266,37 @@ export async function updateTask(
         throw new ValidationError("dayOfMonth is required for monthly tasks.");
       }
     }
+
+    // Validate time window
+    if (data.timeWindowStart && !data.timeWindowEnd) {
+      throw new ValidationError(
+        "timeWindowEnd is required when timeWindowStart is set.",
+      );
+    }
+    if (data.timeWindowEnd && !data.timeWindowStart) {
+      throw new ValidationError(
+        "timeWindowStart is required when timeWindowEnd is set.",
+      );
+    }
+    if (data.timeWindowStart && data.timeWindowEnd) {
+      const twStartRegex = /^([01]\d|2[0-3]):([0-5]\d)$/;
+      const twEndRegex = /^([01]\d|2[0-3]):([0-5]\d)$/;
+      if (!twStartRegex.test(data.timeWindowStart)) {
+        throw new ValidationError(
+          `timeWindowStart "${data.timeWindowStart}" is not in HH:MM format.`,
+        );
+      }
+      if (!twEndRegex.test(data.timeWindowEnd)) {
+        throw new ValidationError(
+          `timeWindowEnd "${data.timeWindowEnd}" is not in HH:MM format.`,
+        );
+      }
+      if (data.timeWindowStart >= data.timeWindowEnd) {
+        throw new ValidationError(
+          "timeWindowStart must be before timeWindowEnd.",
+        );
+      }
+    }
   }
 
   // If updating scheduling fields on a recurring task, recalculate nextRunAt
@@ -245,6 +307,8 @@ export async function updateTask(
     data.dayOfMonth !== undefined ||
     data.timeOfDay !== undefined ||
     data.timezone !== undefined ||
+    data.timeWindowStart !== undefined ||
+    data.timeWindowEnd !== undefined ||
     data.status !== undefined;
 
   const mergedData = { ...data };

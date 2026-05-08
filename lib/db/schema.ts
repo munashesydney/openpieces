@@ -86,6 +86,9 @@ export const tasks = pgTable("tasks", {
   dayOfMonth: integer("day_of_month"),
   timeOfDay: text("time_of_day"),
   timezone: text("timezone").default("UTC"),
+  // Optional time window to restrict recurrence to specific hours of the day
+  timeWindowStart: text("time_window_start"),
+  timeWindowEnd: text("time_window_end"),
   // Execution tracking
   lastRunAt: timestamp("last_run_at"),
   nextRunAt: timestamp("next_run_at"),

@@ -38,6 +38,14 @@ export async function createTaskAction(
   const dayOfMonthStr = formData.get("dayOfMonth") as string | null;
   const dayOfMonth = dayOfMonthStr ? parseInt(dayOfMonthStr) : null;
   const timeOfDay = formData.get("timeOfDay") as string | null;
+  // Time window for minutes/hours intervals
+  const timeWindowEnabled = formData.get("timeWindowEnabled") === "true";
+  const timeWindowStart = timeWindowEnabled
+    ? (formData.get("timeWindowStart") as string)
+    : null;
+  const timeWindowEnd = timeWindowEnabled
+    ? (formData.get("timeWindowEnd") as string)
+    : null;
 
   try {
     await createTask({
@@ -64,6 +72,16 @@ export async function createTaskAction(
       dayOfMonth:
         type === "recurring" && intervalType === "monthly" ? dayOfMonth : null,
       timeOfDay: type === "recurring" ? timeOfDay : null,
+      timeWindowStart:
+        type === "recurring" &&
+        (intervalType === "minutes" || intervalType === "hours")
+          ? timeWindowStart
+          : null,
+      timeWindowEnd:
+        type === "recurring" &&
+        (intervalType === "minutes" || intervalType === "hours")
+          ? timeWindowEnd
+          : null,
       timezone: (formData.get("timezone") as string) || "UTC",
     });
   } catch (err) {

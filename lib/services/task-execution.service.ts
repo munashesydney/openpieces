@@ -339,13 +339,133 @@ export function calculateNextRunTime(task: Task): Date {
     minutes = m ?? 0;
   }
 
-  // Minutes/hours are relative durations — timezone is irrelevant
+  // Minutes/hours are relative durations
   if (intervalType === "minutes" || intervalType === "hours") {
-    const next = new Date(now);
-    if (intervalType === "minutes") {
-      next.setMinutes(next.getMinutes() + Math.max(1, intervalValue ?? 1));
-    } else {
-      next.setHours(next.getHours() + Math.max(1, intervalValue ?? 1));
+    const intervalMs =
+      intervalType === "minutes"
+        ? Math.max(1, intervalValue ?? 1) * 60 * 1000
+        : Math.max(1, intervalValue ?? 1) * 60 * 60 * 1000;
+
+    const tz = timezone || "UTC";
+    const timeWindowStart = task.timeWindowStart;
+    const timeWindowEnd = task.timeWindowEnd;
+
+    // No time window → simple interval from now
+    if (!timeWindowStart || !timeWindowEnd) {
+      return new Date(now.getTime() + intervalMs);
+    }
+
+    // ── Time window is active ───────────────────────────────────────────────
+    // Parse window boundaries
+    const [startH, startM] = timeWindowStart.split(":").map(Number);
+    const [endH, endM] = timeWindowEnd.split(":").map(Number);
+
+    if (tz === "UTC") {
+      // No timezone conversion needed — work directly in UTC
+      const todayStart = new Date(
+        Date.UTC(
+          now.getUTCFullYear(),
+          now.getUTCMonth(),
+          now.getUTCDate(),
+          startH,
+          startM,
+        ),
+      );
+      const todayEnd = new Date(
+        Date.UTC(
+          now.getUTCFullYear(),
+          now.getUTCMonth(),
+          now.getUTCDate(),
+          endH,
+          endM,
+        ),
+      );
+
+      // Past the end → start of window tomorrow
+      if (now >= todayEnd) {
+        const tomorrow = new Date(todayStart);
+        tomorrow.setUTCDate(tomorrow.getUTCDate() + 1);
+        return tomorrow;
+      }
+
+      // Before the start → start of window today
+      if (now < todayStart) {
+        return todayStart;
+      }
+
+      // Within the window
+      const next = new Date(now.getTime() + intervalMs);
+      if (next >= todayEnd) {
+        const tomorrow = new Date(todayStart);
+        tomorrow.setUTCDate(tomorrow.getUTCDate() + 1);
+        return tomorrow;
+      }
+      return next;
+    }
+
+    // ── Non-UTC timezone: use timezone-aware helpers ────────────────────────
+    // Get current wall-clock components in the target timezone
+    const tzParts = new Intl.DateTimeFormat("en-CA", {
+      timeZone: tz,
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+      hourCycle: "h23",
+    }).formatToParts(now);
+
+    const getTzPart = (type: string): number => {
+      const p = tzParts.find((p) => p.type === type);
+      return p ? parseInt(p.value, 10) : 0;
+    };
+
+    const tzYear = getTzPart("year");
+    const tzMonth = getTzPart("month");
+    const tzDay = getTzPart("day");
+
+    // Calculate today's window boundaries in UTC
+    const windowStartUtc = wallClockToUtc(
+      tz,
+      tzYear,
+      tzMonth,
+      tzDay,
+      startH,
+      startM,
+    );
+    const windowEndUtc = wallClockToUtc(tz, tzYear, tzMonth, tzDay, endH, endM);
+
+    // Past the end → start of window tomorrow
+    if (now >= windowEndUtc) {
+      const tomorrow = addDaysInTimezone(tz, tzYear, tzMonth, tzDay, 1);
+      return wallClockToUtc(
+        tz,
+        tomorrow.year,
+        tomorrow.month,
+        tomorrow.day,
+        startH,
+        startM,
+      );
+    }
+
+    // Before the start → start of window today
+    if (now < windowStartUtc) {
+      return windowStartUtc;
+    }
+
+    // Within the window
+    const next = new Date(now.getTime() + intervalMs);
+    if (next >= windowEndUtc) {
+      const tomorrow = addDaysInTimezone(tz, tzYear, tzMonth, tzDay, 1);
+      return wallClockToUtc(
+        tz,
+        tomorrow.year,
+        tomorrow.month,
+        tomorrow.day,
+        startH,
+        startM,
+      );
     }
     return next;
   }
