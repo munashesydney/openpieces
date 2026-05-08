@@ -10,7 +10,6 @@ import {
   Trash2,
   Plus,
   Unlink,
-  ClipboardList,
   Play,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
@@ -27,6 +26,7 @@ import {
 } from "@/app/workspace/[workspaceId]/personal/workflows/actions";
 import Link from "next/link";
 import { WorkflowDeleteModal } from "./workflow-delete-modal";
+import { WorkflowSteps } from "./workflow-steps";
 
 interface WorkflowDetailProps {
   workflow: Workflow;
@@ -51,8 +51,6 @@ export function WorkflowDetail({
   const [selectedActionServiceId, setSelectedActionServiceId] = useState("");
   const [linkError, setLinkError] = useState<string | null>(null);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
-  const [showAllSteps, setShowAllSteps] = useState(false);
-
   const handleDelete = () => {
     startTransition(async () => {
       await deleteWorkflowAction(workspaceId, workflow.id);
@@ -160,43 +158,11 @@ export function WorkflowDetail({
           isPending={isPending}
         />
 
-        {workflow.detailedSteps && (
-          <div className="space-y-4">
-            <div className="flex items-center justify-between px-1">
-              <div className="flex items-center gap-2">
-                <ClipboardList className="h-4 w-4 text-emerald-500" />
-                <h2 className="text-sm font-bold uppercase tracking-wider text-[var(--muted)]">
-                  Execution Plan
-                </h2>
-              </div>
-            </div>
-            <Card className="relative overflow-hidden flex flex-col">
-              <div
-                className={`p-5 text-sm leading-relaxed text-[var(--foreground)] whitespace-pre-wrap ${
-                  !showAllSteps ? "line-clamp-6" : ""
-                }`}
-              >
-                {workflow.detailedSteps}
-              </div>
-
-              {!showAllSteps &&
-                workflow.detailedSteps.split("\n").length > 6 && (
-                  <div className="absolute bottom-10 left-0 right-0 h-16 bg-gradient-to-t from-[var(--card)] to-transparent pointer-events-none" />
-                )}
-
-              <div className="flex justify-center border-t border-[var(--border)] bg-[var(--card)]/50 p-1.5">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-8 text-xs font-semibold uppercase tracking-wider text-[var(--muted)] hover:text-[var(--foreground)]"
-                  onClick={() => setShowAllSteps(!showAllSteps)}
-                >
-                  {showAllSteps ? "Show less" : "View full plan"}
-                </Button>
-              </div>
-            </Card>
-          </div>
-        )}
+        <WorkflowSteps
+          workflowId={workflow.id}
+          workspaceId={workspaceId}
+          steps={workflow.detailedSteps ?? []}
+        />
 
         {/* Triggers: trigger services + tasks */}
         <div className="space-y-4">

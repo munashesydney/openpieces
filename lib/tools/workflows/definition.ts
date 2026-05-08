@@ -27,8 +27,16 @@ export const workflowToolDefinition = {
     createDetails: z
       .object({
         title: z.string().describe("Title of the workflow"),
-        description: z.string().optional().describe("Description of the workflow"),
-        detailedSteps: z.string().optional().describe("Detailed guide for the Events AI on how to process this workflow"),
+        description: z
+          .string()
+          .optional()
+          .describe("Description of the workflow"),
+        detailedSteps: z
+          .array(z.string())
+          .optional()
+          .describe(
+            "Initial list of steps the Events AI should follow when executing this workflow. Each element is one discrete instruction.",
+          ),
         status: workflowStatusEnum
           .optional()
           .describe("Status: active or archived. Defaults to active."),
@@ -39,12 +47,34 @@ export const workflowToolDefinition = {
       .object({
         title: z.string().optional().describe("New title"),
         description: z.string().optional().describe("New description"),
-        detailedSteps: z.string().optional().describe("Updated detailed guide for the Events AI"),
-        status: workflowStatusEnum.optional().describe("New status: active or archived"),
+        status: workflowStatusEnum
+          .optional()
+          .describe("New status: active or archived"),
+        detailedSteps: z
+          .array(z.string())
+          .optional()
+          .describe(
+            "Bulk replace all steps. Provide the complete new list of instructions.",
+          ),
+        updateStep: z
+          .object({
+            index: z
+              .number()
+              .int()
+              .min(0)
+              .describe("Zero-based index of the step to update"),
+            content: z.string().describe("New content for that step"),
+          })
+          .optional()
+          .describe(
+            "Edit a single step at a specific index. Leave other steps unchanged.",
+          ),
       })
       .optional()
       .describe("Details for update action. At least one field required."),
   }),
 };
 
-export type WorkflowToolInput = z.infer<typeof workflowToolDefinition.inputSchema>;
+export type WorkflowToolInput = z.infer<
+  typeof workflowToolDefinition.inputSchema
+>;

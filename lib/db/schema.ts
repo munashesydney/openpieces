@@ -51,7 +51,10 @@ export const workflows = pgTable("workflows", {
   status: text("status", { enum: ["active", "archived"] })
     .notNull()
     .default("active"),
-  detailedSteps: text("detailed_steps").notNull().default(""),
+  detailedSteps: jsonb("detailed_steps")
+    .notNull()
+    .$type<string[]>()
+    .default(sql`'[]'::jsonb`),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });

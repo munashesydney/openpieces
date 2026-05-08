@@ -101,3 +101,120 @@ export async function unlinkActionServiceFromWorkflowAction(
   revalidatePath(`/workspace/${workspaceId}/personal/workflows/${workflowId}`);
   return { success: true };
 }
+
+export async function addDetailedStepAction(
+  workspaceId: string,
+  workflowId: string,
+  stepContent: string,
+): Promise<ActionResult> {
+  await requireWorkspaceOwner(workspaceId);
+
+  if (!stepContent?.trim()) {
+    return { error: "Step content cannot be empty." };
+  }
+
+  try {
+    const { getWorkflowById } =
+      await import("../../../../../lib/services/workflow.service");
+    const existing = await getWorkflowById(workflowId, workspaceId);
+    if (!existing) {
+      return { error: "Workflow not found." };
+    }
+
+    const currentSteps = Array.isArray(existing.detailedSteps)
+      ? existing.detailedSteps
+      : [];
+
+    await updateWorkflow(workflowId, workspaceId, {
+      detailedSteps: [...currentSteps, stepContent.trim()],
+    });
+  } catch (err) {
+    if (err instanceof ValidationError) return { error: err.message };
+    console.error("Unexpected error adding step:", err);
+    return { error: "Something went wrong. Please try again." };
+  }
+
+  revalidatePath(`/workspace/${workspaceId}/personal/workflows/${workflowId}`);
+  return { success: true };
+}
+
+export async function updateDetailedStepAction(
+  workspaceId: string,
+  workflowId: string,
+  stepIndex: number,
+  stepContent: string,
+): Promise<ActionResult> {
+  await requireWorkspaceOwner(workspaceId);
+
+  if (!stepContent?.trim()) {
+    return { error: "Step content cannot be empty." };
+  }
+
+  try {
+    const { getWorkflowById } =
+      await import("../../../../../lib/services/workflow.service");
+    const existing = await getWorkflowById(workflowId, workspaceId);
+    if (!existing) {
+      return { error: "Workflow not found." };
+    }
+
+    const currentSteps = Array.isArray(existing.detailedSteps)
+      ? [...existing.detailedSteps]
+      : [];
+
+    if (stepIndex < 0 || stepIndex >= currentSteps.length) {
+      return { error: "Invalid step index." };
+    }
+
+    currentSteps[stepIndex] = stepContent.trim();
+
+    await updateWorkflow(workflowId, workspaceId, {
+      detailedSteps: currentSteps,
+    });
+  } catch (err) {
+    if (err instanceof ValidationError) return { error: err.message };
+    console.error("Unexpected error updating step:", err);
+    return { error: "Something went wrong. Please try again." };
+  }
+
+  revalidatePath(`/workspace/${workspaceId}/personal/workflows/${workflowId}`);
+  return { success: true };
+}
+
+export async function deleteDetailedStepAction(
+  workspaceId: string,
+  workflowId: string,
+  stepIndex: number,
+): Promise<ActionResult> {
+  await requireWorkspaceOwner(workspaceId);
+
+  try {
+    const { getWorkflowById } =
+      await import("../../../../../lib/services/workflow.service");
+    const existing = await getWorkflowById(workflowId, workspaceId);
+    if (!existing) {
+      return { error: "Workflow not found." };
+    }
+
+    const currentSteps = Array.isArray(existing.detailedSteps)
+      ? [...existing.detailedSteps]
+      : [];
+
+    if (stepIndex < 0 || stepIndex >= currentSteps.length) {
+      return { error: "Invalid step index." };
+    }
+
+    currentSteps.splice(stepIndex, 1);
+
+    await updateWorkflow(workflowId, workspaceId, {
+      detailedSteps: currentSteps,
+    });
+  } catch (err) {
+    if (err instanceof ValidationError) return { error: err.message };
+    console.error("Unexpected error deleting step:", err);
+    return { error: "Something went wrong. Please try again." };
+  }
+
+  revalidatePath(`/workspace/${workspaceId}/personal/workflows/${workflowId}`);
+  return { success: true };
+}

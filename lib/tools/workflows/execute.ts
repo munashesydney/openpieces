@@ -8,8 +8,12 @@ import {
 import type { ToolContext } from "@/lib/tools/registry";
 import type { WorkflowToolInput } from "./definition";
 
-export async function executeWorkflow(input: WorkflowToolInput, context: ToolContext) {
-  const { action, workflowId, page, limit, createDetails, updateDetails } = input;
+export async function executeWorkflow(
+  input: WorkflowToolInput,
+  context: ToolContext,
+) {
+  const { action, workflowId, page, limit, createDetails, updateDetails } =
+    input;
   const { workspaceId } = context;
 
   if (!workspaceId) {
@@ -43,7 +47,7 @@ export async function executeWorkflow(input: WorkflowToolInput, context: ToolCon
         workspaceId,
         title: createDetails.title,
         description: createDetails.description ?? "",
-        detailedSteps: createDetails.detailedSteps ?? "",
+        detailedSteps: createDetails.detailedSteps ?? [],
         status: createDetails.status ?? "active",
       });
     }
@@ -53,13 +57,50 @@ export async function executeWorkflow(input: WorkflowToolInput, context: ToolCon
         throw new Error("workflowId is required for action 'update'");
       }
       if (!updateDetails || Object.keys(updateDetails).length === 0) {
-        throw new Error("updateDetails with at least one field is required for action 'update'");
+        throw new Error(
+          "updateDetails with at least one field is required for action 'update'",
+        );
       }
+      // Fetch existing workflow if we need to mutate a single step
+      let existingDetailedSteps: string[] | undefined;
+
+      if (
+        updateDetails.updateStep !== undefined &&
+        updateDetails.detailedSteps === undefined
+      ) {
+        const existing = await getWorkflowById(workflowId, workspaceId);
+        if (!existing) {
+          throw new Error(`Workflow not found: ${workflowId}`);
+        }
+        existingDetailedSteps = Array.isArray(existing.detailedSteps)
+          ? [...existing.detailedSteps]
+          : [];
+
+        const { index, content } = updateDetails.updateStep;
+        if (index < 0 || index >= existingDetailedSteps.length) {
+          throw new Error(
+            `Invalid step index ${index}. Workflow has ${existingDetailedSteps.length} step(s).`,
+          );
+        }
+        existingDetailedSteps[index] = content;
+      }
+
       const updated = await updateWorkflow(workflowId, workspaceId, {
-        ...(updateDetails.title !== undefined && { title: updateDetails.title }),
-        ...(updateDetails.description !== undefined && { description: updateDetails.description }),
-        ...(updateDetails.detailedSteps !== undefined && { detailedSteps: updateDetails.detailedSteps }),
-        ...(updateDetails.status !== undefined && { status: updateDetails.status }),
+        ...(updateDetails.title !== undefined && {
+          title: updateDetails.title,
+        }),
+        ...(updateDetails.description !== undefined && {
+          description: updateDetails.description,
+        }),
+        ...(updateDetails.detailedSteps !== undefined && {
+          detailedSteps: updateDetails.detailedSteps,
+        }),
+        ...(existingDetailedSteps !== undefined && {
+          detailedSteps: existingDetailedSteps,
+        }),
+        ...(updateDetails.status !== undefined && {
+          status: updateDetails.status,
+        }),
       });
       if (!updated) {
         throw new Error(`Workflow not found or update failed: ${workflowId}`);
@@ -79,7 +120,9 @@ export async function executeWorkflow(input: WorkflowToolInput, context: ToolCon
     }
 
     default: {
-      throw new Error(`Unknown action: ${action}. Valid actions are: list, get, create, update, delete.`);
+      throw new Error(
+        `Unknown action: ${action}. Valid actions are: list, get, create, update, delete.`,
+      );
     }
   }
 }

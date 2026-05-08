@@ -31,20 +31,14 @@ function isAuthorized(request: NextRequest): boolean {
 
 export async function POST(request: NextRequest) {
   if (!isAuthorized(request)) {
-    return NextResponse.json(
-      { error: "Unauthorized" },
-      { status: 401 }
-    );
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   let body: InternalChatRequestBody;
   try {
     body = (await request.json()) as InternalChatRequestBody;
   } catch {
-    return NextResponse.json(
-      { error: "Invalid JSON body" },
-      { status: 400 }
-    );
+    return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
   }
 
   const workspaceId = body.workspaceId?.trim();
@@ -56,41 +50,46 @@ export async function POST(request: NextRequest) {
   if (!workspaceId || !userId || !workflowId || !serviceId) {
     return NextResponse.json(
       { error: "workspaceId, userId, workflowId, and serviceId are required" },
-      { status: 400 }
+      { status: 400 },
     );
   }
 
   if (!content) {
-    return NextResponse.json(
-      { error: "content is required" },
-      { status: 400 }
-    );
+    return NextResponse.json({ error: "content is required" }, { status: 400 });
   }
 
   try {
     const workflow = await getWorkflowById(workflowId, workspaceId);
-    const triggerServices = await getServicesByWorkflowId(workflowId, workspaceId);
-    const actionServices = await getActionServicesForWorkflow(workflowId, workspaceId);
-    
+    const triggerServices = await getServicesByWorkflowId(
+      workflowId,
+      workspaceId,
+    );
+    const actionServices = await getActionServicesForWorkflow(
+      workflowId,
+      workspaceId,
+    );
+
     const uniqueServicesMap = new Map();
     for (const s of [...triggerServices, ...actionServices]) {
       uniqueServicesMap.set(s.id, s);
     }
     const allServices = Array.from(uniqueServicesMap.values());
-    
-    let servicesContext = "\n\n--- AUTO APPENDED WORKFLOW SERVICE CONTEXT ---\n";
-    
+
+    let servicesContext =
+      "\n\n--- AUTO APPENDED WORKFLOW SERVICE CONTEXT ---\n";
+
     if (workflow) {
       servicesContext += `Workflow Title: ${workflow.title}\n`;
       if (workflow.description) {
         servicesContext += `Workflow Description: ${workflow.description}\n`;
       }
-      if (workflow.detailedSteps) {
-        servicesContext += `Workflow Detailed Steps (Instructions):\n${workflow.detailedSteps}\n\n`;
+      if (workflow.detailedSteps && workflow.detailedSteps.length > 0) {
+        servicesContext += `Workflow Detailed Steps (Instructions):\n${workflow.detailedSteps.join("\n")}\n\n`;
       }
     }
 
-    servicesContext += "The following services and their endpoints are linked to this workflow. You can call these endpoints immediately without needing to look them up.\n\n";
+    servicesContext +=
+      "The following services and their endpoints are linked to this workflow. You can call these endpoints immediately without needing to look them up.\n\n";
 
     for (const service of allServices) {
       servicesContext += `Service: ${service.title} (ID: ${service.id}, Type: ${service.type})\n`;
@@ -107,7 +106,7 @@ export async function POST(request: NextRequest) {
       }
       servicesContext += "\n";
     }
-    
+
     if (content) {
       content += servicesContext;
     }
@@ -122,10 +121,13 @@ export async function POST(request: NextRequest) {
     }
 
     if (!effectiveChatId) {
-      const chat = await createAiChat({
-        workspaceId,
-        userId,
-      }, "events");
+      const chat = await createAiChat(
+        {
+          workspaceId,
+          userId,
+        },
+        "events",
+      );
       effectiveChatId = chat.id;
     }
 
@@ -152,7 +154,7 @@ export async function POST(request: NextRequest) {
     if (!chat) {
       return NextResponse.json(
         { error: "Chat not found after enqueue" },
-        { status: 404 }
+        { status: 404 },
       );
     }
 
@@ -164,14 +166,12 @@ export async function POST(request: NextRequest) {
         status: "queued",
         chat,
       },
-      { status: 202 }
+      { status: 202 },
     );
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("POST /api/internal/chat error:", error);
-    return NextResponse.json(
-      { error: error.message || "Internal server error" },
-      { status: 500 }
-    );
+    const message =
+      error instanceof Error ? error.message : "Internal server error";
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }
-

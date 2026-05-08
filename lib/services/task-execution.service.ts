@@ -582,8 +582,8 @@ export async function enqueueTaskForExecution(task: Task): Promise<void> {
       if (workflow.description) {
         servicesContext += `Workflow Description: ${workflow.description}\n`;
       }
-      if (workflow.detailedSteps) {
-        servicesContext += `Workflow Detailed Steps (Instructions):\n${workflow.detailedSteps}\n\n`;
+      if (workflow.detailedSteps && workflow.detailedSteps.length > 0) {
+        servicesContext += `Workflow Detailed Steps (Instructions):\n${workflow.detailedSteps.join("\n")}\n\n`;
       }
     }
 
