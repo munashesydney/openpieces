@@ -50,5 +50,17 @@ if [ -f "/app/pieces-seed/AGENTS.md" ]; then
   echo "✅ AGENTS.md seeded successfully"
 fi
 
+# =============================================================================
+# Ensure pieces volume is writable by the production nextjs user
+# (the runner stage creates user nextjs:nodejs with UID 1001).
+# Named Docker volumes are created as root, so the app would fail
+# with EACCES when writing service code (e.g. pulling from Hub).
+# =============================================================================
+if id "nextjs" >/dev/null 2>&1; then
+  echo "🔧 Ensuring pieces volume ownership for nextjs user..."
+  chown -R nextjs:nodejs /app/pieces
+  echo "✅ Pieces volume ownership set to nextjs:nodejs"
+fi
+
 # Hand off to the intended command (CMD)
 exec "$@"
