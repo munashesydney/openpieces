@@ -1,5 +1,7 @@
-import { notFound } from "next/navigation";
 import { requireWorkspaceOwner } from "../../../lib/services/auth.service";
+import { getWorkspaceChatLimitInfo } from "../../../lib/services/workspace-settings.service";
+import { ChatLimitBanner } from "../../../components/layout/chat-limit-banner";
+import { resetChatLimitAction } from "./actions";
 
 export default async function WorkspaceLayout(props: {
   children: React.ReactNode;
@@ -10,6 +12,20 @@ export default async function WorkspaceLayout(props: {
   const { workspaceId } = await props.params;
   await requireWorkspaceOwner(workspaceId);
 
-  // If secure, render nested content (Personal, Settings, etc.)
-  return <>{props.children}</>;
+  const { used, limit, isOverLimit } =
+    await getWorkspaceChatLimitInfo(workspaceId);
+
+  return (
+    <>
+      {isOverLimit && (
+        <ChatLimitBanner
+          isOverLimit={isOverLimit}
+          used={used}
+          limit={limit}
+          onReset={resetChatLimitAction.bind(null, workspaceId)}
+        />
+      )}
+      {props.children}
+    </>
+  );
 }

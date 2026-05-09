@@ -43,6 +43,13 @@
       "when": 1778273864888,
       "tag": "0005_tricky_expediter",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1778293668792,
+      "tag": "0006_funny_purifiers",
+      "breakpoints": true
     }
   ]
 }

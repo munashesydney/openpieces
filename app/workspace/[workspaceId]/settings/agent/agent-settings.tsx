@@ -16,15 +16,18 @@ type AgentSettingsProps = {
   workspaceId: string;
   initialAgentName: string;
   initialUserNickname: string;
+  initialChatLimit: number;
 };
 
 export function AgentSettings({
   workspaceId,
   initialAgentName,
   initialUserNickname,
+  initialChatLimit,
 }: AgentSettingsProps) {
   const [agentName, setAgentName] = useState(initialAgentName);
   const [userNickname, setUserNickname] = useState(initialUserNickname);
+  const [chatLimit, setChatLimit] = useState(initialChatLimit);
   const [formError, setFormError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
@@ -35,6 +38,7 @@ export function AgentSettings({
     const formData = new FormData();
     formData.set("agentName", agentName);
     formData.set("userNickname", userNickname);
+    formData.set("chatLimit", String(chatLimit));
 
     startTransition(async () => {
       const result = await updateAgentSettingsAction(workspaceId, formData);
@@ -80,6 +84,17 @@ export function AgentSettings({
                 required
               />
 
+              <Input
+                type="number"
+                label="Max chats per day"
+                min={0}
+                value={chatLimit}
+                onChange={(e) => {
+                  const v = parseInt(e.target.value, 10);
+                  setChatLimit(isNaN(v) ? 0 : v);
+                }}
+              />
+
               {formError && (
                 <div className="rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-500">
                   {formError}
@@ -93,6 +108,7 @@ export function AgentSettings({
                   onClick={() => {
                     setAgentName(initialAgentName);
                     setUserNickname(initialUserNickname);
+                    setChatLimit(initialChatLimit);
                   }}
                 >
                   Reset

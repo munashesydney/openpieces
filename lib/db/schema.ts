@@ -413,6 +413,8 @@ export const workspaceSettings = pgTable("workspace_settings", {
     .notNull()
     .default("deepseek/deepseek-v3.2"),
   timezone: text("timezone").notNull().default("UTC"),
+  dailyChatLimit: integer("daily_chat_limit").notNull().default(100),
+  chatLimitResetAt: timestamp("chat_limit_reset_at"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });

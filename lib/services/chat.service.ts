@@ -38,7 +38,10 @@ import {
 } from "@/lib/db/schema";
 import { createTools } from "@/lib/tools/registry";
 import { isValidUuid } from "@/lib/utils/uuid";
-import { getWorkspaceSettings } from "@/lib/services/workspace-settings.service";
+import {
+  getWorkspaceChatLimitInfo,
+  getWorkspaceSettings,
+} from "@/lib/services/workspace-settings.service";
 import { updateWorkflowExecutionByChatId } from "@/lib/services/workflow-execution.service";
 import { getChatAbortController } from "@/lib/workers/chat-controller";
 
@@ -255,6 +258,16 @@ export async function createAiChat(
   data: Pick<NewAiChat, "workspaceId" | "userId">,
   agentType: string = "orchestrator",
 ) {
+  // ── Daily chat limit check ───────────────────────────────────────────────
+  const { used, limit } = await getWorkspaceChatLimitInfo(data.workspaceId);
+  if (used >= limit) {
+    throw new Error(
+      `Daily chat limit reached (${used}/${limit}). ` +
+        `Reset the counter from the workspace to continue.`,
+    );
+  }
+  // ─────────────────────────────────────────────────────────────────────────
+
   const settings = await getWorkspaceSettings(data.workspaceId);
   const model = settings?.defaultModel ?? DEFAULT_MODEL;
 
