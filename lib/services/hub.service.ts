@@ -138,29 +138,66 @@ export async function pushPiece(
   hubUpdatedAt?: string;
   hubPieceId?: string;
 }> {
-  const formData = new FormData();
-  formData.append("title", data.title);
-  formData.append("description", data.description);
-  if (data.category) formData.append("category", data.category);
-  formData.append(
-    "file",
-    new Blob([new Uint8Array(data.zipBuffer)], { type: "application/zip" }),
-    data.filename,
+  // ── Step 1: Get presigned upload URL from hub ──
+  const uploadUrlRes = await fetch(
+    `${serverUrl()}/api/v1/oauth/pieces/upload-url`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ title: data.title }),
+    },
   );
+
+  if (!uploadUrlRes.ok) {
+    const err = (await uploadUrlRes.json().catch(() => ({}))) as {
+      error?: string;
+    };
+    return { ok: false, error: err.error ?? "Failed to get upload URL" };
+  }
+
+  const { uploadUrl, storageKey } = (await uploadUrlRes.json()) as {
+    uploadUrl: string;
+    storageKey: string;
+    publicUrl: string;
+  };
+
+  // ── Step 2: Upload zip directly to R2 ─────────
+  const putRes = await fetch(uploadUrl, {
+    method: "PUT",
+    headers: { "Content-Type": "application/zip" },
+    body: new Uint8Array(data.zipBuffer),
+  });
+
+  if (!putRes.ok) {
+    return { ok: false, error: "Failed to upload piece to storage" };
+  }
+
+  // ── Step 3: Register piece metadata on hub ────
+  const registerForm = new FormData();
+  registerForm.append("title", data.title);
+  registerForm.append("description", data.description);
+  if (data.category) registerForm.append("category", data.category);
+  registerForm.append("storageKey", storageKey);
   if (data.endpoints) {
-    formData.append("endpoints", JSON.stringify(data.endpoints));
+    registerForm.append("endpoints", JSON.stringify(data.endpoints));
   }
   if (data.requiredSecrets) {
-    formData.append("requiredSecrets", JSON.stringify(data.requiredSecrets));
+    registerForm.append(
+      "requiredSecrets",
+      JSON.stringify(data.requiredSecrets),
+    );
   }
   if (data.pieceId) {
-    formData.append("pieceId", data.pieceId);
+    registerForm.append("pieceId", data.pieceId);
   }
 
   const res = await fetch(`${serverUrl()}/api/v1/oauth/pieces`, {
     method: "POST",
     headers: { Authorization: `Bearer ${token}` },
-    body: formData,
+    body: registerForm,
   });
 
   if (!res.ok) {
