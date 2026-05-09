@@ -14,9 +14,9 @@ import { db } from "@/lib/db";
 import { aiChats } from "@/lib/db/schema";
 import { eq, and } from "drizzle-orm";
 
-export type SendAiMessageActionResult = {
-  chat: AiChatListItem;
-};
+export type SendAiMessageActionResult =
+  | { chat: AiChatListItem }
+  | { error: string };
 
 export async function sendAiMessageAction(
   workspaceId: string,
@@ -31,41 +31,47 @@ export async function sendAiMessageAction(
 
   const { user } = await requireWorkspaceOwner(workspaceId);
 
-  let effectiveChatId = chatId;
-  if (effectiveChatId) {
-    const existingChat = await getAiChatRecordById(effectiveChatId, user.id);
-    if (!existingChat) {
-      throw new Error("Chat not found.");
+  try {
+    let effectiveChatId = chatId;
+    if (effectiveChatId) {
+      const existingChat = await getAiChatRecordById(effectiveChatId, user.id);
+      if (!existingChat) {
+        return { error: "Chat not found." };
+      }
+    } else {
+      const chat = await createAiChat(
+        {
+          workspaceId,
+          userId: user.id,
+        },
+        "orchestrator",
+      );
+      effectiveChatId = chat.id;
     }
-  } else {
-    const chat = await createAiChat(
-      {
-        workspaceId,
-        userId: user.id,
-      },
-      "orchestrator",
-    );
-    effectiveChatId = chat.id;
+
+    await appendUserMessageAndMarkPending({
+      chatId: effectiveChatId,
+      content: trimmedContent,
+    });
+
+    await enqueueChatExecution({
+      chatId: effectiveChatId,
+      workspaceId,
+      userId: user.id,
+      mode,
+    });
+
+    const chat = await getAiChatById(effectiveChatId, user.id);
+    if (!chat) {
+      return { error: "Chat not found." };
+    }
+
+    return { chat };
+  } catch (err) {
+    const message =
+      err instanceof Error ? err.message : "Something went wrong.";
+    return { error: message };
   }
-
-  await appendUserMessageAndMarkPending({
-    chatId: effectiveChatId,
-    content: trimmedContent,
-  });
-
-  await enqueueChatExecution({
-    chatId: effectiveChatId,
-    workspaceId,
-    userId: user.id,
-    mode,
-  });
-
-  const chat = await getAiChatById(effectiveChatId, user.id);
-  if (!chat) {
-    throw new Error("Chat not found.");
-  }
-
-  return { chat };
 }
 
 export async function updateWorkspaceModelAction(

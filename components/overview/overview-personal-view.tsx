@@ -314,14 +314,52 @@ export function OverviewPersonalView({
     }
 
     try {
-      const { chat } = await sendMessageAction(currentChatId, text, mode);
+      const result = await sendMessageAction(currentChatId, text, mode);
+
+      if ("error" in result) {
+        if (currentChatId) {
+          setChats((currentChats) =>
+            currentChats.map((c) =>
+              c.id === currentChatId
+                ? { ...c, status: "failed" as const, error: result.error }
+                : c,
+            ),
+          );
+          // Remove the optimistic assistant bubble
+          setMessages((currentMessages) => ({
+            ...currentMessages,
+            [currentChatId]: (currentMessages[currentChatId] ?? []).slice(
+              0,
+              -1,
+            ),
+          }));
+        } else {
+          // New chat that failed — create a placeholder so the error banner renders
+          const failedId = crypto.randomUUID();
+          const failedChat: Chat = {
+            id: failedId,
+            title: text.slice(0, 48) || "New chat",
+            status: "failed" as const,
+            error: result.error,
+            model: null,
+          };
+          setChats((currentChats) => [failedChat, ...currentChats]);
+          setSelectedChatId(failedId);
+          setMessages((currentMessages) => ({
+            ...currentMessages,
+            [failedId]: [optimisticMessage],
+          }));
+        }
+        return;
+      }
+
+      const { chat } = result;
       const mappedChat = mapChat(chat);
 
       setChats((currentChats) => upsertChat(currentChats, mappedChat));
       setSelectedChatId(chat.id);
 
       if (!currentChatId) {
-        // Add the optimistic messages immediately so the thinking UI shows right away
         setMessages((currentMessages) => ({
           ...currentMessages,
           [chat.id]: [optimisticMessage, optimisticAssistant],
