@@ -34,7 +34,7 @@ Deno.serve({ port }, async (req) => {
 
 ## Rules
 
-- **Read port from `Deno.args[0]`** — never hardcode a fallback port. Multiple services run concurrently and each needs a unique port.
+- **Read port from `Deno.args[0]` by default**, but **always follow the user's explicit spec if they ask for something different** (e.g. `Deno.env.get("PORT")` or a fallback like `parseInt(Deno.args[0]) ?? 8000`). Multiple services run concurrently and each needs a unique port, so `Deno.args[0]` is the standard — but the user's requirement takes precedence.
 - **Include `/health`** — mandatory for all services. Returns `{ status: "ok" }` with JSON content-type.
 - **Wrap every async route handler in try/catch** — uncaught rejections crash the service.
 - **Return structured JSON errors** — `{ error: "description" }` with appropriate HTTP status codes.

@@ -50,12 +50,16 @@ Insert this at the top of `<head>` in every page:
     }
   }
   if (!p.endsWith('/')) p += '/';
-  document.write('<base href="' + p + '">');
+  var base = document.createElement('base');
+  base.href = p;
+  document.head.appendChild(base);
 })();
 </script>
 ```
 
 The `<base>` tag tells the browser to resolve ALL relative URLs (links, fetch, form actions, window.location) against this base.
+
+**Always use `document.createElement('base')` + `appendChild` — never `document.write`.** `document.write` is blocked by Content-Security-Policy headers, only works during the initial HTML parse, and is deprecated in modern web standards. The `createElement` approach is robust and always works.
 
 ### Generic base computation pattern
 
@@ -77,21 +81,21 @@ The pattern is always: take `location.pathname`, strip the page-specific suffix,
 **Root page** (no suffix to strip):
 ```html
 <script>
-(function(){var p=location.pathname;if(!p.endsWith('/'))p+='/';document.write('<base href="'+p+'">')})();
+(function(){var p=location.pathname;if(!p.endsWith('/'))p+='/';var b=document.createElement('base');b.href=p;document.head.appendChild(b);})();
 </script>
 ```
 
 **Single-segment page** (strip one path segment):
 ```html
 <script>
-(function(){var p=location.pathname;if(p.endsWith('/route-name'))p=p.slice(0,-('/route-name'.length));if(!p.endsWith('/'))p+='/';document.write('<base href="'+p+'">')})();
+(function(){var p=location.pathname;if(p.endsWith('/route-name'))p=p.slice(0,-('/route-name'.length));if(!p.endsWith('/'))p+='/';var b=document.createElement('base');b.href=p;document.head.appendChild(b);})();
 </script>
 ```
 
 **Multi-segment page** (strip nested path, check longest first):
 ```html
 <script>
-(function(){var p=location.pathname;var suffixes=['/route/sub-page','/route'];for(var i=0;i<suffixes.length;i++){if(p.endsWith(suffixes[i])){p=p.substring(0,p.length-suffixes[i].length);break;}}if(!p.endsWith('/'))p+='/';document.write('<base href="'+p+'">')})();
+(function(){var p=location.pathname;var suffixes=['/route/sub-page','/route'];for(var i=0;i<suffixes.length;i++){if(p.endsWith(suffixes[i])){p=p.substring(0,p.length-suffixes[i].length);break;}}if(!p.endsWith('/'))p+='/';var b=document.createElement('base');b.href=p;document.head.appendChild(b);})();
 </script>
 ```
 
@@ -99,22 +103,25 @@ The pattern is always: take `location.pathname`, strip the page-specific suffix,
 
 ## Linking rules
 
-Once `<base href="/api/s/ID/">` is set, use only **bare names** or `./` in `<a href>`, `fetch()`, and `window.location.href`:
+Once `<base href="/api/s/ID/">` is set, use the `./` prefix for ALL relative URLs. The `./` prefix is safer: if the `<base>` tag is somehow missing or malformed, `./images/4` is more likely to resolve correctly than bare `images/4`.
 
 | Target | Use this |
 |---|---|
-| Sub-page (e.g., online) | `<a href="online">` or `<a href="./online">` |
-| Another sub-page (e.g., play-ai) | `<a href="play-ai">` |
+| Sub-page (e.g., online) | `<a href="./online">` |
+| Another sub-page (e.g., play-ai) | `<a href="./play-ai">` |
 | Back to root / lobby | `<a href="./">` |
 | API endpoint | `fetch('./api/create-room', ...)` |
-| Redirect to sub-page | `window.location.href = 'online/play?room=' + code` |
-| Navigate to sibling | `<a href="other-page">` |
+| Navigate to sibling | `<a href="./other-page">` |
+| Image source | `<img src="./images/4">` |
+| Form action | `<form action="./submit" method="POST">` |
+| Static asset (CSS) | `<link rel="stylesheet" href="./static/style.css">` |
+| Static asset (JS) | `<script src="./static/app.js">` |
 
 **Key insight:** after `<base href="/api/s/ID/">` is set:
-- `online` → `/api/s/ID/online`
 - `./online` → `/api/s/ID/online`
 - `./api/create-room` → `/api/s/ID/api/create-room`
 - `./` → `/api/s/ID/`
+- `./images/4` → `/api/s/ID/images/4`
 
 **What NOT to use:**
 - ❌ Absolute paths starting with `/` — `/play-ai` resolves to `https://host/play-ai`, skipping the proxy prefix
@@ -122,33 +129,51 @@ Once `<base href="/api/s/ID/">` is set, use only **bare names** or `./` in `<a h
 
 ---
 
-## Redirect `Location` headers (⚠️ not resolved against `<base>`)
+## ⚠️ Navigation & Redirects — Use JS, NOT server-side 302
 
-`<base>` tags affect `<a href>`, `<form action>`, `fetch()`, and `window.location` — but **NOT** HTTP `Location` headers from a server redirect (3xx response).
+**Server-side redirects (`Location` headers on 3xx responses) are inherently fragile in proxy environments** and should be avoided. `Location` headers are **not** resolved against the `<base>` tag — the browser resolves them against the raw request URL instead.
 
-When your service returns a 302 with `Location: ./route/page`, the browser resolves it against the **current request URL**, not the `<base>` tag. If `route` is already part of the current path, it gets duplicated:
+If you need to redirect after an action (e.g., form submission, login, navigation), use client-side JavaScript:
 
-| Request URL | `Location` header | Browser resolves to | Why? |
+### Correct: JS fetch + client-side navigation
+
+```js
+// Submit form data via fetch, then navigate client-side
+var res = await fetch('./api/submit', {
+  method: 'POST',
+  headers: { 'content-type': 'application/json' },
+  body: JSON.stringify({ /* form data */ })
+});
+
+if (res.ok) {
+  window.location.href = './dashboard';  // resolved against <base> — correct
+}
+```
+
+### Correct: JS fetch + reload current page
+
+```js
+var res = await fetch('./api/action', { method: 'POST', body: formData });
+if (res.ok) {
+  window.location.reload();
+}
+```
+
+### When you truly must use a `Location` header (rare)
+
+If you have **no choice** but to return a 302 (e.g., external OAuth redirects), the `Location` header resolves against the **raw request URL** (not `<base>`). The browser strips the last segment before resolving, so the danger is repeating directory names already in the current path. Use just the page name:
+
+| Current URL path | Want | Correct | Wrong |
 |---|---|---|---|
-| `/api/s/ID/route/login` | `./route/dashboard` | `/api/s/ID/route/route/dashboard` | ❌ `./route/` appends another `route/` |
-| `/api/s/ID/route/login` | `dashboard` | `/api/s/ID/route/dashboard` | ✅ just the page name |
-| `/api/s/ID/route/dashboard` | `./route/login` | `/api/s/ID/route/route/login` | ❌ same duplication |
-| `/api/s/ID/route/dashboard` | `login` | `/api/s/ID/route/login` | ✅ |
-| `/api/s/ID/route/dashboard` | `./` | `/api/s/ID/route/` | ❌ stays inside `route/` |
-| `/api/s/ID/route/dashboard` | `../` | `/api/s/ID/` | ✅ one level up, back to root |
+| `.../route/login` | `.../route/dashboard` | `dashboard` | `./route/dashboard` duplicates `route/` ❌ |
+| `.../route/dashboard` | `.../route/settings` | `settings` | `./route/settings` duplicates `route/` ❌ |
+| `.../route/dashboard` | `.../` (root) | `../` | `./` stays inside `route/` ❌ |
 
-### Rule of thumb
+**Think of the raw request path as a folder.** You're already in `route/` — just say `dashboard`, don't say `./route/dashboard`.
 
-In a `Location` header, **use only the page/resource name, not `./parent/` prefix**. If the target is at the same level as the current page, just name it directly.
+But again: **prefer JS fetch + `location.href`** instead. It's simpler, works every time, and needs no mental model of how browsers resolve `Location` headers against raw request URLs.
 
-| If current page is | And you want to redirect to | Use | Not |
-|---|---|---|---|
-| `.../route/login` | `.../route/dashboard` | `dashboard` | `./route/dashboard` |
-| `.../route/dashboard` | `.../route/settings` | `settings` | `./route/settings` |
-| `.../route/dashboard` | `.../` (root) | `../` | `./` |
-| `.../sub/dashboard` | `.../route/home` | `../route/home` | `./sub/../route/home` |
-
-**Think of it like files in a folder:** if you're in `/route/` and want `/route/dashboard`, just say `dashboard` — not `./route/dashboard` which repeats the folder name.
+---
 
 ## WebSocket limitation
 
@@ -194,11 +219,12 @@ await fetch('./api/move', {
 
 Static assets (CSS, JS, images) should be served from the service itself, not from external CDNs (which may be blocked in restricted networks). Place assets in a `static/` directory and serve them with proper Content-Type headers via the `${publicUrl}/static/...` path.
 
-However, in HTML pages, reference them with relative paths resolved against the `<base>`:
+In HTML pages, reference them with the `./` prefix resolved against the `<base>`:
 
 ```html
-<link rel="stylesheet" href="static/style.css">
-<script src="static/app.js"></script>
+<link rel="stylesheet" href="./static/style.css">
+<script src="./static/app.js"></script>
+<img src="./static/logo.png" alt="Logo">
 ```
 
 These resolve to `/api/s/ID/static/style.css` via the `<base>` tag — no server-side injection needed.
@@ -212,3 +238,4 @@ These resolve to `/api/s/ID/static/style.css` via the `<base>` tag — no server
 - ❌ **Do NOT use WebSocket** — the proxy's `fetch()` cannot upgrade connections
 - ❌ **Do NOT use absolute paths starting with `/`** — `/play-ai` resolves to `https://host/play-ai`, skipping the entire proxy prefix
 - ❌ **Do NOT hardcode service IDs in URLs** — they change between environments; always rely on the `<base>` tag computed from `location.pathname`
+- ❌ **Do NOT use server-side `Location` header redirects** — use JS `fetch()` + `window.location.href` instead
