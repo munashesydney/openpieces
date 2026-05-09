@@ -106,9 +106,9 @@ export function AgentSettings({
                   variant="ghost"
                   type="button"
                   onClick={() => {
-                    setAgentName(initialAgentName);
-                    setUserNickname(initialUserNickname);
-                    setChatLimit(initialChatLimit);
+                    setAgentName("Assistant");
+                    setUserNickname("User");
+                    setChatLimit(100);
                   }}
                 >
                   Reset
