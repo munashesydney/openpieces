@@ -195,6 +195,7 @@ import {
   downloadPieceZip,
 } from "@/lib/services/hub.service";
 import {
+  createService,
   downloadServiceCode,
   writeServiceCode,
   updateServiceMetadata,
@@ -410,6 +411,67 @@ export async function pullFromHubAction(
     }
   }
 
+  revalidatePath(`/workspace/${workspaceId}/personal/services/${serviceId}`);
+  return { success: true };
+}
+
+export async function forkServiceLocallyAction(
+  workspaceId: string,
+  serviceId: string,
+): Promise<ActionResult> {
+  await requireWorkspaceOwner(workspaceId);
+
+  const service = await getServiceById(serviceId, workspaceId);
+  if (!service) return { error: "Service not found" };
+
+  // Generate a unique directory slug for the fork
+  const baseSlug = service.directory?.split("/").pop() || "service";
+  const forkSlug = `${baseSlug}-copy-${Date.now().toString(36)}`;
+
+  // Create the forked service record (this also creates the directory on disk)
+  const newService = await createService({
+    workspaceId,
+    title: `${service.title} - Copy`,
+    description: service.description,
+    type: service.type,
+    directory: forkSlug,
+    workflowId: service.workflowId,
+  });
+
+  // Copy files from the original service directory to the new one
+  try {
+    const zipBuffer = await downloadServiceCode(serviceId, workspaceId);
+    await writeServiceCode(newService.directory!, zipBuffer);
+  } catch (err) {
+    // Clean up the new service record on failure
+    const { deleteService } = await import("@/lib/services/service.service");
+    await deleteService(newService.id, workspaceId).catch(() => {});
+    return { error: `Failed to copy service code: ${(err as Error).message}` };
+  }
+
+  // Copy endpoints
+  const endpoints = await getEndpointsByServiceId(serviceId, workspaceId);
+  await Promise.all(
+    endpoints.map((ep) =>
+      createEndpoint({
+        serviceId: newService.id,
+        method: ep.method,
+        path: ep.path,
+        description: ep.description,
+        inputSchema: (ep.inputSchema ?? {}) as Record<string, unknown>,
+      }),
+    ),
+  );
+
+  // Copy required secrets (silently skip any that don't exist in workspace)
+  const secrets = await getRequiredSecrets(serviceId);
+  await Promise.all(
+    secrets.map((s) =>
+      addRequiredSecret(newService.id, s.secretKey).catch(() => {}),
+    ),
+  );
+
+  revalidatePath(`/workspace/${workspaceId}/personal/services`);
   revalidatePath(`/workspace/${workspaceId}/personal/services/${serviceId}`);
   return { success: true };
 }

@@ -37,6 +37,7 @@ import { ActionMenu } from "@/components/basic/input/action-menu";
 import { ServiceLogsPanel } from "./service-logs-panel";
 import { PushToHubButton } from "./push-to-hub-button";
 import { PullFromHubButton } from "./pull-from-hub-button";
+import { ForkServiceButton } from "./fork-service-button";
 import { HubBadge } from "./hub-badge";
 import {
   type Service,
@@ -274,6 +275,10 @@ export function ServiceDetail({
             </div>
             <div className="shrink-0 flex items-center gap-3">
               <PushToHubButton
+                workspaceId={workspaceId}
+                serviceId={service.id}
+              />
+              <ForkServiceButton
                 workspaceId={workspaceId}
                 serviceId={service.id}
               />
