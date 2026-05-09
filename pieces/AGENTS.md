@@ -54,6 +54,7 @@ Skills live in `.opencode/skills/<name>/SKILL.md` relative to the pieces root. R
 | `endpoint-registry` | After writing every route handler (except /health) — register endpoints with JSON Schema |
 | `trigger-notifications` | Only for trigger services — the `notifyEventsAi` helper, message format, chatId |
 | `service-types` | At the start to understand the pattern — trigger vs action vs web UI |
+| `pieceignore` | When adding large dependencies or data files — controls what gets pushed to the hub via .pieceignore |
 | `code-standards` | Every service — error handling, logging, graceful shutdown, TypeScript discipline |
 
 ---

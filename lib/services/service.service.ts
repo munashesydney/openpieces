@@ -1,5 +1,5 @@
 import { eq, and, count, sql } from "drizzle-orm";
-import { rm, readdir, mkdir, writeFile } from "fs/promises";
+import { rm, readdir, mkdir, writeFile, readFile } from "fs/promises";
 import path from "path";
 import { existsSync } from "fs";
 import archiver from "archiver";
@@ -16,6 +16,174 @@ import { ValidationError } from "../errors/validation-error";
 import { getBaseUrl, buildServiceUrl } from "../utils/url";
 import { readServiceLogTail } from "./service-log-stream";
 import { getWorkspaceOwnerId } from "./workspace.service";
+
+// ── .pieceignore ──────────────────────────────
+
+const PIECEIGNORE_DEFAULTS = `# Dependencies
+node_modules/
+
+# Build output
+dist/
+build/
+.next/
+
+# Logs
+logs/
+*.log
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Data files (large binaries)
+data/
+*.db
+*.sqlite
+*.sqlite3
+
+# Test files
+__tests__/
+*.test.ts
+*.test.js
+*.spec.ts
+*.spec.js
+
+# Git
+.git/
+.gitignore
+.pieceignore
+`;
+
+/**
+ * Create the piece directory and write a default .pieceignore file
+ * if one doesn't already exist.
+ */
+export async function ensurePieceIgnore(directory: string): Promise<void> {
+  const piecesDir = path.join(process.cwd(), "pieces", directory.trim());
+  await mkdir(piecesDir, { recursive: true });
+
+  const ignorePath = path.join(piecesDir, ".pieceignore");
+  if (!existsSync(ignorePath)) {
+    await writeFile(ignorePath, PIECEIGNORE_DEFAULTS, "utf-8");
+  }
+}
+
+// ── .pieceignore pattern matching ─────────────
+
+interface PieceignoreRule {
+  regex: RegExp;
+  negate: boolean;
+  directoryOnly: boolean;
+}
+
+function globPartToRegex(part: string): string {
+  if (part === "**") return ".*";
+
+  let regex = "";
+  let i = 0;
+  while (i < part.length) {
+    const ch = part[i];
+    if (ch === "*" && part[i + 1] === "*") {
+      regex += ".*";
+      i += 2;
+    } else if (ch === "*") {
+      regex += "[^/]*";
+      i++;
+    } else if (ch === "?") {
+      regex += "[^/]";
+      i++;
+    } else if (".+^${}()|[]\\".includes(ch)) {
+      regex += "\\" + ch;
+      i++;
+    } else {
+      regex += ch;
+      i++;
+    }
+  }
+  return regex;
+}
+
+function parsePieceignore(content: string): PieceignoreRule[] {
+  const rules: PieceignoreRule[] = [];
+  const lines = content.split("\n");
+
+  for (const line of lines) {
+    let trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith("#")) continue;
+
+    const negate = trimmed.startsWith("!");
+    if (negate) trimmed = trimmed.slice(1).trim();
+    if (!trimmed) continue;
+
+    const directoryOnly = trimmed.endsWith("/");
+    if (directoryOnly) trimmed = trimmed.slice(0, -1);
+
+    const anchored = trimmed.startsWith("/");
+    if (anchored) trimmed = trimmed.slice(1);
+
+    let regexStr = "";
+    if (anchored || trimmed.includes("/")) {
+      regexStr = "^";
+    } else {
+      regexStr = "(^|.*/)";
+    }
+
+    const parts = trimmed.split("/");
+    for (let j = 0; j < parts.length; j++) {
+      if (j > 0) regexStr += "/";
+      regexStr += globPartToRegex(parts[j]);
+    }
+
+    if (directoryOnly) {
+      regexStr += "(/.*)?$";
+    } else {
+      regexStr += "$";
+    }
+
+    rules.push({ regex: new RegExp(regexStr), negate, directoryOnly });
+  }
+
+  return rules;
+}
+
+function isIgnored(
+  relativePath: string,
+  isDirectory: boolean,
+  rules: PieceignoreRule[],
+): boolean {
+  let excluded = false;
+  for (const rule of rules) {
+    if (rule.directoryOnly && !isDirectory) continue;
+    if (rule.regex.test(relativePath)) {
+      excluded = !rule.negate;
+    }
+  }
+  return excluded;
+}
+
+async function loadPieceignoreRules(
+  piecesDir: string,
+): Promise<PieceignoreRule[]> {
+  const ignorePath = path.join(piecesDir, ".pieceignore");
+  try {
+    const content = await readFile(ignorePath, "utf-8");
+    return parsePieceignore(content);
+  } catch {
+    // No .pieceignore file — parse defaults so behaviour is consistent
+    return parsePieceignore(PIECEIGNORE_DEFAULTS);
+  }
+}
 
 const VALID_SERVICE_TYPES = ["trigger", "action"] as const;
 
@@ -114,6 +282,12 @@ export async function createService(data: NewService): Promise<Service> {
     .insert(services)
     .values({ ...data, directory: directoryValue })
     .returning();
+
+  // Seed .pieceignore so the piece starts with sensible push exclusions
+  await ensurePieceIgnore(directoryValue).catch(() => {
+    // Non-critical — don't fail service creation if this errors
+  });
+
   return result[0];
 }
 
@@ -362,26 +536,21 @@ async function walkDirectory(
   basePath: string,
 ): Promise<{ filePath: string; absolutePath: string }[]> {
   const results: { filePath: string; absolutePath: string }[] = [];
+  const rules = await loadPieceignoreRules(dirPath);
 
   async function walk(currentPath: string) {
     const entries = await readdir(currentPath, { withFileTypes: true });
     for (const entry of entries) {
       const fullPath = path.join(currentPath, entry.name);
+      const relativePath = path.relative(basePath, fullPath);
 
-      // Skip hidden files/directories, node_modules, logs, and .git
-      if (
-        entry.name.startsWith(".") ||
-        entry.name === "node_modules" ||
-        entry.name === "logs"
-      ) {
+      if (isIgnored(relativePath, entry.isDirectory(), rules)) {
         continue;
       }
 
       if (entry.isDirectory()) {
         await walk(fullPath);
       } else if (entry.isFile()) {
-        // Store relative path from basePath
-        const relativePath = path.relative(basePath, fullPath);
         results.push({ filePath: relativePath, absolutePath: fullPath });
       }
     }
@@ -474,6 +643,11 @@ export async function writeServiceCode(
   // Extract ZIP
   const zip = new AdmZip(zipBuffer);
   zip.extractAllTo(piecesDir, true /* overwrite */);
+
+  // Seed .pieceignore if the pulled piece didn't include one
+  await ensurePieceIgnore(directory).catch(() => {
+    // Non-critical
+  });
 }
 
 // ── Update service metadata ───────────────────
