@@ -1,0 +1,36 @@
+# ──────────────────────────────────────────────────────────────
+# OpenPieces Caddy Edge Proxy
+# ──────────────────────────────────────────────────────────────
+# This is the static bootstrap config.  Dynamic service routes are
+# pushed / removed at runtime by the worker via the admin API
+# (http://caddy:2019).  Do not edit service routes here.
+#
+# Environment variables expected at runtime:
+#   APP_DOMAIN  – hostname of the Next.js app (e.g. app.example.com)
+#   APP_PORT    – internal port the Next.js app listens on (default 3141)
+# ──────────────────────────────────────────────────────────────
+
+{
+	# Expose admin API on all interfaces so the worker container can
+	# push / delete service routes.  Port 2019 is NOT mapped to the
+	# host – it is only reachable inside the Docker network.
+	admin 0.0.0.0:2019 {
+		origins http://worker
+	}
+
+	# Uncomment the block below + provide DNS provider credentials
+	# when you are ready for production wildcard TLS certificates.
+	# Caddy will use its internal CA (self-signed) otherwise.
+	#
+	# acme_dns cloudflare {env.CLOUDFLARE_API_TOKEN}
+	# or:
+	# acme_dns route53 {env.AWS_ACCESS_KEY_ID} {env.AWS_SECRET_ACCESS_KEY}
+}
+
+# ── Main Next.js app ──────────────────────────────────────────
+# This catch-all handles the primary domain.  Service subdomain
+# routes are inserted *before* this by the admin API and take
+# priority because Caddy matches routes in order.
+{$APP_DOMAIN:localhost} {
+	reverse_proxy app:{$APP_PORT:3141}
+}

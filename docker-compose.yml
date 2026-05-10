@@ -2,7 +2,8 @@
 # Production — standalone Next.js build, no source mounts, restart policies
 #
 # Usage:
-#   docker compose -f docker-compose.prod.yml up -d
+#   docker compose up -d                    # without edge proxy
+#   docker compose --profile edge up -d     # with Caddy edge proxy
 #
 # Requirements:
 #   - All env vars set in .env or injected by your platform
@@ -33,6 +34,8 @@ services:
       - OPENPIECES_HUB_REDIRECT_URI=${NEXT_PUBLIC_APP_URL}/api/hub/callback
       - OPENPIECES_INTERNAL_URL=${OPENPIECES_INTERNAL_URL:-http://app:${APP_PORT:-3141}}
       - AI_GATEWAY_API_KEY=${AI_GATEWAY_API_KEY}
+      - CADDY_ADMIN_URL=${CADDY_ADMIN_URL:-http://caddy:2019}
+      - SERVICE_DOMAIN=${SERVICE_DOMAIN:-}
     env_file:
       - .env
     depends_on:
@@ -63,12 +66,18 @@ services:
       - .env
     volumes:
       - pieces:/app/pieces
+    # Expose the Deno service port range on the internal Docker network
+    # so Caddy can reach services directly at worker:{port}.
+    expose:
+      - "8001-9000"
     environment:
       - NODE_ENV=production
       - DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
       - NEXT_PUBLIC_APP_URL=${NEXT_PUBLIC_APP_URL}
       - OPENPIECES_INTERNAL_URL=${OPENPIECES_INTERNAL_URL:-http://app:${APP_PORT:-3141}}
       - AI_GATEWAY_API_KEY=${AI_GATEWAY_API_KEY}
+      - CADDY_ADMIN_URL=${CADDY_ADMIN_URL:-http://caddy:2019}
+      - SERVICE_DOMAIN=${SERVICE_DOMAIN:-}
     depends_on:
       app:
         condition: service_healthy
@@ -138,7 +147,34 @@ services:
         max-size: "10m"
         max-file: "3"
 
+  # ── Caddy edge proxy (optional, use --profile edge) ─────────────
+  # Handles TLS termination and routes:
+  #   app.domain.com  → Next.js app
+  #   {id}.domain.com → worker:{port} (dynamic, managed by worker)
+  caddy:
+    image: caddy:2-alpine
+    profiles: ["edge"]
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp" # HTTP/3
+    volumes:
+      - ./caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    environment:
+      - APP_DOMAIN=${APP_DOMAIN:-localhost}
+      - APP_PORT=${APP_PORT:-3141}
+    restart: always
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
 volumes:
   pieces:
   postgres_data:
   opencode_data:
+  caddy_data:
+  caddy_config:

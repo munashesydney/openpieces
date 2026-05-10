@@ -23,6 +23,12 @@ import {
   resetServiceLog,
   readServiceLogTail,
 } from "@/lib/services/service-log-stream";
+import {
+  registerServiceRoute,
+  unregisterServiceRoute,
+  recoverAllRoutes,
+  buildServicePublicUrl,
+} from "@/lib/services/caddy.service";
 import { db } from "@/lib/db";
 import { services, type Service } from "@/lib/db/schema";
 
@@ -325,7 +331,7 @@ async function executeServiceSpawnJob(job: ServiceSpawnJob) {
         OPENPIECES_INTERNAL_URL:
           process.env.OPENPIECES_INTERNAL_URL ??
           `http://app:${process.env.APP_PORT ?? 3141}`,
-        OPENPIECES_SERVICE_PUBLIC_URL: `${process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3141"}/api/s/${serviceId}`,
+        OPENPIECES_SERVICE_PUBLIC_URL: buildServicePublicUrl(serviceId),
       },
     },
   );
@@ -405,6 +411,10 @@ async function executeServiceSpawnJob(job: ServiceSpawnJob) {
       "info",
       `Service is healthy on port ${port}`,
     );
+
+    // Register the subdomain → worker route with the edge proxy (Caddy).
+    // If Caddy is not running this is a no-op (logs a warning).
+    await registerServiceRoute(serviceId, port);
 
     // Spawn the QA AI agent to check health asynchronously after 30 seconds
     setTimeout(async () => {
@@ -607,6 +617,9 @@ async function executeServiceStopJob(job: ServiceStopJob) {
       status: "stopped",
     });
     await appendServiceLog(directory, "info", "Service stopped successfully");
+
+    // Remove the subdomain route from the edge proxy (Caddy).
+    await unregisterServiceRoute(serviceId);
   } catch (err) {
     const errorMessage = err instanceof Error ? err.message : "Unknown error";
     await appendServiceLog(
@@ -624,6 +637,9 @@ async function executeServiceStopJob(job: ServiceStopJob) {
       pid: null,
       status: "stopped",
     });
+
+    // Try to unregister the route anyway.
+    await unregisterServiceRoute(serviceId);
   }
 }
 
@@ -646,6 +662,16 @@ async function recoverAndStartAllServices() {
   }
 
   console.log("[service-worker] Service recovery complete");
+
+  // Re-register Caddy routes for services that are already running.
+  // (The spawn queue will re-register routes for restarted services,
+  // but this handles the window before those jobs process and the
+  // case where Caddy was restarted while services stayed up.)
+  const runningNow = await db
+    .select()
+    .from(services)
+    .where(eq(services.status, "running"));
+  await recoverAllRoutes(runningNow);
 }
 
 async function cleanupStuckDeployments() {

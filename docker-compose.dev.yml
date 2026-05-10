@@ -4,6 +4,9 @@
 # Start:
 #   docker compose -f docker-compose.dev.yml up --build
 #
+# With Caddy edge proxy:
+#   docker compose -f docker-compose.dev.yml --profile edge up --build
+#
 # With your own hosted Postgres instead:
 #   Remove the `db` service below and set DATABASE_URL in .env
 # =============================================================================
@@ -40,6 +43,8 @@ services:
       - OPENPIECES_INTERNAL_URL=${OPENPIECES_INTERNAL_URL:-http://app:${APP_PORT:-3141}}
       - OPENPIECES_HUB_REDIRECT_URI=${NEXT_PUBLIC_APP_URL}/api/hub/callback
       - AI_GATEWAY_API_KEY=${AI_GATEWAY_API_KEY}
+      - CADDY_ADMIN_URL=${CADDY_ADMIN_URL:-http://caddy:2019}
+      - SERVICE_DOMAIN=${SERVICE_DOMAIN:-}
     env_file:
       - .env
     depends_on:
@@ -74,12 +79,18 @@ services:
       - ./pieces:/app/pieces
     entrypoint: ["entrypoint.sh"]
     command: sh -c "node_modules/.bin/tsx scripts/ai-worker.ts"
+    # Expose the Deno service port range on the internal Docker network
+    # so Caddy can reach services directly at worker:{port}.
+    expose:
+      - "8001-9000"
     environment:
       - WATCHPACK_POLLING=true
       - DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
       - NEXT_PUBLIC_APP_URL=${NEXT_PUBLIC_APP_URL}
       - OPENPIECES_INTERNAL_URL=${OPENPIECES_INTERNAL_URL:-http://app:${APP_PORT:-3141}}
       - AI_GATEWAY_API_KEY=${AI_GATEWAY_API_KEY}
+      - CADDY_ADMIN_URL=${CADDY_ADMIN_URL:-http://caddy:2019}
+      - SERVICE_DOMAIN=${SERVICE_DOMAIN:-}
     env_file:
       - .env
     depends_on:
@@ -142,5 +153,32 @@ services:
       - OPENPIECES_INTERNAL_URL=${OPENPIECES_INTERNAL_URL:-http://app:${APP_PORT:-3141}}
       - OPENCODE_ENABLE_EXA=1
 
+  # ── Caddy edge proxy (optional, use --profile edge) ─────────────
+  # In dev, Caddy uses its internal CA (self-signed certs) since
+  # there is typically no public DNS pointing at localhost.
+  # Access services at http://{id}.localhost (HTTP) or
+  # https://{id}.localhost (self-signed, accept the cert warning).
+  caddy:
+    image: caddy:2-alpine
+    profiles: ["edge"]
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    environment:
+      - APP_DOMAIN=${APP_DOMAIN:-localhost}
+      - APP_PORT=${APP_PORT:-3141}
+    restart: unless-stopped
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "2"
+
 volumes:
   postgres_data:
+  caddy_data:
+  caddy_config:
