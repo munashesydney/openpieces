@@ -79,7 +79,7 @@ This starts all services with health checks and restart policies:
 
 Go to `http://localhost:3141/setup` to create your admin account.
 
-### 4. Subdomain routing (optional)
+### 4. Subdomain routing (required)
 
 Give each service its own origin at `https://{serviceId}.yourdomain.com` so links and assets resolve correctly without path-prefix tricks:
 

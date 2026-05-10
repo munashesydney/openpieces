@@ -2,7 +2,7 @@
 set -e
 
 # Required variables for the application
-required_vars="DATABASE_URL AUTH_SECRET SECRETS_ENCRYPTION_KEY INTERNAL_API_KEY OPENCODE_SERVER_PASSWORD AI_GATEWAY_API_KEY"
+required_vars="DATABASE_URL AUTH_SECRET SECRETS_ENCRYPTION_KEY INTERNAL_API_KEY OPENCODE_SERVER_PASSWORD AI_GATEWAY_API_KEY SERVICE_DOMAIN"
 
 # Placeholder values that should be rejected
 dangerous_defaults="change-me-before-deploying change-me-to-a-random-secret change-me-to-a-secure-password change-me-to-a-random-internal-secret"
