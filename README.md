@@ -79,6 +79,21 @@ This starts all services with health checks and restart policies:
 
 Go to `http://localhost:3141/setup` to create your admin account.
 
+### 4. Subdomain routing (optional)
+
+Give each service its own domain at `https://{serviceId}.yourdomain.com` so links and assets resolve correctly without path-prefix tricks:
+
+1. Add a wildcard DNS record: `*.yourdomain.com` → your VPS IP
+2. Set `SERVICE_DOMAIN=yourdomain.com` in `.env`
+3. (Optional) Set DNS provider credentials in `caddy/Caddyfile` for automatic wildcard TLS
+4. Launch with the edge proxy:
+
+```bash
+docker compose --profile edge up -d --build
+```
+
+Caddy handles TLS termination and routes `{id}.yourdomain.com` directly to each service's port. The legacy `/api/s/{id}` paths continue to work as fallback.
+
 ---
 
 ## Development
@@ -171,6 +186,8 @@ The bundled Postgres includes `pgvector` for embedding storage — your external
 | `APP_PORT` | `3141` | Internal port for the Next.js app (exposed to host) |
 | `OPENCODE_PORT` | `4096` | Internal port for the OpenCode server |
 | `NEXT_PUBLIC_APP_URL` | `http://localhost:3141` | Public URL — change to your domain in production |
+| `SERVICE_DOMAIN` | — | Enable subdomain routing — services will be at `https://{id}.{SERVICE_DOMAIN}` |
+| `CADDY_ADMIN_URL` | `http://caddy:2019` | Caddy admin API endpoint (internal) |
 | `TAVILY_API_KEY` | — | Tavily web search API key |
 | `DB_POOL_MAX` | `5` | Connection pool size for the app |
 | `PG_BOSS_POOL_SIZE` | `5` | Connection pool size for the worker |

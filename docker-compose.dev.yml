@@ -169,7 +169,7 @@ services:
       - caddy_data:/data
       - caddy_config:/config
     environment:
-      - APP_DOMAIN=${APP_DOMAIN:-localhost}
+      - SERVICE_DOMAIN=${SERVICE_DOMAIN:-localhost}
       - APP_PORT=${APP_PORT:-3141}
     restart: unless-stopped
     logging:

@@ -6,8 +6,8 @@
 # (http://caddy:2019).  Do not edit service routes here.
 #
 # Environment variables expected at runtime:
-#   APP_DOMAIN  – hostname of the Next.js app (e.g. app.example.com)
-#   APP_PORT    – internal port the Next.js app listens on (default 3141)
+#   SERVICE_DOMAIN  – public domain (e.g. example.com)
+#   APP_PORT        – internal port the Next.js app listens on (default 3141)
 # ──────────────────────────────────────────────────────────────
 
 {
@@ -31,6 +31,6 @@
 # This catch-all handles the primary domain.  Service subdomain
 # routes are inserted *before* this by the admin API and take
 # priority because Caddy matches routes in order.
-{$APP_DOMAIN:localhost} {
+{$SERVICE_DOMAIN:localhost} {
 	reverse_proxy app:{$APP_PORT:3141}
 }
