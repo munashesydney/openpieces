@@ -1,12 +1,6 @@
 "use client";
 
-import {
-  ExternalLink,
-  CopyPlus,
-  Loader2,
-  Settings,
-  KeyRound,
-} from "lucide-react";
+import { ExternalLink, Settings, KeyRound } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Modal } from "../ui/modal";
@@ -29,7 +23,6 @@ export function PushToHubButton({
   const [showForkModal, setShowForkModal] = useState(false);
   const [showSetupModal, setShowSetupModal] = useState(false);
   const [setupHubUrl, setSetupHubUrl] = useState("");
-  const [forking, setForking] = useState(false);
 
   const handlePush = async () => {
     setStatus("connecting");
@@ -68,46 +61,6 @@ export function PushToHubButton({
     setTimeout(() => setStatus("idle"), 3000);
   };
 
-  const handleFork = async () => {
-    setForking(true);
-    setShowForkModal(false);
-
-    // Check hub is configured first (again, in case they dismissed and came back)
-    const setup = await checkHubSetup();
-    if (!setup.configured) {
-      setStatus("idle");
-      setSetupHubUrl(setup.hubUrl);
-      setShowSetupModal(true);
-      setForking(false);
-      return;
-    }
-
-    setStatus("pushing");
-    setMessage("");
-
-    const result = await pushToHubAction(workspaceId, serviceId, true);
-
-    if ("redirectUrl" in result) {
-      router.push(result.redirectUrl);
-      return;
-    }
-
-    if ("error" in result) {
-      setStatus("error");
-      setMessage(result.error);
-      setForking(false);
-      return;
-    }
-
-    setStatus("done");
-    setMessage("Fork pushed to hub!");
-    setForking(false);
-    setTimeout(() => {
-      setStatus("idle");
-      router.refresh();
-    }, 1500);
-  };
-
   return (
     <>
       <div className="flex items-center gap-3">
@@ -137,39 +90,30 @@ export function PushToHubButton({
         isOpen={showForkModal}
         onClose={() => setShowForkModal(false)}
         title="You don't own this hub piece"
-        description="You can only push updates to pieces you created. Create your own copy to publish under your name."
+        description="You can only push updates to pieces you created. Create a local copy first, then push your own version."
         footer={
           <div className="flex justify-end gap-3">
             <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setShowForkModal(false)}
-              disabled={forking}
-            >
-              Cancel
-            </Button>
-            <Button
               variant="primary"
               size="sm"
-              onClick={handleFork}
-              isLoading={forking}
+              onClick={() => setShowForkModal(false)}
             >
-              <CopyPlus size={12} />
-              Push as my copy
+              Got it
             </Button>
           </div>
         }
       >
         <div className="rounded-lg border border-[var(--border)] bg-[var(--sidebar-bg)]/60 p-3">
           <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-[var(--muted)]">
-            What will happen
+            What to do
           </p>
-          <ul className="space-y-1 text-sm text-[var(--foreground)]">
-            <li>- A new piece will be created under your account</li>
-            <li>- &quot; - Copy&quot; will be appended to the title</li>
-            <li>- The hub link will be cleared from this service</li>
-            <li>- Future pushes will update your new copy</li>
-          </ul>
+          <ol className="space-y-1 text-sm text-[var(--foreground)] list-decimal list-inside">
+            <li>
+              Click <strong>Fork Locally</strong> to create your own copy
+            </li>
+            <li>Modify it however you like</li>
+            <li>Push your new version to the hub</li>
+          </ol>
         </div>
       </Modal>
 
