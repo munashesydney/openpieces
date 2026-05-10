@@ -46,19 +46,18 @@ Exposes endpoints that perform a specific task on demand.
 
 ## Service with a Web UI
 
-For services that serve a browser-based interface.
+For services that serve a browser-based interface. Each service runs at the root of its own subdomain (`https://{serviceId}.{SERVICE_DOMAIN}`), so standard absolute paths work naturally.
 
 **Characteristics:**
 - Serves HTML directly from Deno — no build step, no JSX
-- Every HTML page includes a `<base>` tag computed from `location.pathname` — no server-side URL injection
 - Static assets (CSS, JS, images) are served from a `static/` directory
+- Use standard absolute paths (`/game`, `/static/style.css`) — no tricks needed
 - Include `access-control-allow-origin: "*"` on asset responses
 - Handle missing files gracefully — return 404, not 500
-- Use relative paths in HTML (resolved against `<base>`), never absolute paths starting with `/`
 
 **Pattern — serving HTML:**
 ```ts
-if (pathname.endsWith('/play-ai')) {
+if (pathname === "/play-ai") {
   const html = await Deno.readTextFile("static/play-ai.html");
   return new Response(html, {
     headers: { "content-type": "text/html; charset=utf-8" },
@@ -66,36 +65,27 @@ if (pathname.endsWith('/play-ai')) {
 }
 ```
 
-**Pattern — HTML file with `<base>` tag:**
+**Pattern — HTML page:**
 ```html
 <!DOCTYPE html>
 <html>
 <head>
-<script>
-(function(){
-  var p = location.pathname;
-  // Strip the route suffix that identifies this page
-  if (p.endsWith('/play-ai')) p = p.slice(0, -('/play-ai'.length));
-  if (!p.endsWith('/')) p += '/';
-  document.write('<base href="' + p + '">');
-})();
-</script>
-<link rel="stylesheet" href="static/style.css">
+  <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
-  <a href="./">Back to Home</a>
-  <a href="other-page">Go to Other Page</a>
-  <script src="static/app.js"></script>
+  <a href="/">Home</a>
+  <a href="/other-page">Other Page</a>
+  <script src="/static/app.js"></script>
 </body>
 </html>
 ```
 
 **Static asset serving:**
 ```ts
-if (pathname.startsWith('/static/')) {
+if (pathname.startsWith("/static/")) {
   try {
     const file = await Deno.readFile(`.${pathname}`);
-    const ext = pathname.split('.').pop();
+    const ext = pathname.split(".").pop();
     const mimeTypes: Record<string, string> = {
       css: "text/css",
       js: "application/javascript",
@@ -116,14 +106,7 @@ if (pathname.startsWith('/static/')) {
 }
 ```
 
-**Key differences from the old approach:**
-- ❌ No `OPENPIECES_SERVICE_PUBLIC_URL` injection into HTML
-- ❌ No placeholder replacement (`./style.css` → `${publicUrl}/style.css`)
-- ✅ Use `<base>` tag computed from `location.pathname` in every HTML page
-- ✅ Use relative paths in HTML (`static/style.css`, `./other-page`, `other-page`)
-- ✅ Static assets served from the service's own `static/` directory
-
-See the `proxy-routing` skill for detailed guidance on `<base>` tag computation and linking rules. See the `server-routing` skill for server-side path matching patterns.
+See the `proxy-routing` skill for URL construction and WebSocket limitations. See the `server-routing` skill for route matching patterns.
 
 ## When to use me
 

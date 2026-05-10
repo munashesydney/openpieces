@@ -9,12 +9,18 @@ export function getBaseUrl(): string {
  *
  * When SERVICE_DOMAIN is set, services are exposed at
  * `https://{serviceId}.{SERVICE_DOMAIN}` (subdomain origin).
- * Otherwise falls back to the legacy path-prefix form.
+ * When SERVICE_DOMAIN=localhost the app port is appended
+ * (e.g. http://{id}.localhost:3141) since Next.js runs on a
+ * non-standard port in dev.
  */
 export function buildServiceUrl(_baseUrl: string, serviceId: string): string {
   if (SERVICE_DOMAIN) {
     const protocol = SERVICE_DOMAIN === "localhost" ? "http" : "https";
-    return `${protocol}://${serviceId}.${SERVICE_DOMAIN}`;
+    const port =
+      SERVICE_DOMAIN === "localhost"
+        ? `:${process.env.APP_PORT ?? "3141"}`
+        : "";
+    return `${protocol}://${serviceId}.${SERVICE_DOMAIN}${port}`;
   }
   const baseUrl = getBaseUrl();
   return `${baseUrl}/api/s/${serviceId}`;

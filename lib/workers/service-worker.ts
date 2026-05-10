@@ -329,7 +329,11 @@ async function executeServiceSpawnJob(job: ServiceSpawnJob) {
           const domain = (process.env.SERVICE_DOMAIN ?? "").trim();
           if (domain) {
             const protocol = domain === "localhost" ? "http" : "https";
-            return `${protocol}://${serviceId}.${domain}`;
+            const port =
+              domain === "localhost"
+                ? `:${process.env.APP_PORT ?? "3141"}`
+                : "";
+            return `${protocol}://${serviceId}.${domain}${port}`;
           }
           return `${process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3141"}/api/s/${serviceId}`;
         })(),
