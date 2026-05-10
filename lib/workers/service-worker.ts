@@ -325,7 +325,14 @@ async function executeServiceSpawnJob(job: ServiceSpawnJob) {
         OPENPIECES_INTERNAL_URL:
           process.env.OPENPIECES_INTERNAL_URL ??
           `http://app:${process.env.APP_PORT ?? 3141}`,
-        OPENPIECES_SERVICE_PUBLIC_URL: `${process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3141"}/api/s/${serviceId}`,
+        OPENPIECES_SERVICE_PUBLIC_URL: (() => {
+          const domain = (process.env.SERVICE_DOMAIN ?? "").trim();
+          if (domain) {
+            const protocol = domain === "localhost" ? "http" : "https";
+            return `${protocol}://${serviceId}.${domain}`;
+          }
+          return `${process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3141"}/api/s/${serviceId}`;
+        })(),
       },
     },
   );

@@ -32,7 +32,16 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
   ],
   session: { strategy: "jwt" },
   callbacks: {
-    authorized({ auth }) {
+    authorized({ request, auth }) {
+      // Service subdomains are always public.
+      const host =
+        typeof request?.headers?.get === "function"
+          ? (request.headers.get("host") ?? "")
+          : "";
+      const serviceDomain = process.env.SERVICE_DOMAIN?.trim();
+      if (serviceDomain && host.split(":")[0].endsWith("." + serviceDomain)) {
+        return true;
+      }
       return !!auth?.user;
     },
     jwt({ token, user }) {
