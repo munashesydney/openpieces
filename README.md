@@ -45,6 +45,8 @@ Open [http://localhost:3141](http://localhost:3141) and go to `/setup`.
 
 ## Production Deploy
 
+> **Domain recommendation:** Use a main-level domain like `example.com` for `SERVICE_DOMAIN`. This keeps wildcard SSL simple — Let's Encrypt HTTP challenge covers `*.example.com` out of the box. If you use a subdomain like `op.example.com`, you'll need [extra SSL setup](docs/wildcard-ssl-setup.md) for `*.op.example.com`.
+
 ### 1. Clone and configure
 
 ```bash
@@ -85,9 +87,35 @@ Give each service its own origin at `https://{serviceId}.yourdomain.com` so link
 
 1. Add a wildcard DNS record: `*.yourdomain.com` → your VPS IP
 2. Set `SERVICE_DOMAIN=yourdomain.com` in `.env`
-3. Rebuild and restart
+3. Configure your reverse proxy to route all subdomains to the app container:
 
-Services are reachable at `https://{serviceId}.yourdomain.com` — each gets its own origin, so `/game` in HTML just works. Works behind any proxy (nginx, Coolify, Traefik) with no extra containers or port conflicts.
+   **Coolify / Traefik:** Go to Servers → choose server → Proxy → Dynamic Configurations → add:
+   ```yaml
+   http:
+     routers:
+       wildcard:
+         rule: HostRegexp(`^.+\\.yourdomain\\.com$`)
+         entryPoints:
+           - https
+         service: myapp
+         tls:
+           certResolver: letsencrypt
+     services:
+       myapp:
+         loadBalancer:
+           servers:
+             -
+               url: 'http://app:3141'
+   ```
+   Replace `yourdomain\\.com` with your domain (dots escaped). Replace `3141` with your `APP_PORT` if different.
+
+   > **SSL for sub-subdomains?** If your domain is itself a subdomain (e.g. `op.example.com`), you'll need DNS-01 challenge for wildcard SSL. See [Wildcard SSL Setup](docs/wildcard-ssl-setup.md).
+
+   **Nginx / Caddy / other proxies:** Route `*.yourdomain.com` → `http://localhost:3141` (or your app port). The app handles subdomain extraction from the `Host` header.
+
+4. Rebuild and restart
+
+Services are reachable at `https://{serviceId}.yourdomain.com` — each gets its own origin, so `/game` in HTML just works.
 
 ---
 
