@@ -44,6 +44,8 @@ services:
       - "traefik.http.routers.op-wildcard.rule=HostRegexp(`^.+\\.${SERVICE_DOMAIN_REGEX_ESCAPED}$`)"
       - "traefik.http.routers.op-wildcard.entrypoints=https"
       - "traefik.http.routers.op-wildcard.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.op-wildcard.service=op-main"
+      - "traefik.http.services.op-main.loadbalancer.server.port=${APP_PORT:-3141}"
     depends_on:
       db:
         condition: service_healthy
