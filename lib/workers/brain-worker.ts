@@ -1,4 +1,8 @@
-import { getPgBoss, BRAIN_QUEUE, PG_BOSS_CONCURRENCY } from "@/lib/queues/pg-boss";
+import {
+  getPgBoss,
+  BRAIN_QUEUE,
+  PG_BOSS_CONCURRENCY,
+} from "@/lib/queues/pg-boss";
 import {
   getOrCreateBrainSettings,
   triggerBrainIngestion,
@@ -31,7 +35,10 @@ async function pollForIngestion(workspaceId: string) {
       console.log(`[brain-worker] Ingestion complete: ${result.message}`);
     }
   } catch (error) {
-    console.error(`[brain-worker] Ingestion error for workspace ${workspaceId}:`, error);
+    console.error(
+      `[brain-worker] Ingestion error for workspace ${workspaceId}:`,
+      error,
+    );
   }
 }
 
@@ -57,14 +64,19 @@ async function pollForReinforcement(workspaceId: string) {
       console.log(`[brain-worker] Reinforcement complete: ${result.message}`);
     }
   } catch (error) {
-    console.error(`[brain-worker] Reinforcement error for workspace ${workspaceId}:`, error);
+    console.error(
+      `[brain-worker] Reinforcement error for workspace ${workspaceId}:`,
+      error,
+    );
   }
 }
 
 async function processAllWorkspaces() {
   try {
     // Get all workspaces
-    const allWorkspaces = await db.select({ id: workspaces.id }).from(workspaces);
+    const allWorkspaces = await db
+      .select({ id: workspaces.id })
+      .from(workspaces);
 
     for (const workspace of allWorkspaces) {
       await pollForIngestion(workspace.id);
@@ -83,25 +95,36 @@ export async function startBrainWorker() {
   });
 
   // Handle brain processing jobs
-  await boss.work(BRAIN_QUEUE, { localConcurrency: PG_BOSS_CONCURRENCY }, async (jobs) => {
-    const job = jobs[0];
-    if (!job) {
-      return;
-    }
+  await boss.work(
+    BRAIN_QUEUE,
+    { localConcurrency: PG_BOSS_CONCURRENCY },
+    async (jobs) => {
+      const job = jobs[0];
+      if (!job) {
+        return;
+      }
 
-    const data = job.data as { workspaceId: string; action: "ingest" | "reinforce" };
-    console.log(`[brain-worker] Received brain job: ${data.action} for workspace ${data.workspaceId}`);
+      const data = job.data as {
+        workspaceId: string;
+        action: "ingest" | "reinforce";
+      };
+      console.log(
+        `[brain-worker] Received brain job: ${data.action} for workspace ${data.workspaceId}`,
+      );
 
-    if (data.action === "ingest") {
-      await pollForIngestion(data.workspaceId);
-    } else if (data.action === "reinforce") {
-      await pollForReinforcement(data.workspaceId);
-    }
-  });
+      if (data.action === "ingest") {
+        await pollForIngestion(data.workspaceId);
+      } else if (data.action === "reinforce") {
+        await pollForReinforcement(data.workspaceId);
+      }
+    },
+  );
 
   // Poll every 5 minutes
   const POLL_INTERVAL_MS = 5 * 60 * 1000;
-  console.log(`[brain-worker] Starting brain polling every ${POLL_INTERVAL_MS / 1000 / 60} minutes`);
+  console.log(
+    `[brain-worker] Starting brain polling every ${POLL_INTERVAL_MS / 1000 / 60} minutes`,
+  );
 
   // Run immediately on start
   await processAllWorkspaces();
@@ -111,19 +134,3 @@ export async function startBrainWorker() {
 
   return boss;
 }
-
-async function shutdown(signal: string) {
-  console.log(`[brain-worker] received ${signal}, shutting down`);
-
-  if (boss) {
-    await boss.stop();
-  }
-}
-
-process.on("SIGINT", () => {
-  void shutdown("SIGINT");
-});
-
-process.on("SIGTERM", () => {
-  void shutdown("SIGTERM");
-});

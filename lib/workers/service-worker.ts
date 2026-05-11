@@ -44,6 +44,11 @@ const _reservedServicePorts = new Map<string, number>();
 // service from being spawned concurrently by multiple queue consumers.
 const _spawningServices = new Set<string>();
 
+// Tracks PIDs of successfully spawned Deno child processes so they can be
+// explicitly killed during worker shutdown, preventing orphan accumulation
+// across container restarts (Docker restart: always preserves PID namespace).
+const _childPids = new Set<number>();
+
 async function isPortBoundByOS(port: number): Promise<boolean> {
   return new Promise((resolve) => {
     const server = net.createServer();
@@ -341,6 +346,11 @@ async function executeServiceSpawnJob(job: ServiceSpawnJob) {
     },
   );
 
+  // Track PID so killChildProcesses() can clean it up on worker shutdown.
+  if (proc.pid !== undefined) {
+    _childPids.add(proc.pid);
+  }
+
   proc.stdout?.on("data", (data: Buffer) => {
     const message = data.toString().trim();
     if (message) {
@@ -354,6 +364,7 @@ async function executeServiceSpawnJob(job: ServiceSpawnJob) {
     }
   });
   proc.on("error", (err) => {
+    if (proc.pid !== undefined) _childPids.delete(proc.pid);
     console.error(
       `[service-worker][${service.title}] spawn error:`,
       err.message,
@@ -361,6 +372,7 @@ async function executeServiceSpawnJob(job: ServiceSpawnJob) {
     void appendServiceLog(directory, "error", `Spawn error: ${err.message}`);
   });
   proc.on("exit", (code, signal) => {
+    if (proc.pid !== undefined) _childPids.delete(proc.pid);
     if (code !== null) {
       console.error(
         `[service-worker][${service.title}] exited with code ${code}`,
@@ -750,6 +762,62 @@ async function cleanupStuckDeployments() {
   }
 }
 
+/**
+ * Kills all tracked child Deno processes. Called during graceful shutdown
+ * so detached children don't survive as orphans across container restarts.
+ *
+ * 1. Sends SIGTERM to all tracked PIDs for graceful shutdown.
+ * 2. Waits up to 5 seconds for them to exit.
+ * 3. Sends SIGKILL to any that remain.
+ */
+export async function killChildProcesses(): Promise<void> {
+  const pids = Array.from(_childPids);
+  if (pids.length === 0) return;
+
+  console.log(
+    `[service-worker] Killing ${pids.length} tracked child process(es)...`,
+  );
+
+  // Phase 1: graceful SIGTERM
+  for (const pid of pids) {
+    try {
+      process.kill(pid, "SIGTERM");
+    } catch {
+      // Process already dead
+    }
+  }
+
+  // Phase 2: wait up to 5s for all to exit, then SIGKILL survivors
+  await new Promise<void>((resolve) => {
+    const interval = setInterval(() => {
+      const remaining = Array.from(_childPids);
+      if (remaining.length === 0) {
+        clearInterval(interval);
+        resolve();
+      }
+    }, 200);
+
+    setTimeout(() => {
+      clearInterval(interval);
+      const survivors = Array.from(_childPids);
+      if (survivors.length > 0) {
+        console.log(
+          `[service-worker] Force-killing ${survivors.length} remaining child process(es)...`,
+        );
+        for (const pid of survivors) {
+          try {
+            process.kill(pid, "SIGKILL");
+          } catch {
+            // Already dead
+          }
+        }
+      }
+      _childPids.clear();
+      resolve();
+    }, 5000);
+  });
+}
+
 export async function startServiceWorker() {
   const boss = await getPgBoss();
 
@@ -758,6 +826,15 @@ export async function startServiceWorker() {
   // enqueues that recoverAndStartAllServices() is about to issue.
   await boss.deleteQueue(SERVICE_SPAWN_QUEUE);
   await boss.createQueue(SERVICE_SPAWN_QUEUE, { retryLimit: 0 });
+
+  // ── Clear stale runtime state from the DB ────────────────────────────────
+  // On worker restart, any PIDs / ports / "running" status in the DB belong
+  // to processes from the previous incarnation.  Nullify them so that
+  // executeServiceSpawnJob does not attempt to kill a stale PID or skip
+  // spawning because it thinks the service is already running.
+  await db.execute(
+    sql`UPDATE ${services} SET pid = NULL, port = NULL, status = 'stopped' WHERE status = 'running' OR status = 'crashed' OR status = 'deploying'`,
+  );
 
   // ── Enqueue ALL services for spawn BEFORE the worker starts listening ────
   // Critical: if the worker were already running when we enqueue, pre-existing
@@ -769,7 +846,7 @@ export async function startServiceWorker() {
   // ── Start the spawn queue worker ─────────────────────────────────────────
   await boss.work(
     SERVICE_SPAWN_QUEUE,
-    { localConcurrency: 10 },
+    { localConcurrency: 5 },
     async (jobs) => {
       const job = jobs[0];
       if (!job) return;

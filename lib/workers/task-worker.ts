@@ -63,23 +63,3 @@ export async function startTaskWorker() {
 
   return boss;
 }
-
-async function shutdown(signal: string) {
-  console.log(`[task-worker] received ${signal}, shutting down`);
-
-  if (pollTimer) {
-    clearTimeout(pollTimer);
-  }
-
-  if (boss) {
-    await boss.stop();
-  }
-}
-
-process.on("SIGINT", () => {
-  void shutdown("SIGINT");
-});
-
-process.on("SIGTERM", () => {
-  void shutdown("SIGTERM");
-});
