@@ -262,6 +262,7 @@ export async function pushToHubAction(
     zipBuffer,
     filename: `${title.toLowerCase().replace(/[^a-z0-9]+/g, "-")}.zip`,
     pieceId: cleanHubPieceId ?? undefined,
+    category: service.type === "trigger" ? "TRIGGER" : "ACTION",
     endpoints: endpoints.map((e) => ({
       method: e.method,
       path: e.path,
