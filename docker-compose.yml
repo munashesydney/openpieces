@@ -38,10 +38,10 @@ services:
       - .env
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.op-main.rule=Host(`dev.munashesydney.com`)"
+      - "traefik.http.routers.op-main.rule=Host(`${SERVICE_DOMAIN}`)"
       - "traefik.http.routers.op-main.entrypoints=https"
       - "traefik.http.routers.op-main.tls.certresolver=letsencrypt"
-      - "traefik.http.routers.op-wildcard.rule=HostRegexp(`^.+\\.dev\\.munashesydney\\.com$`)"
+      - "traefik.http.routers.op-wildcard.rule=HostRegexp(`^.+\\.${SERVICE_DOMAIN_REGEX_ESCAPED}$`)"
       - "traefik.http.routers.op-wildcard.entrypoints=https"
       - "traefik.http.routers.op-wildcard.tls.certresolver=letsencrypt"
     depends_on:
