@@ -45,6 +45,8 @@ Open [http://localhost:3141](http://localhost:3141) and go to `/setup`.
 
 ## Production Deploy
 
+> **Domain recommendation:** Use a main-level domain like `example.com` for `SERVICE_DOMAIN`. This keeps wildcard SSL simple — Let's Encrypt HTTP challenge covers `*.example.com` out of the box. If you use a subdomain like `op.example.com`, you'll need [extra SSL setup](docs/wildcard-ssl-setup.md) for `*.op.example.com`.
+
 ### 1. Clone and configure
 
 ```bash
@@ -78,6 +80,42 @@ This starts all services with health checks and restart policies:
 ### 3. Access
 
 Go to `http://localhost:3141/setup` to create your admin account.
+
+### 4. Subdomain routing (required)
+
+Give each service its own origin at `https://{serviceId}.yourdomain.com` so links and assets resolve correctly without path-prefix tricks:
+
+1. Add a wildcard DNS record: `*.yourdomain.com` → your VPS IP
+2. Set `SERVICE_DOMAIN=yourdomain.com` in `.env`
+3. Configure your reverse proxy to route all subdomains to the app container:
+
+   **Coolify / Traefik:** Go to Servers → choose server → Proxy → Dynamic Configurations → add:
+   ```yaml
+   http:
+     routers:
+       wildcard:
+         rule: HostRegexp(`^.+\\.yourdomain\\.com$`)
+         entryPoints:
+           - https
+         service: myapp
+         tls:
+           certResolver: letsencrypt
+     services:
+       myapp:
+         loadBalancer:
+           servers:
+             -
+               url: 'http://app:3141'
+   ```
+   Replace `yourdomain\\.com` with your domain (dots escaped). Replace `3141` with your `APP_PORT` if different.
+
+   > **SSL for sub-subdomains?** If your domain is itself a subdomain (e.g. `op.example.com`), you'll need DNS-01 challenge for wildcard SSL. See [Wildcard SSL Setup](docs/wildcard-ssl-setup.md).
+
+   **Nginx / Caddy / other proxies:** Route `*.yourdomain.com` → `http://localhost:3141` (or your app port). The app handles subdomain extraction from the `Host` header.
+
+4. Rebuild and restart
+
+Services are reachable at `https://{serviceId}.yourdomain.com` — each gets its own origin, so `/game` in HTML just works.
 
 ---
 
@@ -171,6 +209,7 @@ The bundled Postgres includes `pgvector` for embedding storage — your external
 | `APP_PORT` | `3141` | Internal port for the Next.js app (exposed to host) |
 | `OPENCODE_PORT` | `4096` | Internal port for the OpenCode server |
 | `NEXT_PUBLIC_APP_URL` | `http://localhost:3141` | Public URL — change to your domain in production |
+| `SERVICE_DOMAIN` | — | Enable subdomain routing — services at `https://{id}.{SERVICE_DOMAIN}` |
 | `TAVILY_API_KEY` | — | Tavily web search API key |
 | `DB_POOL_MAX` | `5` | Connection pool size for the app |
 | `PG_BOSS_POOL_SIZE` | `5` | Connection pool size for the worker |

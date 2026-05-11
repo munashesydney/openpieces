@@ -1,6 +1,12 @@
+import { NextResponse, type NextRequest } from "next/server";
 import { auth } from "./auth";
 
-export default auth((req) => {
+export default auth(async (req) => {
+  // Service subdomain routing — detect subdomain and rewrite to internal
+  // proxy handler (which runs in Node.js runtime and can query the DB).
+  const res = rewriteServiceSubdomain(req);
+  if (res) return res;
+
   if (
     process.env.NODE_ENV === "production" &&
     process.env.DEBUG_LOGS === "true"
@@ -12,13 +18,40 @@ export default auth((req) => {
 export const config = {
   matcher: [
     /*
-     * Protect all routes except:
-     * - /login and /setup (public auth pages)
-     * - /api/auth/* (Auth.js handlers)
-     * - /api/setup (first-run setup endpoint)
-     * - /_next/* (Next.js internals)
-     * - Static files with extensions (e.g. .ico, .png, .svg)
+     * All paths except Next.js internals.
+     * Service subdomains need full coverage (including static files).
+     * Auth exclusions are handled inside the auth middleware.
      */
-    "/((?!login|setup|api/auth|api/setup|api/hub|api/opencode/health|api/opencode/webhook|api/s/|api/internal/secrets|api/internal/service-endpoints|api/internal/service-required-secrets|api/internal/chat|api/health|_next/static|_next/image|favicon.ico|.*\\..*).*)",
+    "/((?!_next/static|_next/image|favicon.ico).*)",
   ],
 };
+
+// ── Subdomain detection (runs in Edge Runtime — no DB access) ──
+
+function rewriteServiceSubdomain(req: NextRequest) {
+  const serviceDomain = (process.env.SERVICE_DOMAIN ?? "").trim();
+  if (!serviceDomain) return null;
+
+  const host = req.headers.get("host") ?? "";
+  const hostname = host.split(":")[0];
+
+  if (!hostname.endsWith("." + serviceDomain)) return null;
+
+  const serviceId = hostname.slice(
+    0,
+    hostname.length - serviceDomain.length - 1,
+  );
+  if (!serviceId || serviceId === "www") return null;
+
+  // Build the internal proxy path.  Avoid double-slash for root requests.
+  const subPath = req.nextUrl.pathname === "/" ? "" : req.nextUrl.pathname;
+  const proxyPath = `/api/internal/proxy/${serviceId}${subPath}`;
+
+  console.log(
+    `[subdomain] Rewriting ${host}${req.nextUrl.pathname} → ${proxyPath}`,
+  );
+
+  const url = req.nextUrl.clone();
+  url.pathname = proxyPath;
+  return NextResponse.rewrite(url);
+}

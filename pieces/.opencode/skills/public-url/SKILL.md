@@ -10,7 +10,7 @@ metadata:
 
 ## What I do
 
-Every OpenPieces service has a public URL injected as an environment variable. This skill explains its **only** legitimate uses — and the patterns you must avoid.
+Every OpenPieces service has a public URL injected as an environment variable. This skill explains its **only** legitimate uses.
 
 ## The variable
 
@@ -18,7 +18,7 @@ Every OpenPieces service has a public URL injected as an environment variable. T
 const publicUrl = Deno.env.get("OPENPIECES_SERVICE_PUBLIC_URL")!;
 ```
 
-It is always available and points to the externally-accessible address of your service through the proxy.
+It is always available and points to the externally-accessible address of your service.
 
 ---
 
@@ -36,12 +36,12 @@ These are **server-to-server** scenarios — the consuming code runs on another 
 
 | Situation | Don't do this | Instead |
 |---|---|---|
-| Building asset paths in HTML responses | `` `${publicUrl}/style.css` `` | Use a `<base>` tag in the HTML page (see `proxy-routing` skill) |
-| Writing `fetch()` URLs in client-side JavaScript | `` `${publicUrl}/api/data` `` | Use relative URLs resolved against `<base>` (see `proxy-routing` skill) |
-| Setting `window.location.href` for navigation | `` `${publicUrl}/dashboard` `` | Use a relative URL like `./dashboard` (see `proxy-routing` skill) |
+| Building asset paths in HTML responses | `` `${publicUrl}/style.css` `` | Use a normal absolute path like `/style.css` |
+| Writing `fetch()` URLs in client-side JavaScript | `` `${publicUrl}/api/data` `` | Use a normal absolute path like `/api/data` |
+| Setting `window.location.href` for navigation | `` `${publicUrl}/dashboard` `` | Use a normal absolute path like `/dashboard` |
 | Self-calling an endpoint from within the same service | `` fetch(`${publicUrl}/process`) `` | Call the function directly, or use `http://localhost:{port}` for local loopback |
 
-**The public URL must never appear in HTML or JavaScript that runs in a browser.** Browser-side code should use the `<base>` tag approach documented in the `proxy-routing` skill.
+**The public URL must never appear in HTML or JavaScript that runs in a browser.** Browser-side code should use standard absolute paths — the service is at the root of its own origin.
 
 ---
 
@@ -91,7 +91,7 @@ const res = await fetch(`${publicUrl}/process`, { ... });
 
 ## Server-to-server calls to OTHER services
 
-When calling another OpenPieces service, use its public URL (it must be known to you via configuration or an env var):
+When calling another OpenPieces service, use its public URL:
 
 ```ts
 const targetPublicUrl = Deno.env.get("TARGET_SERVICE_PUBLIC_URL")!;
@@ -99,8 +99,6 @@ const res = await fetch(`${targetPublicUrl}/api/data`, {
   headers: { "authorization": `Bearer ${internalApiKey}` },
 });
 ```
-
-This is a legitimate use because the HTTP request goes through the proxy to the other service.
 
 ---
 
@@ -111,6 +109,6 @@ This is a legitimate use because the HTTP request goes through the proxy to the 
 | Webhook callback URL for external system | ✅ Yes |
 | OAuth redirect URL | ✅ Yes |
 | Server-to-server API call | ✅ Yes |
-| HTML asset path (`<link>`, `<script src>`) | ❌ No — use `<base>` tag instead |
-| Client-side `fetch()` in browser JS | ❌ No — use relative URLs instead |
+| HTML asset path (`<link>`, `<script src>`) | ❌ No — use normal absolute paths |
+| Client-side `fetch()` in browser JS | ❌ No — use normal absolute paths |
 | Internal self-call within the same service | ❌ No — call functions directly or use localhost loopback |

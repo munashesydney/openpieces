@@ -65,15 +65,13 @@ An encrypted key-value pair. You can see which secrets exist and whether they ar
 **Workspace Brain**
 Long-term memory. Check it before planning — it may contain existing services, past decisions, user preferences, known credential issues, and workflow history.
 
-## How OpenCode Implements Services (The Proxy)
+## How OpenCode Implements Services
 
-All services run behind a Next.js proxy that mounts them at \`/api/s/{service_id}\`. A service handling \`/game\` actually lives at \`/api/s/f0f207b0/game\` externally. This has three architectural implications you must understand when designing:
+Each service runs on its own subdomain — \`{serviceId}.yourdomain.com\`. This means every service gets a full, independent origin. A service handling \`/game\` is reachable directly at \`https://f0f207b0.yourdomain.com/game\` — no path prefix, no proxy quirks.
 
-1. **WebSocket is impossible** — the proxy uses \`fetch()\` which cannot upgrade connections. Never design a service that relies on WebSocket. OpenCode replaces it with HTTP short polling automatically.
-2. **URL construction is non-trivial** — OpenCode handles this via its skill files: \`<base>\` tags in HTML, \`endsWith\` routing on the server, relative URLs for client-side JS. You do not need to specify these patterns in your plan.
-3. **\`OPENPIECES_SERVICE_PUBLIC_URL\` is server-to-server only** — it must never appear in HTML or browser JavaScript. OpenCode knows this. Only use it for webhook callbacks and cross-service API calls.
+This has one key architectural implication: there are no special constraints. Standard path matching works. Absolute paths in HTML resolve correctly. WebSocket upgrades function normally. OpenCode is trained (via its skill files) to take full advantage of this clean model.
 
-When you specify endpoints in your plan (e.g., \`POST /webhook\`), just name the path as the service sees it internally. OpenCode will handle the proxy prefix automatically. Trust OpenCode — it is specifically trained to write proxy-compatible code via its \`proxy-routing\`, \`server-routing\`, and \`public-url\` skills.
+When you specify endpoints in your plan (e.g., \`POST /webhook\`), just name the path as the service sees it internally. Trust OpenCode — it is specifically trained to write correct service code via its \`proxy-routing\`, \`server-routing\`, and \`public-url\` skills.
 
 ---
 

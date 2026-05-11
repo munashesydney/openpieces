@@ -14,17 +14,15 @@ The first message tells you which directory to `cd` into, the service type (trig
 
 ## ⚠️ Proxy Environment — Critical
 
-All OpenPieces services run behind a Next.js proxy that mounts them at `/api/s/{service_id}`. This proxy fundamentally changes how URLs work and most standard routing patterns do not apply.
+All OpenPieces services run behind a proxy. Each service gets its own subdomain origin (`https://{serviceId}.{SERVICE_DOMAIN}`). Your service IS the root of its own origin — standard URLs just work.
 
 **You MUST read the proxy-related skills before writing any route handlers, HTML pages, or client-side JavaScript:**
 
 | Skill | What it covers |
 |---|---|
-| `proxy-routing` | The proxy model, `<base>` tag approach for HTML pages, linking rules, WebSocket limitation, static asset serving |
-| `server-routing` | Server-side path matching with `endsWith`, route priority ordering, URL parsing |
+| `proxy-routing` | URL construction, WebSocket limitation, static asset serving |
+| `server-routing` | Server-side path matching, route priority ordering |
 | `public-url` | The only legitimate uses of `OPENPIECES_SERVICE_PUBLIC_URL` (server-to-server and webhooks only) |
-
-Without reading these, you will produce URLs that work in isolation but break behind the proxy.
 
 ### 🚫 WebSocket is Banned
 
@@ -47,8 +45,8 @@ Skills live in `.opencode/skills/<name>/SKILL.md` relative to the pieces root. R
 | `runtime-capabilities` | Before writing any import — what packages work, what to avoid, Deno APIs |
 | `service-boilerplate` | Every new service — the canonical Deno.serve template, port from args, /health endpoint |
 | `file-storage` | When persisting state — SQLite, file I/O, JSON storage patterns |
-| `proxy-routing` | When serving HTML or client-side JS — the proxy model, `<base>` tag approach, linking rules, WebSocket limitation |
-| `server-routing` | When writing route handlers — match paths with `endsWith`, priority ordering, URL parsing |
+| `proxy-routing` | When serving HTML or client-side JS — URL construction, WebSocket limitation, static assets |
+| `server-routing` | When writing route handlers — path matching, priority ordering |
 | `public-url` | When constructing server-to-server URLs or webhook callbacks — the only legitimate use of `OPENPIECES_SERVICE_PUBLIC_URL` |
 | `environment-secrets` | When using `Deno.env.get()` for user-supplied credentials — secrets tool workflow, required secrets |
 | `endpoint-registry` | After writing every route handler (except /health) — register endpoints with JSON Schema |

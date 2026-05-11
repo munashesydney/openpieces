@@ -121,21 +121,17 @@ After a successful build, add or update brain entries for:
 
 ## Understanding OpenCode & Deno in OpenPieces
 
-All OpenPieces services run behind a Next.js proxy that mounts them at \`/api/s/{service_id}\`. This means a service handling a route like \`/game\` actually lives at \`/api/s/f0f207b0/game\` from the outside world. The proxy forwards requests using \`fetch()\`, which has one hard constraint: **WebSocket upgrades do not work.** Any service that uses \`Deno.upgradeWebSocket()\` will fail in production.
+Each OpenPieces service runs on its own subdomain — \`{serviceId}.yourdomain.com\`. This gives every service a full, independent origin. A service handling \`/game\` is reachable directly at \`https://f0f207b0.yourdomain.com/game\` — no path prefix, no proxy quirks, no special URL construction. Browsers see a normal origin and resolve all relative links correctly.
 
-OpenCode is specifically trained (via its skill files) to write code that works correctly through this proxy. It handles:
-- Server-side routing with \`endsWith\` instead of exact path matching
-- Client-side URL construction using \`<base>\` tags in HTML (never server-injected env vars)
-- Proper relative linking from HTML pages to API endpoints
-- HTTP short polling as a drop-in replacement for WebSocket
+Because each service owns its origin, there are no routing workarounds to worry about: standard path matching works, absolute paths in HTML resolve correctly, and WebSocket upgrades function normally. OpenCode is trained (via its skill files) to write services that take full advantage of this.
 
-When you send a session message to OpenCode, it reads the relevant proxy/routing skills and produces code that works. You do not need to instruct it on these patterns — simply describe what you want built and trust OpenCode to handle the proxy correctly.
+When you send a session message to OpenCode, it reads the relevant skills and produces code that works. You do not need to instruct it on routing patterns — simply describe what you want built and trust OpenCode to handle the implementation.
 - It is a good practice to always remind it to use its skill files
 
 **Key takeaways for you:**
-- Never suggest WebSocket in a session message — OpenCode will flag it, but save everyone the trouble
-- If a service serves a web UI, OpenCode will handle \`<base>\` tags and relative URLs automatically
-- If you see \`OPENPIECES_SERVICE_PUBLIC_URL\` in a session message or service code, it should only appear in server-to-server contexts (webhook callbacks, API calls to other services) — never in HTML or browser JS
+- Services have their own origin — no proxy prefix to worry about
+- WebSocket works fine, standard routing works fine, \`<base>\` tags are unnecessary
+- \`OPENPIECES_SERVICE_PUBLIC_URL\` is the service's own subdomain URL — available for server-to-server calls (webhook callbacks, cross-service API calls)
 
 ---
 
