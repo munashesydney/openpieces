@@ -36,6 +36,14 @@ services:
       - SERVICE_DOMAIN=${SERVICE_DOMAIN:-}
     env_file:
       - .env
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.op-main.rule=Host(`dev.munashesydney.com`)"
+      - "traefik.http.routers.op-main.entrypoints=https"
+      - "traefik.http.routers.op-main.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.op-wildcard.rule=HostRegexp(`{subdomain:[a-zA-Z0-9-]+}.dev.munashesydney.com`)"
+      - "traefik.http.routers.op-wildcard.entrypoints=https"
+      - "traefik.http.routers.op-wildcard.tls.certresolver=letsencrypt"
     depends_on:
       db:
         condition: service_healthy
