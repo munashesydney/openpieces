@@ -38,14 +38,14 @@ services:
       - .env
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.op-main.rule=Host(`${SERVICE_DOMAIN}`)"
-      - "traefik.http.routers.op-main.entrypoints=https"
-      - "traefik.http.routers.op-main.tls.certresolver=letsencrypt"
-      - "traefik.http.routers.op-wildcard.rule=HostRegexp(`^.+\\.${SERVICE_DOMAIN_REGEX_ESCAPED}$`)"
-      - "traefik.http.routers.op-wildcard.entrypoints=https"
-      - "traefik.http.routers.op-wildcard.tls.certresolver=letsencrypt"
-      - "traefik.http.routers.op-wildcard.service=op-main"
-      - "traefik.http.services.op-main.loadbalancer.server.port=${APP_PORT:-3141}"
+      - "traefik.http.routers.${COMPOSE_PROJECT_NAME}-main.rule=Host(`${SERVICE_DOMAIN}`)"
+      - "traefik.http.routers.${COMPOSE_PROJECT_NAME}-main.entrypoints=https"
+      - "traefik.http.routers.${COMPOSE_PROJECT_NAME}-main.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.${COMPOSE_PROJECT_NAME}-wildcard.rule=HostRegexp(`^.+\\.${SERVICE_DOMAIN_REGEX_ESCAPED}$`)"
+      - "traefik.http.routers.${COMPOSE_PROJECT_NAME}-wildcard.entrypoints=https"
+      - "traefik.http.routers.${COMPOSE_PROJECT_NAME}-wildcard.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.${COMPOSE_PROJECT_NAME}-wildcard.service=${COMPOSE_PROJECT_NAME}-main"
+      - "traefik.http.services.${COMPOSE_PROJECT_NAME}-main.loadbalancer.server.port=${APP_PORT:-3141}"
     depends_on:
       db:
         condition: service_healthy
