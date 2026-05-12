@@ -230,9 +230,11 @@ export function Header() {
         className="flex min-w-0 shrink-0 items-center gap-3 pl-4 pr-2 lg:hidden"
         aria-label="OpenPieces"
       >
-        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-[var(--accent)] to-purple-900">
-          <span className="text-lg font-bold text-white">O</span>
-        </div>
+        <img
+          src="/op-not-moving.png"
+          alt="OpenPieces"
+          className="h-8 w-8 rounded-lg object-cover"
+        />
         <span className="truncate text-xl font-semibold text-[var(--foreground)]">
           OpenPieces
         </span>
@@ -298,6 +300,19 @@ export function Header() {
           />
           <div className="absolute left-0 right-0 top-full z-50 max-h-[min(70vh,calc(100dvh-3.5rem))] overflow-y-auto border-b border-[var(--border)] bg-[var(--background)] shadow-lg lg:hidden">
             <div className="flex flex-col gap-4 p-4">
+              {/* Workspace switcher at top — accessible right away */}
+              <div>
+                <p className="mb-2 px-1 text-[10px] font-semibold uppercase tracking-wider text-[var(--muted)]">
+                  Switch workspace
+                </p>
+                <WorkspaceSwitcher
+                  placement="down"
+                  activeWorkspaceId={workspaceId}
+                />
+              </div>
+
+              <div className="h-px bg-[var(--border)]" />
+
               <div>
                 <p className="mb-2 px-1 text-[10px] font-semibold uppercase tracking-wider text-[var(--muted)]">
                   Workspace
@@ -361,16 +376,6 @@ export function Header() {
                     );
                   })}
                 </nav>
-              </div>
-
-              <div className="border-t border-[var(--border)] pt-4">
-                <p className="mb-2 px-1 text-[10px] font-semibold uppercase tracking-wider text-[var(--muted)]">
-                  Switch workspace
-                </p>
-                <WorkspaceSwitcher
-                  placement="down"
-                  activeWorkspaceId={workspaceId}
-                />
               </div>
             </div>
           </div>

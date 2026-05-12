@@ -665,15 +665,15 @@ export function TasksList({
               {completedTasks.map((task) => (
                 <div
                   key={task.id}
-                  className="flex items-center justify-between rounded-xl border border-[var(--border)] bg-[var(--sidebar-bg)] p-4 opacity-60"
+                  className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-[var(--border)] bg-[var(--sidebar-bg)] p-4 opacity-60"
                 >
-                  <div className="flex items-center gap-3">
-                    <div className="h-2 w-2 rounded-full bg-emerald-500" />
-                    <span className="text-sm font-medium text-[var(--foreground)]">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="h-2 w-2 shrink-0 rounded-full bg-emerald-500" />
+                    <span className="truncate text-sm font-medium text-[var(--foreground)]">
                       {task.title}
                     </span>
                   </div>
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-3 shrink-0">
                     {task.scheduledAt && (
                       <span className="text-[10px] font-bold uppercase text-[var(--muted)]">
                         {formatSchedule(task)}
