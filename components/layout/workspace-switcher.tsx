@@ -61,9 +61,7 @@ export function WorkspaceSwitcher({
   const initial = active ? active.name.trim().slice(0, 1).toUpperCase() : "-";
 
   const menuPositionClass =
-    placement === "up"
-      ? "bottom-[calc(100%+8px)]"
-      : "top-[calc(100%+8px)]";
+    placement === "up" ? "bottom-[calc(100%+8px)]" : "top-[calc(100%+8px)]";
 
   const isIconVariant = variant === "icon";
   const iconMenuPositionClass =
@@ -73,9 +71,13 @@ export function WorkspaceSwitcher({
 
   if (!active && workspaces.length === 0) {
     return (
-      <div className={isIconVariant ? "relative flex justify-center" : "relative mx-4"}>
+      <div
+        className={
+          isIconVariant ? "relative flex justify-center" : "relative mx-4"
+        }
+      >
         <div className="flex w-full items-center gap-3 rounded-lg border border-[var(--border)] bg-[var(--hover-bg)] px-3 py-2 animate-pulse">
-           <div className="h-4 w-24 bg-[var(--border)] rounded" />
+          <div className="h-4 w-24 bg-[var(--border)] rounded" />
         </div>
       </div>
     );
@@ -84,7 +86,9 @@ export function WorkspaceSwitcher({
   return (
     <div
       ref={rootRef}
-      className={isIconVariant ? "relative flex justify-center" : "relative mx-4"}
+      className={
+        isIconVariant ? "relative flex justify-center" : "relative mx-4"
+      }
     >
       <button
         type="button"
@@ -121,8 +125,10 @@ export function WorkspaceSwitcher({
         <div
           role="menu"
           className={`absolute ${
-            isIconVariant ? iconMenuPositionClass : `left-0 right-0 ${menuPositionClass}`
-          } z-50 overflow-hidden rounded-lg border border-[var(--border)] bg-[var(--sidebar-bg)] shadow-[0_12px_30px_rgba(0,0,0,0.22)]`}
+            isIconVariant
+              ? iconMenuPositionClass
+              : `left-0 right-0 ${menuPositionClass}`
+          } z-50 overflow-y-auto max-h-[min(50vh,320px)] rounded-lg border border-[var(--border)] bg-[var(--sidebar-bg)] shadow-[0_12px_30px_rgba(0,0,0,0.22)]`}
         >
           <ul className="p-1">
             {workspaces.map((w) => {
@@ -176,4 +182,3 @@ export function WorkspaceSwitcher({
     </div>
   );
 }
-
