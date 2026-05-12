@@ -224,7 +224,7 @@ export function Header() {
   const brandHref = workspaceId ? personalHref : "/";
 
   return (
-    <header className="relative z-50 flex h-14 shrink-0 items-center border-b border-[var(--border)] bg-[var(--background)]">
+    <header className="relative z-50 flex h-14 shrink-0 items-center border-b border-[var(--border)] bg-[var(--background)] overflow-hidden">
       <Link
         href={brandHref}
         className="flex min-w-0 shrink-0 items-center gap-3 pl-4 pr-2 lg:hidden"
