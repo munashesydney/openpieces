@@ -21,7 +21,9 @@ This guide sets up **free wildcard SSL** for `*.op.yourdomain.com` using Let's E
 
 ## Step 1: Add DNS Challenge to the Traefik Proxy
 
-In Coolify: **Servers → your server → Proxy** (this shows the Traefik docker-compose config).
+> **Coolify users:** Servers → your server → Proxy
+>
+> **Standalone Traefik:** wherever your Traefik `docker-compose.yml` lives (e.g. `/opt/traefik/docker-compose.yml`).
 
 Find the existing HTTP challenge lines in the `command:` section:
 

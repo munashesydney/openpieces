@@ -77,6 +77,8 @@ Give each service its own origin at `https://{serviceId}.example.com` so links a
    ```
 3. The `docker-compose.yml` already includes Traefik labels that handle the routing — no extra configuration needed.
 
+   > **Coolify (docker compose):** Turn **off** Escape special characters in labels, and set the `SERVICE_DOMAIN_REGEX_ESCAPED` env var to **Is Literal**.
+
    > If your domain is itself a subdomain (e.g. `op.example.com`), Cloudflare's free tier won't cover `*.op.example.com`. See [Wildcard SSL Setup](docs/wildcard-ssl-setup.md) to enable DNS-01 challenge.
 
    **Other proxies (Nginx / Caddy / etc):** Route `*.example.com` → `http://localhost:3141` (or your app port). The app extracts subdomains from the `Host` header.
