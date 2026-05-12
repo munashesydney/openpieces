@@ -30,7 +30,7 @@ Find the existing HTTP challenge lines in the `command:` section:
       - '--certificatesresolvers.letsencrypt.acme.httpchallenge.entrypoint=http'
 ```
 
-Add these **three new lines** directly after them:
+Replace them with these **three new lines**:
 
 ```yaml
       - '--certificatesresolvers.letsencrypt.acme.dnschallenge=true'
