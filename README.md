@@ -65,7 +65,23 @@ Edit `.env` — at minimum you need to set:
 
 Generate a secret: `node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"`
 
-### 2. Launch
+### 2. Subdomain routing (skip if you are on localhost)
+
+Give each service its own origin at `https://{serviceId}.example.com` so links and assets resolve correctly without path-prefix tricks:
+
+1. Add a wildcard DNS record: `*.example.com` → your VPS IP
+2. Set these in `.env`:
+   ```
+   SERVICE_DOMAIN=example.com
+   SERVICE_DOMAIN_REGEX_ESCAPED=example\.com
+   ```
+3. The `docker-compose.yml` already includes Traefik labels that handle the routing — no extra configuration needed.
+
+   > If your domain is itself a subdomain (e.g. `op.example.com`), Cloudflare's free tier won't cover `*.op.example.com`. See [Wildcard SSL Setup](docs/wildcard-ssl-setup.md) to enable DNS-01 challenge.
+
+   **Other proxies (Nginx / Caddy / etc):** Route `*.example.com` → `http://localhost:3141` (or your app port). The app extracts subdomains from the `Host` header.
+
+### 3. Launch
 
 ```bash
 docker compose up -d --build
@@ -77,45 +93,11 @@ This starts all services with health checks and restart policies:
 - **db** — PostgreSQL 16 with pgvector (bundled)
 - **opencode** — AI coding assistant
 
-### 3. Access
+### 4. Access
 
 Go to `http://localhost:3141/setup` to create your admin account.
 
-### 4. Subdomain routing (required)
-
-Give each service its own origin at `https://{serviceId}.yourdomain.com` so links and assets resolve correctly without path-prefix tricks:
-
-1. Add a wildcard DNS record: `*.yourdomain.com` → your VPS IP
-2. Set `SERVICE_DOMAIN=yourdomain.com` in `.env`
-3. Configure your reverse proxy to route all subdomains to the app container:
-
-   **Coolify / Traefik:** Go to Servers → choose server → Proxy → Dynamic Configurations → add:
-   ```yaml
-   http:
-     routers:
-       wildcard:
-         rule: HostRegexp(`^.+\\.yourdomain\\.com$`)
-         entryPoints:
-           - https
-         service: myapp
-         tls:
-           certResolver: letsencrypt
-     services:
-       myapp:
-         loadBalancer:
-           servers:
-             -
-               url: 'http://app:3141'
-   ```
-   Replace `yourdomain\\.com` with your domain (dots escaped). Replace `3141` with your `APP_PORT` if different.
-
-   > **SSL for sub-subdomains?** If your domain is itself a subdomain (e.g. `op.example.com`), you'll need DNS-01 challenge for wildcard SSL. See [Wildcard SSL Setup](docs/wildcard-ssl-setup.md).
-
-   **Nginx / Caddy / other proxies:** Route `*.yourdomain.com` → `http://localhost:3141` (or your app port). The app handles subdomain extraction from the `Host` header.
-
-4. Rebuild and restart
-
-Services are reachable at `https://{serviceId}.yourdomain.com` — each gets its own origin, so `/game` in HTML just works.
+Services are reachable at `https://{serviceId}.example.com` — each gets its own origin, so `/game` in HTML just works.
 
 ---
 

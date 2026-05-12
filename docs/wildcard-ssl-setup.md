@@ -19,7 +19,7 @@ This guide sets up **free wildcard SSL** for `*.op.yourdomain.com` using Let's E
 
 ---
 
-## Step 1: Add DNS Challenge to Traefik
+## Step 1: Add DNS Challenge to the Traefik Proxy
 
 In Coolify: **Servers → your server → Proxy** (this shows the Traefik docker-compose config).
 
@@ -52,39 +52,17 @@ Save and restart the proxy.
 
 ---
 
-## Step 2: Add Wildcard TLS Store
+## Step 2: Set Up the App Container
 
-In Coolify: **Servers → your server → Proxy → Dynamic Configurations**.
+The routing and TLS configuration is handled entirely by labels on the `app` service — no dynamic config file needed.
 
-Add a new configuration with the TLS store definition. Replace `op.munashesydney.com` with your domain:
+In your app's `docker-compose.yml`, set the `SERVICE_DOMAIN` and `SERVICE_DOMAIN_REGEX_ESCAPED` environment variables, and the existing Traefik labels will handle the rest. See the [README](../README.md#4-subdomain-routing-required) for details.
 
-```yaml
-tls:
-  stores:
-    default:
-      defaultGeneratedCert:
-        resolver: letsencrypt
-        domain:
-          main: op.munashesydney.com
-          sans:
-            - '*.op.munashesydney.com'
-```
-
-This tells Traefik to generate a single certificate covering both the apex domain and every subdomain beneath it.
-
-Save and restart the proxy.
-
----
-
-## Step 3: Verify
-
-Restart the proxy one final time. Traefik will:
+Once the proxy is restarted, Traefik will:
 
 1. Use DNS-01 challenge to prove ownership of `op.yourdomain.com`
 2. Issue a wildcard certificate covering `*.op.yourdomain.com`
 3. All service subdomains (`{id}.op.yourdomain.com`) will now have valid HTTPS
-
-You can check the Traefik dashboard or your browser's certificate details on any service URL to confirm.
 
 ---
 
