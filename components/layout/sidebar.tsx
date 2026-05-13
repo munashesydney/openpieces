@@ -60,7 +60,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
             className={`flex h-10 w-10 items-center justify-center rounded-lg text-[var(--muted)] transition-colors ${
               personalActive
                 ? "bg-[var(--hover-bg-strong)] text-[var(--foreground)]"
-                : "hover:bg-[var(--hover-bg-strong)] hover:text-[var(--foreground)]"
+                : "hover:bg-[var(--hover-bg)] hover:text-[var(--foreground)]"
             }`}
             aria-label="Personal"
           >
@@ -75,7 +75,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
             className={`flex h-10 w-10 items-center justify-center rounded-lg text-[var(--muted)] transition-colors ${
               brainActive
                 ? "bg-[var(--hover-bg-strong)] text-[var(--foreground)]"
-                : "hover:bg-[var(--hover-bg-strong)] hover:text-[var(--foreground)]"
+                : "hover:bg-[var(--hover-bg)] hover:text-[var(--foreground)]"
             }`}
             aria-label="Brain"
           >
@@ -90,7 +90,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
             className={`flex h-10 w-10 items-center justify-center rounded-lg text-[var(--muted)] transition-colors ${
               settingsActive
                 ? "bg-[var(--hover-bg-strong)] text-[var(--foreground)]"
-                : "hover:bg-[var(--hover-bg-strong)] hover:text-[var(--foreground)]"
+                : "hover:bg-[var(--hover-bg)] hover:text-[var(--foreground)]"
             }`}
             aria-label="Settings"
           >
@@ -147,7 +147,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
               className={`flex items-start gap-2 rounded-lg p-3 transition-colors ${
                 personalActive
                   ? "bg-[var(--hover-bg-strong)] text-[var(--foreground)]"
-                  : "bg-[var(--hover-bg)] text-[var(--muted)] hover:bg-[var(--hover-bg-strong)] hover:text-[var(--foreground)]"
+                  : "text-[var(--muted)] hover:bg-[var(--hover-bg)] hover:text-[var(--foreground)]"
               }`}
             >
               <User
@@ -166,7 +166,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
               className={`flex items-start gap-2 rounded-lg p-3 transition-colors ${
                 brainActive
                   ? "bg-[var(--hover-bg-strong)] text-[var(--foreground)]"
-                  : "bg-[var(--hover-bg)] text-[var(--muted)] hover:bg-[var(--hover-bg-strong)] hover:text-[var(--foreground)]"
+                  : "text-[var(--muted)] hover:bg-[var(--hover-bg)] hover:text-[var(--foreground)]"
               }`}
             >
               <Brain
@@ -185,7 +185,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
               className={`flex items-start gap-2 rounded-lg p-3 transition-colors ${
                 settingsActive
                   ? "bg-[var(--hover-bg-strong)] text-[var(--foreground)]"
-                  : "bg-[var(--hover-bg)] text-[var(--muted)] hover:bg-[var(--hover-bg-strong)] hover:text-[var(--foreground)]"
+                  : "text-[var(--muted)] hover:bg-[var(--hover-bg)] hover:text-[var(--foreground)]"
               }`}
             >
               <Settings

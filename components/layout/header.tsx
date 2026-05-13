@@ -240,7 +240,7 @@ export function Header() {
         </span>
       </Link>
 
-      <nav className="hidden flex-1 flex-wrap items-center gap-1 px-6 scrollbar-hide lg:flex">
+      <nav className="hidden flex-1 self-stretch items-stretch scrollbar-hide lg:flex">
         {navItems.map((item) => {
           const Icon = item.icon;
           const active =
@@ -252,7 +252,7 @@ export function Header() {
             <Link
               key={item.label}
               href={item.href}
-              className={`relative flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-colors group ${
+              className={`relative flex items-center gap-2 self-stretch px-3 text-sm font-medium transition-colors group ${
                 active
                   ? "text-[var(--foreground)]"
                   : "text-[var(--muted)] hover:text-[var(--foreground)]"
@@ -265,7 +265,7 @@ export function Header() {
               />
               {item.label}
               <span
-                className={`absolute bottom-0 left-4 right-4 h-0.5 rounded-full transition-all duration-200 ${
+                className={`absolute bottom-0 left-0 right-0 h-0.5 transition-all duration-200 ${
                   active
                     ? "bg-[var(--accent)] shadow-[0_0_8px_var(--accent-glow)]"
                     : "bg-[var(--accent)]/0 group-hover:bg-[var(--accent)]/40"
