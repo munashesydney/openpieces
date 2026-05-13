@@ -85,113 +85,115 @@ export function GeneralSettings({
   };
 
   return (
-    <div className="flex w-full justify-center px-6 pb-20 pt-10">
-      <div className="w-full max-w-[820px] space-y-8">
-        <Card>
-          <CardHeader>
-            <CardTitle>Workspace Identity</CardTitle>
-            <CardDescription>
-              Manage how your workspace is identified.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-6">
-              <Input
-                label="Workspace Name"
-                placeholder="e.g. Acme Corporation"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                required
-              />
-
-              <Textarea
-                label="Description"
-                placeholder="Tell us about this workspace..."
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-              />
-
-              {formError && (
-                <div className="rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-500">
-                  {formError}
-                </div>
-              )}
-
-              <div className="flex items-center justify-end gap-3 pt-4">
-                <Button variant="ghost" type="button">
-                  Cancel
-                </Button>
-                <Button type="submit" disabled={isPending}>
-                  {isPending ? "Saving..." : "Save Changes"}
-                </Button>
-              </div>
-            </form>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Default Timezone</CardTitle>
-            <CardDescription>
-              Default timezone used for recurring task scheduling when a task
-              doesn't specify one.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleTimezoneSubmit} className="space-y-6">
-              <div className="space-y-3">
-                <Dropdown
-                  label="Timezone"
-                  options={timezoneOptions}
-                  value={timezone}
-                  onChange={setTimezone}
-                  placeholder="Select a timezone"
+    <div className="flex w-full px-6 pb-20">
+      <div className="w-full px-4">
+        <div className="lg:grid lg:grid-cols-2 gap-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Workspace Identity</CardTitle>
+              <CardDescription>
+                Manage how your workspace is identified.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <form onSubmit={handleSubmit} className="space-y-6">
+                <Input
+                  label="Workspace Name"
+                  placeholder="e.g. Acme Corporation"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  required
                 />
 
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={detectTimezone}
-                >
-                  <LocateFixed className="h-3.5 w-3.5" />
-                  Detect my timezone
-                </Button>
-              </div>
+                <Textarea
+                  label="Description"
+                  placeholder="Tell us about this workspace..."
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                />
 
-              <p className="text-xs text-[var(--muted)]">
-                Your current timezone detected by the browser:{" "}
-                {typeof window !== "undefined"
-                  ? Intl.DateTimeFormat().resolvedOptions().timeZone
-                  : "..."}
-              </p>
+                {formError && (
+                  <div className="rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-500">
+                    {formError}
+                  </div>
+                )}
 
-              {tzFormError && (
-                <div className="rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-500">
-                  {tzFormError}
+                <div className="flex items-center justify-end gap-3 pt-4">
+                  <Button variant="ghost" type="button">
+                    Cancel
+                  </Button>
+                  <Button type="submit" disabled={isPending}>
+                    {isPending ? "Saving..." : "Save Changes"}
+                  </Button>
                 </div>
-              )}
+              </form>
+            </CardContent>
+          </Card>
 
-              <div className="flex items-center justify-end gap-3 pt-4">
-                <Button type="submit" disabled={tzPending}>
-                  {tzPending ? "Saving..." : "Save Changes"}
-                </Button>
-              </div>
-            </form>
-          </CardContent>
-        </Card>
+          <Card>
+            <CardHeader>
+              <CardTitle>Default Timezone</CardTitle>
+              <CardDescription>
+                Default timezone used for recurring task scheduling when a task
+                doesn't specify one.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <form onSubmit={handleTimezoneSubmit} className="space-y-6">
+                <div className="space-y-3">
+                  <Dropdown
+                    label="Timezone"
+                    options={timezoneOptions}
+                    value={timezone}
+                    onChange={setTimezone}
+                    placeholder="Select a timezone"
+                  />
 
-        <Card className="hover:border-red-500/30">
-          <CardHeader>
-            <CardTitle className="text-red-500">Danger Zone</CardTitle>
-            <CardDescription>
-              Irreversible and destructive actions for this workspace.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Button variant="danger">Delete Workspace</Button>
-          </CardContent>
-        </Card>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={detectTimezone}
+                  >
+                    <LocateFixed className="h-3.5 w-3.5" />
+                    Detect my timezone
+                  </Button>
+                </div>
+
+                <p className="text-xs text-[var(--muted)]">
+                  Your current timezone detected by the browser:{" "}
+                  {typeof window !== "undefined"
+                    ? Intl.DateTimeFormat().resolvedOptions().timeZone
+                    : "..."}
+                </p>
+
+                {tzFormError && (
+                  <div className="rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-500">
+                    {tzFormError}
+                  </div>
+                )}
+
+                <div className="flex items-center justify-end gap-3 pt-4">
+                  <Button type="submit" disabled={tzPending}>
+                    {tzPending ? "Saving..." : "Save Changes"}
+                  </Button>
+                </div>
+              </form>
+            </CardContent>
+          </Card>
+
+          <Card className="hover:border-red-500/30 lg:col-span-2">
+            <CardHeader>
+              <CardTitle className="text-red-500">Danger Zone</CardTitle>
+              <CardDescription>
+                Irreversible and destructive actions for this workspace.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Button variant="danger">Delete Workspace</Button>
+            </CardContent>
+          </Card>
+        </div>
       </div>
     </div>
   );

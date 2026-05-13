@@ -89,7 +89,7 @@ export function WorkflowDetail({
 
   return (
     <div className="flex w-full justify-center px-6 pb-20 pt-10 font-Inter">
-      <div className="w-full max-w-[820px] space-y-10">
+      <div className="w-full px-4 space-y-10">
         {/* Navigation & Header */}
         <div className="space-y-6">
           <button
@@ -100,10 +100,10 @@ export function WorkflowDetail({
             Back to Workflows
           </button>
 
-          <div className="flex items-start justify-between gap-4">
-            <div className="space-y-1 flex-1">
-              <div className="flex items-center gap-3">
-                <h1 className="text-2xl font-semibold text-[var(--foreground)]">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+            <div className="space-y-1 min-w-0 flex-1">
+              <div className="flex flex-wrap items-center gap-3">
+                <h1 className="text-2xl sm:text-3xl font-medium tracking-tight text-foreground">
                   {workflow.title}
                 </h1>
                 <span
@@ -124,7 +124,7 @@ export function WorkflowDetail({
                 </p>
               )}
             </div>
-            <div className="flex items-center gap-2 shrink-0">
+            <div className="flex items-center gap-2 shrink-0 self-end sm:self-auto">
               <Link
                 href={`/workspace/${workspaceId}/personal/workflows/${workflow.id}/executions`}
               >

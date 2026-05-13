@@ -1,6 +1,12 @@
-export function MainArea({ children }: { children: React.ReactNode }) {
+export function MainArea({
+  children,
+  className = "",
+}: {
+  children: React.ReactNode;
+  className?: string;
+}) {
   return (
-    <main className="relative flex-1 overflow-hidden dot-grid">
+    <main className={`relative flex-1 overflow-hidden ${className}`}>
       <div className="absolute inset-0 overflow-auto pl-[max(0px,env(safe-area-inset-left))] pr-[max(0px,env(safe-area-inset-right))] pb-[max(0px,env(safe-area-inset-bottom))]">
         <div className="h-full min-h-full">{children}</div>
       </div>

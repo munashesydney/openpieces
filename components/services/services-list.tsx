@@ -84,20 +84,20 @@ export function ServicesList({
 
   return (
     <div className="flex w-full justify-center px-6 pb-20 pt-10">
-      <div className="w-full max-w-[820px] space-y-10">
+      <div className="w-full px-4 space-y-10">
         {/* Header Section */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-semibold text-[var(--foreground)]">
-              Services
+            <h1 className="text-2xl sm:text-3xl font-medium tracking-tight text-foreground">
+              Pieces
             </h1>
             <p className="text-sm text-[var(--muted)]">
-              Manage and deploy AI-generated services within your workspace.
+              Manage and deploy AI-generated pieces within your workspace.
             </p>
           </div>
           <Button onClick={() => setIsSheetOpen(true)}>
             <Plus className="h-4 w-4" />
-            New Service
+            <span className="hidden sm:inline">New Piece</span>
           </Button>
         </div>
 
@@ -108,7 +108,7 @@ export function ServicesList({
             setIsSheetOpen(false);
             setFormError(null);
           }}
-          title="Create New Service"
+          title="Create New Piece"
           description="Define a new trigger or action for your workspace."
           footer={<></>} // Handled inside form
         >
@@ -183,7 +183,7 @@ export function ServicesList({
                   (newServiceType === "trigger" && !selectedWorkflow)
                 }
               >
-                {isPending ? "Creating..." : "Create Service"}
+                {isPending ? "Creating..." : "Create Piece"}
               </Button>
             </div>
           </form>
@@ -253,7 +253,7 @@ export function ServicesList({
               <span className="font-medium text-[var(--foreground)]">
                 {total}
               </span>{" "}
-              services
+              pieces
             </div>
             <div className="flex items-center gap-2">
               <Link href={currentPage > 1 ? `?page=${currentPage - 1}` : "#"}>

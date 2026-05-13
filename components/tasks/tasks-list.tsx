@@ -424,11 +424,11 @@ export function TasksList({
 
   return (
     <div className="flex w-full justify-center px-6 pb-20 pt-10">
-      <div className="w-full max-w-[820px] space-y-10">
+      <div className="w-full px-4 space-y-10">
         {/* Header Section */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-semibold text-[var(--foreground)]">
+            <h1 className="text-2xl sm:text-3xl font-medium tracking-tight text-foreground">
               Tasks
             </h1>
             <p className="text-sm text-[var(--muted)]">
@@ -437,7 +437,7 @@ export function TasksList({
           </div>
           <Button onClick={() => setIsSheetOpen(true)}>
             <Plus className="h-4 w-4" />
-            New Task
+            <span className="hidden sm:inline">New Task</span>
           </Button>
         </div>
 
@@ -552,18 +552,18 @@ export function TasksList({
             {recurringTasks.map((task) => (
               <Card key={task.id} hoverable className="group p-5">
                 <div className="flex items-start justify-between gap-4">
-                  <div className="flex flex-1 items-start gap-4">
+                  <div className="flex min-w-0 flex-1 items-start gap-4">
                     <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[var(--hover-bg)] text-[var(--muted)]">
                       <Clock className="h-5 w-5" />
                     </div>
-                    <div>
-                      <h3 className="text-base font-medium text-[var(--foreground)]">
+                    <div className="min-w-0 flex-1">
+                      <h3 className="text-base font-medium text-[var(--foreground)] truncate">
                         {task.title}
                       </h3>
-                      <p className="mt-1 text-sm text-[var(--muted)]">
+                      <p className="mt-1 text-sm text-[var(--muted)] line-clamp-2">
                         {task.description}
                       </p>
-                      <div className="mt-3 flex items-center gap-3">
+                      <div className="mt-3 flex flex-wrap items-center gap-3">
                         <div className="flex items-center gap-1.5 text-[10px] font-bold uppercase text-[var(--accent)]">
                           <Timer className="h-3 w-3" />
                           {formatSchedule(task)}
@@ -606,18 +606,18 @@ export function TasksList({
             {upcomingTasks.map((task) => (
               <Card key={task.id} hoverable className="group p-5">
                 <div className="flex items-start justify-between gap-4">
-                  <div className="flex flex-1 items-start gap-4">
+                  <div className="flex min-w-0 flex-1 items-start gap-4">
                     <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[var(--hover-bg)] text-[var(--muted)]">
                       <Calendar className="h-5 w-5" />
                     </div>
-                    <div>
-                      <h3 className="text-base font-medium text-[var(--foreground)]">
+                    <div className="min-w-0 flex-1">
+                      <h3 className="text-base font-medium text-[var(--foreground)] truncate">
                         {task.title}
                       </h3>
-                      <p className="mt-1 text-sm text-[var(--muted)]">
+                      <p className="mt-1 text-sm text-[var(--muted)] line-clamp-2">
                         {task.description}
                       </p>
-                      <div className="mt-3 flex items-center gap-3 text-[10px] font-bold uppercase text-[var(--muted)]">
+                      <div className="mt-3 flex flex-wrap items-center gap-3 text-[10px] font-bold uppercase text-[var(--muted)]">
                         <span>One-time</span>
                         {task.scheduledAt && (
                           <>

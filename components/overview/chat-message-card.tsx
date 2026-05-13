@@ -1,12 +1,11 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import ReactMarkdown from "react-markdown";
-import remarkGfm from "remark-gfm";
 import { ChevronDown, ChevronRight } from "lucide-react";
 import type { AiToolCall, AiToolResult } from "@/lib/ai-chat/types";
 import { ChatToolCalls } from "./chat-tool-calls";
 import { QuestionInputCard } from "./question-input-card";
+import { MarkdownRenderer } from "./markdown-renderer";
 
 type ChatMessageCardProps = {
   content: string;
@@ -189,7 +188,7 @@ export function ChatMessageCard({
         <div
           className={`${assistantMarkdownClass}${toolCalls.length > 0 || hasReasoning || isStreaming ? " mt-3" : ""}`}
         >
-          <ReactMarkdown remarkPlugins={[remarkGfm]}>{content}</ReactMarkdown>
+          <MarkdownRenderer content={content} />
         </div>
       ) : null}
 

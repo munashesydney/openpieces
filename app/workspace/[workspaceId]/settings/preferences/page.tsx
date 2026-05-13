@@ -20,14 +20,21 @@ export default function PreferencesPage() {
 
   if (!mounted) {
     return (
-      <div className="flex w-full justify-center px-6 pb-20 pt-10">
-        <div className="w-full max-w-[820px] space-y-8">
+      <div className="flex w-full px-6 pb-20">
+        <div className="w-full max-w-[820px] px-4 space-y-8">
           <section className="rounded-2xl border border-[var(--border)] bg-[var(--sidebar-bg)] p-8 shadow-sm">
-            <h2 className="text-xl font-semibold text-[var(--foreground)]">Appearance</h2>
-            <p className="mt-1 text-sm text-[var(--muted)]">Customize how the application looks for you.</p>
+            <h2 className="text-xl font-semibold text-[var(--foreground)]">
+              Appearance
+            </h2>
+            <p className="mt-1 text-sm text-[var(--muted)]">
+              Customize how the application looks for you.
+            </p>
             <div className="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-3">
               {themes.map((t) => (
-                <div key={t.id} className="flex flex-col items-center gap-3 rounded-xl border border-[var(--border)] bg-[var(--background)] p-6">
+                <div
+                  key={t.id}
+                  className="flex flex-col items-center gap-3 rounded-xl border border-[var(--border)] bg-[var(--background)] p-6"
+                >
                   <t.icon className="h-6 w-6 text-[var(--muted)]" />
                   <span className="text-sm font-medium">{t.label}</span>
                 </div>
@@ -40,11 +47,15 @@ export default function PreferencesPage() {
   }
 
   return (
-    <div className="flex w-full justify-center px-6 pb-20 pt-10">
-      <div className="w-full max-w-[820px] space-y-8">
+    <div className="flex w-full px-6 pb-20">
+      <div className="w-full max-w-[820px] px-4 space-y-8">
         <section className="rounded-2xl border border-[var(--border)] bg-[var(--sidebar-bg)] p-8 shadow-sm">
-          <h2 className="text-xl font-semibold text-[var(--foreground)]">Appearance</h2>
-          <p className="mt-1 text-sm text-[var(--muted)]">Customize how the application looks for you.</p>
+          <h2 className="text-xl font-semibold text-[var(--foreground)]">
+            Appearance
+          </h2>
+          <p className="mt-1 text-sm text-[var(--muted)]">
+            Customize how the application looks for you.
+          </p>
 
           <div className="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-3">
             {themes.map((t) => (

@@ -4,13 +4,25 @@ import { useState, useTransition } from "react";
 import Link from "next/link";
 import { Card } from "../ui/card";
 import { Button } from "@/components/basic/buttons/button";
-import { ChevronLeft, ChevronRight, Plus, Workflow, ChevronRight as ChevronRightIcon, Sparkles, Clock, Trash2 } from "lucide-react";
+import {
+  ChevronLeft,
+  ChevronRight,
+  Plus,
+  Workflow,
+  ChevronRight as ChevronRightIcon,
+  Sparkles,
+  Clock,
+  Trash2,
+} from "lucide-react";
 import { Sheet } from "../ui/sheet";
 import { Input } from "@/components/basic/input/input";
 import { Textarea } from "@/components/basic/input/textarea";
 import { Dropdown } from "@/components/basic/input/dropdown";
 import { ActionMenu } from "@/components/basic/input/action-menu";
-import { createWorkflowAction, deleteWorkflowAction } from "@/app/workspace/[workspaceId]/personal/workflows/actions";
+import {
+  createWorkflowAction,
+  deleteWorkflowAction,
+} from "@/app/workspace/[workspaceId]/personal/workflows/actions";
 import { type Workflow as WorkflowType } from "@/lib/db/schema";
 import { WorkflowDeleteModal } from "./workflow-delete-modal";
 
@@ -67,16 +79,20 @@ export function WorkflowsList({
 
   return (
     <div className="flex w-full justify-center px-6 pb-20 pt-10">
-      <div className="w-full max-w-[820px] space-y-10">
+      <div className="w-full px-4 space-y-10">
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-semibold text-[var(--foreground)]">Workflows</h1>
-            <p className="text-sm text-[var(--muted)]">Manage your AI-generated automation plans.</p>
+            <h1 className="text-2xl sm:text-3xl font-medium tracking-tight text-foreground">
+              Workflows
+            </h1>
+            <p className="text-sm text-[var(--muted)]">
+              Manage your AI-generated automation plans.
+            </p>
           </div>
           <Button onClick={() => setIsSheetOpen(true)}>
             <Plus className="h-4 w-4" />
-            New Workflow
+            <span className="hidden sm:inline">New Workflow</span>
           </Button>
         </div>
 
@@ -116,7 +132,12 @@ export function WorkflowsList({
               />
             </div>
             <div className="mt-8 flex justify-end gap-3 border-t border-[var(--border)] pt-4">
-              <Button type="button" variant="ghost" onClick={() => setIsSheetOpen(false)} disabled={isPending}>
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={() => setIsSheetOpen(false)}
+                disabled={isPending}
+              >
                 Cancel
               </Button>
               <Button type="submit" disabled={isPending || !title}>
@@ -155,29 +176,48 @@ export function WorkflowsList({
                 {Math.min(currentPage * pageSize, total)}
               </span>{" "}
               of{" "}
-              <span className="font-medium text-[var(--foreground)]">{total}</span> workflows
+              <span className="font-medium text-[var(--foreground)]">
+                {total}
+              </span>{" "}
+              workflows
             </div>
             <div className="flex items-center gap-2">
               <Link href={currentPage > 1 ? `?page=${currentPage - 1}` : "#"}>
-                <Button variant="outline" size="icon" disabled={currentPage <= 1} aria-label="Previous">
+                <Button
+                  variant="outline"
+                  size="icon"
+                  disabled={currentPage <= 1}
+                  aria-label="Previous"
+                >
                   <ChevronLeft className="h-4 w-4" />
                 </Button>
               </Link>
               <div className="flex gap-1">
-                {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
-                  <Link key={page} href={`?page=${page}`}>
-                    <Button
-                      variant={page === currentPage ? "primary" : "outline"}
-                      size="icon"
-                      className="text-sm"
-                    >
-                      {page}
-                    </Button>
-                  </Link>
-                ))}
+                {Array.from({ length: totalPages }, (_, i) => i + 1).map(
+                  (page) => (
+                    <Link key={page} href={`?page=${page}`}>
+                      <Button
+                        variant={page === currentPage ? "primary" : "outline"}
+                        size="icon"
+                        className="text-sm"
+                      >
+                        {page}
+                      </Button>
+                    </Link>
+                  ),
+                )}
               </div>
-              <Link href={currentPage < totalPages ? `?page=${currentPage + 1}` : "#"}>
-                <Button variant="outline" size="icon" disabled={currentPage >= totalPages} aria-label="Next">
+              <Link
+                href={
+                  currentPage < totalPages ? `?page=${currentPage + 1}` : "#"
+                }
+              >
+                <Button
+                  variant="outline"
+                  size="icon"
+                  disabled={currentPage >= totalPages}
+                  aria-label="Next"
+                >
                   <ChevronRight className="h-4 w-4" />
                 </Button>
               </Link>
@@ -208,37 +248,41 @@ function WorkflowCard({
 
   return (
     <>
-      <Link href={`/workspace/${workspaceId}/personal/workflows/${workflow.id}`}>
+      <Link
+        href={`/workspace/${workspaceId}/personal/workflows/${workflow.id}`}
+      >
         <Card
           hoverable
           className={`group cursor-pointer p-5 ${isPending ? "opacity-50 pointer-events-none" : ""}`}
         >
           <div className="flex items-start justify-between gap-4">
-            <div className="flex flex-1 items-start gap-4">
+            <div className="flex min-w-0 flex-1 items-start gap-4">
               <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[var(--hover-bg)] text-[var(--accent)] transition-colors group-hover:bg-[var(--accent)] group-hover:text-white">
                 <Workflow className="h-5 w-5" />
               </div>
-              <div>
-                <div className="flex items-center gap-2">
-                  <h3 className="text-base font-medium text-[var(--foreground)]">{workflow.title}</h3>
+              <div className="min-w-0 flex-1">
+                <div className="flex flex-wrap items-center gap-2">
+                  <h3 className="text-base font-medium text-[var(--foreground)]">
+                    {workflow.title}
+                  </h3>
                   <span
                     className={`rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider ${
                       workflow.status === "active"
                         ? "bg-emerald-500/10 text-emerald-500"
                         : workflow.status === "archived"
-                        ? "bg-red-500/10 text-red-500"
-                        : "bg-[var(--border)] text-[var(--muted)]"
+                          ? "bg-red-500/10 text-red-500"
+                          : "bg-[var(--border)] text-[var(--muted)]"
                     }`}
                   >
                     {workflow.status}
                   </span>
                 </div>
                 {workflow.description && (
-                  <p className="mt-1 text-sm text-[var(--muted)] line-clamp-2 max-w-[600px]">
+                  <p className="mt-1 text-sm text-[var(--muted)] line-clamp-2">
                     {workflow.description}
                   </p>
                 )}
-                <div className="mt-3 flex items-center gap-4 text-[10px] font-bold uppercase tracking-tight text-[var(--muted)]">
+                <div className="mt-3 flex flex-wrap items-center gap-4 text-[10px] font-bold uppercase tracking-tight text-[var(--muted)]">
                   <div className="flex items-center gap-1.5">
                     <Clock className="h-3.5 w-3.5" />
                     <span>Updated {timeAgo(new Date(workflow.updatedAt))}</span>
@@ -246,7 +290,7 @@ function WorkflowCard({
                 </div>
               </div>
             </div>
-            <div className="flex items-center gap-1 -mt-1">
+            <div className="flex shrink-0 items-center gap-1 -mt-1">
               <div className="shrink-0" onClick={(e) => e.preventDefault()}>
                 <ActionMenu
                   onSelect={(val) => {
@@ -255,7 +299,12 @@ function WorkflowCard({
                     }
                   }}
                   options={[
-                    { label: "Delete", value: "delete", icon: <Trash2 className="h-4 w-4" />, destructive: true },
+                    {
+                      label: "Delete",
+                      value: "delete",
+                      icon: <Trash2 className="h-4 w-4" />,
+                      destructive: true,
+                    },
                   ]}
                 />
               </div>

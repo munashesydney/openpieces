@@ -250,7 +250,7 @@ export function ServiceDetail({
 
   return (
     <div className="flex w-full justify-center px-6 pb-20 pt-10 font-Inter">
-      <div className="w-full max-w-[820px] space-y-10">
+      <div className="w-full px-4 space-y-10">
         {/* Navigation & Header */}
         <div className="space-y-6">
           <button
@@ -261,32 +261,36 @@ export function ServiceDetail({
             Back to Services
           </button>
 
-          <div className="flex items-start justify-between">
-            <div className="space-y-1">
-              <h1 className="text-2xl font-semibold text-[var(--foreground)]">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+            <div className="space-y-1 min-w-0 flex-1">
+              <h1 className="text-2xl sm:text-3xl font-medium tracking-tight text-foreground">
                 {service.title}
               </h1>
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
                 <HubBadge hubPieceId={service.hubPieceId} />
                 <p className="text-sm text-[var(--muted)]">
                   {service.description || "Service Details & API Reference"}
                 </p>
               </div>
             </div>
-            <div className="shrink-0 flex items-center gap-3">
-              <PushToHubButton
-                workspaceId={workspaceId}
-                serviceId={service.id}
-              />
-              <ForkServiceButton
-                workspaceId={workspaceId}
-                serviceId={service.id}
-              />
-              <PullFromHubButton
-                workspaceId={workspaceId}
-                serviceId={service.id}
-                serviceType={service.type}
-              />
+            <div className="flex shrink-0 items-center gap-3">
+              <div className="overflow-x-auto scrollbar-hide">
+                <div className="flex items-center gap-3">
+                  <PushToHubButton
+                    workspaceId={workspaceId}
+                    serviceId={service.id}
+                  />
+                  <ForkServiceButton
+                    workspaceId={workspaceId}
+                    serviceId={service.id}
+                  />
+                  <PullFromHubButton
+                    workspaceId={workspaceId}
+                    serviceId={service.id}
+                    serviceType={service.type}
+                  />
+                </div>
+              </div>
               <ActionMenu
                 onSelect={(val) => {
                   if (val === "delete") {
@@ -558,8 +562,8 @@ export function ServiceDetail({
               </CardDescription>
             </div>
             <Button size="sm" onClick={() => setIsSheetOpen(true)}>
-              <Plus className="h-4 w-4 mr-2" />
-              Add Endpoint
+              <Plus className="h-4 w-4" />
+              <span className="hidden sm:inline ml-1.5">Add Endpoint</span>
             </Button>
           </CardHeader>
           <CardContent>
@@ -569,8 +573,8 @@ export function ServiceDetail({
                   key={endpoint.id}
                   className={`group flex items-start justify-between gap-4 py-6 first:pt-0 last:pb-0 ${isPending ? "opacity-50" : ""}`}
                 >
-                  <div className="flex flex-col gap-2">
-                    <div className="flex items-center gap-3">
+                  <div className="flex flex-col gap-2 min-w-0">
+                    <div className="flex flex-wrap items-center gap-3">
                       <span
                         className={`rounded-md border px-2 py-0.5 text-[9px] font-bold tracking-wider ${
                           endpoint.method === "GET"
@@ -701,8 +705,10 @@ export function ServiceDetail({
               </CardDescription>
             </div>
             <Button size="sm" onClick={() => setIsSecretsSheetOpen(true)}>
-              <Plus className="h-4 w-4 mr-2" />
-              Add Required Secret
+              <Plus className="h-4 w-4" />
+              <span className="hidden sm:inline ml-1.5">
+                Add Required Secret
+              </span>
             </Button>
           </CardHeader>
           <CardContent>
@@ -717,8 +723,8 @@ export function ServiceDetail({
                     key={req.id}
                     className={`group flex items-start justify-between gap-4 py-6 first:pt-0 last:pb-0 ${isPending ? "opacity-50" : ""}`}
                   >
-                    <div className="flex flex-col gap-2">
-                      <div className="flex items-center gap-3">
+                    <div className="flex flex-col gap-2 min-w-0">
+                      <div className="flex flex-wrap items-center gap-3">
                         <code className="text-sm font-mono text-[var(--foreground)] opacity-80">
                           {req.secretKey}
                         </code>

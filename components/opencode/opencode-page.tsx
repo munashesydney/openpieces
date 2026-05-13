@@ -1,13 +1,25 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { Loader2, Send, Plus, Terminal, FolderOpen, X, Activity } from "lucide-react";
+import {
+  Loader2,
+  Send,
+  Plus,
+  Terminal,
+  FolderOpen,
+  X,
+  Activity,
+} from "lucide-react";
 import { Dropdown } from "@/components/basic/input/dropdown";
 import { OpenCodePageSkeleton } from "@/components/opencode/opencode-page-skeleton";
 import type { Service } from "@/lib/db/schema";
 import { serviceDirectoryLabel } from "@/lib/utils/service-directory-label";
 
-type SessionEvent = { type: string; sessionId?: string; [key: string]: unknown };
+type SessionEvent = {
+  type: string;
+  sessionId?: string;
+  [key: string]: unknown;
+};
 
 export function OpenCodePage({
   workspaceId,
@@ -17,7 +29,9 @@ export function OpenCodePage({
   services: Service[];
 }) {
   const [sessions, setSessions] = useState<any[]>([]);
-  const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null);
+  const [selectedSessionId, setSelectedSessionId] = useState<string | null>(
+    null,
+  );
   const [messages, setMessages] = useState<any[]>([]);
   const [input, setInput] = useState("");
   /** Initial / refresh of session list (page 1) */
@@ -29,16 +43,28 @@ export function OpenCodePage({
   const [events, setEvents] = useState<SessionEvent[]>([]);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [selectedServiceId, setSelectedServiceId] = useState("");
-  const [selectedSessionDirectory, setSelectedSessionDirectory] = useState<string | null>(null);
-  const [selectedSessionStatus, setSelectedSessionStatus] = useState<string | null>(null);
-  const [selectedSessionLastMessage, setSelectedSessionLastMessage] = useState<string | null>(null);
+  const [selectedSessionDirectory, setSelectedSessionDirectory] = useState<
+    string | null
+  >(null);
+  const [selectedSessionStatus, setSelectedSessionStatus] = useState<
+    string | null
+  >(null);
+  const [selectedSessionLastMessage, setSelectedSessionLastMessage] = useState<
+    string | null
+  >(null);
   const [sessionsPage, setSessionsPage] = useState(1);
   const [sessionsHasMore, setSessionsHasMore] = useState(false);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [sendError, setSendError] = useState<string | null>(null);
+  const [showSessions, setShowSessions] = useState(true);
+
+  const showSessionsPanel = showSessions || !selectedSessionId;
 
   const servicesWithDirectory = services.filter(
-    (s) => s.directory && typeof s.directory === "string" && s.directory.trim() !== ""
+    (s) =>
+      s.directory &&
+      typeof s.directory === "string" &&
+      s.directory.trim() !== "",
   );
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const eventSourceRef = useRef<EventSource | null>(null);
@@ -57,7 +83,7 @@ export function OpenCodePage({
         .catch(() => setSelectedSessionDirectory(null));
       // Grab status + lastMessage from the sessions list
       const session = sessions.find(
-        (s) => (s.sessionId || s.session_id || s.id) === selectedSessionId
+        (s) => (s.sessionId || s.session_id || s.id) === selectedSessionId,
       );
       setSelectedSessionStatus(session?.status ?? null);
       setSelectedSessionLastMessage(session?.lastMessage ?? null);
@@ -86,7 +112,10 @@ export function OpenCodePage({
     if (selectedSessionStatus !== "working" || !selectedSessionId) return;
 
     const pollTimeout = setTimeout(() => {
-      console.log("[Polling] No activity, starting backup poll for", selectedSessionId);
+      console.log(
+        "[Polling] No activity, starting backup poll for",
+        selectedSessionId,
+      );
       const interval = setInterval(async () => {
         if (!selectedSessionId) {
           clearInterval(interval);
@@ -94,14 +123,20 @@ export function OpenCodePage({
         }
         // Fetch fresh session list to get current DB status
         try {
-          const res = await fetch(`/api/opencode/sessions?workspaceId=${workspaceId}&page=1&pageSize=20`);
+          const res = await fetch(
+            `/api/opencode/sessions?workspaceId=${workspaceId}&page=1&pageSize=20`,
+          );
           if (!res.ok) return;
           const data = await res.json();
-          const sessionsList = Array.isArray(data) ? data : (data.sessions || []);
+          const sessionsList = Array.isArray(data) ? data : data.sessions || [];
           const session = sessionsList.find(
-            (s: any) => (s.sessionId || s.session_id || s.id) === selectedSessionId
+            (s: any) =>
+              (s.sessionId || s.session_id || s.id) === selectedSessionId,
           );
-          if (!session || (session.status !== "working" && session.status !== "active")) {
+          if (
+            !session ||
+            (session.status !== "working" && session.status !== "active")
+          ) {
             clearInterval(interval);
             setSessions(sessionsList);
             if (session) {
@@ -144,7 +179,7 @@ export function OpenCodePage({
 
     sessionSseRef.current?.close();
     const es = new EventSource(
-      `${window.location.origin}/api/opencode/sessions/${selectedSessionId}/events`
+      `${window.location.origin}/api/opencode/sessions/${selectedSessionId}/events`,
     );
     sessionSseRef.current = es;
 
@@ -159,7 +194,10 @@ export function OpenCodePage({
 
     const startPolling = () => {
       if (pollInterval) return; // Already polling
-      console.log("[SSE] SSE failed, starting polling fallback for", selectedSessionId);
+      console.log(
+        "[SSE] SSE failed, starting polling fallback for",
+        selectedSessionId,
+      );
       stopPolling();
       pollInterval = setInterval(async () => {
         if (!selectedSessionId) {
@@ -193,8 +231,8 @@ export function OpenCodePage({
             prev.map((s) =>
               (s.sessionId || s.session_id || s.id) === selectedSessionId
                 ? { ...s, status: newStatus, lastMessage: content }
-                : s
-            )
+                : s,
+            ),
           );
           setSelectedSessionStatus(newStatus);
           setSelectedSessionLastMessage(content);
@@ -232,7 +270,9 @@ export function OpenCodePage({
     try {
       if (page === 1) setIsSessionsLoading(true);
       else setIsLoadingMore(true);
-      const res = await fetch(`/api/opencode/sessions?workspaceId=${workspaceId}&page=${page}&pageSize=20`);
+      const res = await fetch(
+        `/api/opencode/sessions?workspaceId=${workspaceId}&page=${page}&pageSize=20`,
+      );
       const data = await res.json();
       if (!res.ok) {
         console.error("Failed to load sessions:", data);
@@ -295,7 +335,13 @@ export function OpenCodePage({
   const loadMessages = async (id: string) => {
     // Discard response if we're no longer on this session
     if (id !== selectedSessionId) {
-      console.log("[loadMessages] Discarding messages for", id, "(current:", selectedSessionId, ")");
+      console.log(
+        "[loadMessages] Discarding messages for",
+        id,
+        "(current:",
+        selectedSessionId,
+        ")",
+      );
       return;
     }
     try {
@@ -305,7 +351,7 @@ export function OpenCodePage({
       // Double-check after fetch
       if (id !== selectedSessionId) return;
       const data = await res.json();
-      const messagesList = Array.isArray(data) ? data : (data.messages || []);
+      const messagesList = Array.isArray(data) ? data : data.messages || [];
       setMessages(messagesList);
     } catch (e) {
       console.error(e);
@@ -338,8 +384,8 @@ export function OpenCodePage({
             prev.map((s) =>
               (s.sessionId || s.session_id || s.id) === sessionId
                 ? { ...s, status: newStatus, lastMessage: content }
-                : s
-            )
+                : s,
+            ),
           );
           setSelectedSessionStatus(newStatus);
           setSelectedSessionLastMessage(content);
@@ -381,16 +427,19 @@ export function OpenCodePage({
       prev.map((s) =>
         (s.sessionId || s.session_id || s.id) === selectedSessionId
           ? { ...s, status: "working" }
-          : s
-      )
+          : s,
+      ),
     );
 
     try {
-      const res = await fetch(`/api/opencode/sessions/${selectedSessionId}/messages`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ content: userMessage.content }),
-      });
+      const res = await fetch(
+        `/api/opencode/sessions/${selectedSessionId}/messages`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ content: userMessage.content }),
+        },
+      );
 
       if (res.status === 202) {
         // SSE is already connected via persistent useEffect - just wait for completion
@@ -409,8 +458,8 @@ export function OpenCodePage({
           prev.map((s) =>
             (s.sessionId || s.session_id || s.id) === selectedSessionId
               ? { ...s, status: "active" }
-              : s
-          )
+              : s,
+          ),
         );
       }
     } catch (e) {
@@ -422,8 +471,8 @@ export function OpenCodePage({
         prev.map((s) =>
           (s.sessionId || s.session_id || s.id) === selectedSessionId
             ? { ...s, status: "active" }
-            : s
-        )
+            : s,
+        ),
       );
     }
   };
@@ -434,8 +483,12 @@ export function OpenCodePage({
 
   return (
     <div className="flex h-full text-sm">
-      {/* Sidebar: Sessions */}
-      <div className="w-64 border-r border-[var(--border)] bg-[var(--background)] flex flex-col h-full">
+      {/* Sidebar: Sessions — mobile: full width, desktop: 256px side-by-side */}
+      <div
+        className={`${
+          showSessionsPanel ? "flex" : "hidden"
+        } w-full lg:w-64 shrink-0 border-r border-[var(--border)] bg-[var(--background)] flex-col h-full lg:flex`}
+      >
         <div className="p-4 border-b border-[var(--border)] flex justify-between items-center">
           <h2 className="font-semibold flex items-center gap-2">
             <Terminal className="h-4 w-4" /> Sessions
@@ -465,11 +518,13 @@ export function OpenCodePage({
                 </button>
               </div>
               <p className="text-sm text-[var(--muted)] mb-3">
-                Select a service with a directory. The session will use that directory for OpenCode.
+                Select a service with a directory. The session will use that
+                directory for OpenCode.
               </p>
               {servicesWithDirectory.length === 0 ? (
                 <p className="text-sm text-amber-600 dark:text-amber-500 py-2">
-                  No services with a directory set. Create a service and set its directory first.
+                  No services with a directory set. Create a service and set its
+                  directory first.
                 </p>
               ) : (
                 <Dropdown
@@ -494,7 +549,11 @@ export function OpenCodePage({
                 </button>
                 <button
                   onClick={createSession}
-                  disabled={!selectedServiceId || isCreatingSession || servicesWithDirectory.length === 0}
+                  disabled={
+                    !selectedServiceId ||
+                    isCreatingSession ||
+                    servicesWithDirectory.length === 0
+                  }
                   className="px-4 py-2 rounded-lg bg-[var(--accent)] text-white hover:opacity-90 disabled:opacity-50 transition-opacity"
                 >
                   {isCreatingSession ? (
@@ -509,7 +568,9 @@ export function OpenCodePage({
         )}
         <div className="flex-1 overflow-y-auto p-2">
           {sessions.length === 0 && !isSessionsLoading && (
-            <div className="text-[var(--muted)] text-center mt-4">No sessions found</div>
+            <div className="text-[var(--muted)] text-center mt-4">
+              No sessions found
+            </div>
           )}
           {sessions.map((session) => {
             // Handle different possible ID formats returned by API
@@ -517,7 +578,10 @@ export function OpenCodePage({
             return (
               <button
                 key={id}
-                onClick={() => setSelectedSessionId(id)}
+                onClick={() => {
+                  setSelectedSessionId(id);
+                  setShowSessions(false);
+                }}
                 className={`w-full text-left p-3 rounded-md mb-1 transition-colors truncate ${
                   selectedSessionId === id
                     ? "bg-[var(--accent)] text-white"
@@ -526,7 +590,7 @@ export function OpenCodePage({
               >
                 {id}
               </button>
-            )
+            );
           })}
           {sessionsHasMore && (
             <button
@@ -544,41 +608,72 @@ export function OpenCodePage({
       </div>
 
       {/* Main chat area */}
-      <div className="flex-1 flex flex-col h-full bg-[var(--background)] relative">
+      <div
+        className={`flex-1 min-w-0 flex flex-col h-full bg-[var(--background)] relative ${
+          selectedSessionId && !showSessions ? "" : "hidden lg:flex"
+        }`}
+      >
         {!selectedSessionId ? (
-          <div className="flex-1 flex items-center justify-center text-[var(--muted)]">
+          <div className="hidden lg:flex flex-1 items-center justify-center text-[var(--muted)]">
             Select or create a session to start coding
           </div>
         ) : (
           <>
-            {selectedSessionDirectory && (
-              <div className="px-6 py-2 border-b border-[var(--border)] bg-[var(--hover-bg)]/50 flex items-center gap-3 text-xs text-[var(--muted)]">
-                <span className="flex items-center gap-1.5 shrink-0">
-                  <FolderOpen className="h-3.5 w-3.5" />
-                  <span className="truncate" title={selectedSessionDirectory}>
+            {/* Mobile back button + directory bar */}
+            {(selectedSessionDirectory || selectedSessionStatus) && (
+              <div className="flex items-center gap-2 px-3 py-2 border-b border-[var(--border)] bg-[var(--hover-bg)]/50 min-w-0">
+                <button
+                  onClick={() => {
+                    setShowSessions(true);
+                  }}
+                  className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-[var(--muted)] hover:bg-[var(--hover-bg)] hover:text-[var(--foreground)] lg:hidden"
+                  aria-label="Back to sessions"
+                >
+                  <svg
+                    className="h-4 w-4"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                    strokeWidth={2}
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M15.75 19.5 8.25 12l7.5-7.5"
+                    />
+                  </svg>
+                </button>
+                <div className="flex items-center gap-3 text-xs text-[var(--muted)] min-w-0 flex-1">
+                  <span className="flex items-center gap-1.5 shrink-0">
+                    <FolderOpen className="h-3.5 w-3.5 shrink-0" />
+                  </span>
+                  <span
+                    className="truncate min-w-0"
+                    title={selectedSessionDirectory ?? ""}
+                  >
                     {selectedSessionDirectory}
                   </span>
-                </span>
-                {selectedSessionStatus && (
-                  <span
-                    className={`shrink-0 px-2 py-0.5 rounded-full text-[10px] font-medium ${
-                      selectedSessionStatus === "active"
-                        ? "bg-green-500/20 text-green-400"
-                        : selectedSessionStatus === "working"
-                        ? "bg-yellow-500/20 text-yellow-400"
-                        : selectedSessionStatus === "completed"
-                        ? "bg-blue-500/20 text-blue-400"
-                        : selectedSessionStatus === "failed"
-                        ? "bg-red-500/20 text-red-400"
-                        : "bg-gray-500/20 text-gray-400"
-                    }`}
-                  >
-                    {selectedSessionStatus}
-                  </span>
-                )}
+                  {selectedSessionStatus && (
+                    <span
+                      className={`shrink-0 px-2 py-0.5 rounded-full text-[10px] font-medium ${
+                        selectedSessionStatus === "active"
+                          ? "bg-green-500/20 text-green-400"
+                          : selectedSessionStatus === "working"
+                            ? "bg-yellow-500/20 text-yellow-400"
+                            : selectedSessionStatus === "completed"
+                              ? "bg-blue-500/20 text-blue-400"
+                              : selectedSessionStatus === "failed"
+                                ? "bg-red-500/20 text-red-400"
+                                : "bg-gray-500/20 text-gray-400"
+                      }`}
+                    >
+                      {selectedSessionStatus}
+                    </span>
+                  )}
+                </div>
               </div>
             )}
-            <div className="flex-1 overflow-y-auto p-6 space-y-6">
+            <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-6">
               {isMessagesLoading && messages.length === 0 ? (
                 <div
                   className="space-y-6 animate-pulse"
@@ -605,7 +700,7 @@ export function OpenCodePage({
                       }`}
                     >
                       <div
-                        className={`max-w-[80%] rounded-xl px-4 py-3 whitespace-pre-wrap ${
+                        className={`max-w-[85%] sm:max-w-[75%] rounded-xl px-4 py-3 whitespace-pre-wrap break-words ${
                           msg.role === "user"
                             ? "bg-[var(--accent)] text-white"
                             : "bg-[var(--input-bg)] border border-[var(--border)] text-[var(--foreground)]"
@@ -617,7 +712,7 @@ export function OpenCodePage({
                   ))}
                   {(isSending || events.length > 0) && (
                     <div className="flex justify-start">
-                      <div className="max-w-[80%] rounded-xl px-4 py-3 bg-[var(--input-bg)] border border-[var(--border)] text-[var(--foreground)] w-full">
+                      <div className="max-w-[85%] sm:max-w-[75%] rounded-xl px-4 py-3 bg-[var(--input-bg)] border border-[var(--border)] text-[var(--foreground)]">
                         <div className="flex items-center gap-2 mb-2 text-[var(--muted)]">
                           <Activity className="h-4 w-4 shrink-0" />
                           <span className="text-xs font-medium">
@@ -626,21 +721,37 @@ export function OpenCodePage({
                         </div>
                         <div className="space-y-1 max-h-48 overflow-y-auto text-xs">
                           {events.map((ev, i) => {
-                            const e = ev as { input?: { tool?: string }; properties?: { status?: string } };
+                            const e = ev as {
+                              input?: { tool?: string };
+                              properties?: { status?: string };
+                            };
                             let label = ev.type;
-                            if (ev.type === "tool.execute.before" && e.input?.tool)
+                            if (
+                              ev.type === "tool.execute.before" &&
+                              e.input?.tool
+                            )
                               label = `Running ${e.input.tool}...`;
-                            else if (ev.type === "tool.execute.after" && e.input?.tool)
+                            else if (
+                              ev.type === "tool.execute.after" &&
+                              e.input?.tool
+                            )
                               label = `Finished ${e.input.tool}`;
-                            else if (ev.type === "session.status" && e.properties?.status)
+                            else if (
+                              ev.type === "session.status" &&
+                              e.properties?.status
+                            )
                               label = String(e.properties.status);
-                            else if (ev.type === "message.part.updated") label = "Updating message...";
+                            else if (ev.type === "message.part.updated")
+                              label = "Updating message...";
                             return (
                               <div
                                 key={i}
                                 className="py-1 border-b border-[var(--border)]/50 last:border-0"
                               >
-                                <span className="text-[var(--muted)]">[{ev.type}]</span> {label}
+                                <span className="text-[var(--muted)]">
+                                  [{ev.type}]
+                                </span>{" "}
+                                {label}
                               </div>
                             );
                           })}
@@ -655,7 +766,9 @@ export function OpenCodePage({
 
             {sendError && (
               <div className="px-4 py-2 bg-red-500/10 border border-red-500/20 rounded-lg mx-4 mb-2">
-                <p className="text-sm text-red-600 dark:text-red-400">{sendError}</p>
+                <p className="text-sm text-red-600 dark:text-red-400">
+                  {sendError}
+                </p>
               </div>
             )}
 
@@ -663,7 +776,10 @@ export function OpenCodePage({
               <div className="flex items-end gap-2 max-w-4xl mx-auto relative">
                 <textarea
                   value={input}
-                  onChange={(e) => { setInput(e.target.value); setSendError(null); }}
+                  onChange={(e) => {
+                    setInput(e.target.value);
+                    setSendError(null);
+                  }}
                   onKeyDown={(e) => {
                     if (e.key === "Enter" && !e.shiftKey) {
                       e.preventDefault();
