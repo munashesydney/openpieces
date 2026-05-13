@@ -83,7 +83,7 @@ export function Header() {
         : "/workflows",
     },
     {
-      label: "Services",
+      label: "Pieces",
       href: workspaceId
         ? `/workspace/${workspaceId}/personal/services`
         : "/services",
