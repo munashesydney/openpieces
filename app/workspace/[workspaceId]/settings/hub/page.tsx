@@ -70,8 +70,8 @@ export default function HubSettingsPage() {
   }
 
   return (
-    <div className="flex w-full justify-center px-6 pb-20 pt-10">
-      <div className="w-full max-w-[820px] space-y-8">
+    <div className="flex w-full px-6 pb-20">
+      <div className="w-full max-w-[820px] px-4 space-y-8">
         {/* Setup prompt when client ID is missing */}
         {!clientIdConfigured && (
           <div className="rounded-xl border border-amber-500/15 bg-amber-500/5 p-5">

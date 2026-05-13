@@ -1,13 +1,6 @@
 "use client";
 
-import {
-  useCallback,
-  useEffect,
-  useLayoutEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useMediaQuery } from "@/lib/hooks/use-media-query";
 import { PanelLeftOpen } from "lucide-react";
 import { Button } from "@/components/basic/buttons/button";
@@ -91,10 +84,6 @@ export function OverviewPersonalView({
 }: OverviewPersonalViewProps) {
   const isLg = useMediaQuery("(min-width: 1024px)");
   const [sidebarOpen, setSidebarOpen] = useState(false);
-
-  useLayoutEffect(() => {
-    setSidebarOpen(isLg);
-  }, [isLg]);
   const [chats, setChats] = useState<Chat[]>(initialChats.map(mapChat));
   const [selectedChatId, setSelectedChatId] = useState<string | null>(
     initialSelectedChatId,
