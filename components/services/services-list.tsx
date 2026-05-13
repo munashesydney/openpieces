@@ -97,7 +97,7 @@ export function ServicesList({
           </div>
           <Button onClick={() => setIsSheetOpen(true)}>
             <Plus className="h-4 w-4" />
-            New Service
+            <span className="hidden sm:inline">New Service</span>
           </Button>
         </div>
 
