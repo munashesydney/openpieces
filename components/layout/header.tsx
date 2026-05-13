@@ -292,91 +292,112 @@ export function Header() {
 
       {mobileMenuOpen && (
         <>
+          {/* Full-screen backdrop */}
           <button
             type="button"
-            className="fixed inset-0 top-14 z-40 bg-black/40 lg:hidden"
+            className="fixed inset-0 z-40 bg-black/40 lg:hidden animate-[fadeIn_0.2s_ease-out]"
             aria-label="Close menu"
             onClick={() => setMobileMenuOpen(false)}
           />
-          <div className="absolute left-0 right-0 top-full z-50 max-h-[min(70vh,calc(100dvh-3.5rem))] overflow-y-auto border-b border-[var(--border)] bg-[var(--background)] shadow-lg lg:hidden">
-            <div className="flex flex-col gap-4 p-4">
-              {/* Workspace switcher at top — accessible right away */}
-              <div>
-                <p className="mb-2 px-1 text-[10px] font-semibold uppercase tracking-wider text-[var(--muted)]">
-                  Switch workspace
-                </p>
-                <WorkspaceSwitcher
-                  placement="down"
-                  activeWorkspaceId={workspaceId}
+
+          {/* Sidebar drawer from the left */}
+          <div className="fixed left-0 top-0 bottom-0 z-50 flex w-72 flex-col border-r border-[var(--border)] bg-[var(--sidebar-bg)] shadow-2xl lg:hidden animate-[slideRight_0.25s_ease-out]">
+            {/* Sidebar header */}
+            <div className="flex items-center justify-between px-4 pt-5 pb-4">
+              <Link
+                href={brandHref}
+                className="flex items-center gap-3"
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                <img
+                  src="/op-not-moving.png"
+                  alt="OpenPieces"
+                  className="h-8 w-8 rounded-lg object-cover"
                 />
-              </div>
+                <span className="text-xl font-semibold text-[var(--foreground)]">
+                  OpenPieces
+                </span>
+              </Link>
+              <button
+                type="button"
+                onClick={() => setMobileMenuOpen(false)}
+                className="flex h-8 w-8 items-center justify-center rounded-lg text-[var(--muted)] transition-colors hover:bg-[var(--hover-bg)] hover:text-[var(--foreground)]"
+                aria-label="Close menu"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
 
-              <div className="h-px bg-[var(--border)]" />
+            {/* Scrollable navigation area */}
+            <div className="flex-1 overflow-y-auto px-4 py-4">
+              {/* App-level navigation */}
+              <p className="mb-2 px-1 text-[10px] font-semibold uppercase tracking-wider text-[var(--muted)]">
+                Workspace
+              </p>
+              <nav className="flex flex-col gap-1 mb-6">
+                {appNavItems.map((item) => {
+                  const Icon = item.icon;
+                  return (
+                    <Link
+                      key={item.label}
+                      href={item.href}
+                      onClick={() => setMobileMenuOpen(false)}
+                      className={`flex items-center gap-3 rounded-lg px-4 py-3 text-sm font-medium transition-colors ${
+                        item.active
+                          ? "bg-[var(--hover-bg-strong)] text-[var(--foreground)]"
+                          : "text-[var(--muted)] hover:bg-[var(--hover-bg)] hover:text-[var(--foreground)]"
+                      }`}
+                    >
+                      <Icon
+                        className="h-5 w-5 shrink-0"
+                        strokeWidth={item.active ? 2.5 : 1.5}
+                      />
+                      {item.label}
+                    </Link>
+                  );
+                })}
+              </nav>
 
-              <div>
-                <p className="mb-2 px-1 text-[10px] font-semibold uppercase tracking-wider text-[var(--muted)]">
-                  Workspace
-                </p>
-                <nav className="flex flex-col gap-1">
-                  {appNavItems.map((item) => {
-                    const Icon = item.icon;
-                    return (
-                      <Link
-                        key={item.label}
-                        href={item.href}
-                        onClick={() => setMobileMenuOpen(false)}
-                        className={`flex items-center gap-3 rounded-lg px-4 py-3 text-sm font-medium transition-colors ${
-                          item.active
-                            ? "bg-[var(--hover-bg-strong)] text-[var(--foreground)]"
-                            : "text-[var(--muted)] hover:bg-[var(--hover-bg)] hover:text-[var(--foreground)]"
-                        }`}
-                      >
-                        <Icon
-                          className="h-5 w-5 shrink-0"
-                          strokeWidth={item.active ? 2.5 : 1.5}
-                        />
-                        {item.label}
-                      </Link>
-                    );
-                  })}
-                </nav>
-              </div>
+              {/* Page-level navigation */}
+              <p className="mb-2 px-1 text-[10px] font-semibold uppercase tracking-wider text-[var(--muted)]">
+                {pageSectionTitle}
+              </p>
+              <nav className="flex flex-col gap-1">
+                {navItems.map((item) => {
+                  const Icon = item.icon;
+                  const active =
+                    item.label === "Overview" || item.label === "Brain"
+                      ? pathname === item.activePattern
+                      : pathname.startsWith(item.activePattern);
 
-              <div className="h-px bg-[var(--border)]" />
+                  return (
+                    <Link
+                      key={item.label}
+                      href={item.href}
+                      onClick={() => setMobileMenuOpen(false)}
+                      className={`flex items-center gap-3 rounded-lg px-4 py-3 text-sm font-medium transition-colors ${
+                        active
+                          ? "bg-[var(--hover-bg-strong)] text-[var(--foreground)]"
+                          : "text-[var(--muted)] hover:bg-[var(--hover-bg)] hover:text-[var(--foreground)]"
+                      }`}
+                    >
+                      <Icon
+                        className="h-5 w-5 shrink-0"
+                        strokeWidth={active ? 2.5 : 1.5}
+                      />
+                      {item.label}
+                    </Link>
+                  );
+                })}
+              </nav>
+            </div>
 
-              <div>
-                <p className="mb-2 px-1 text-[10px] font-semibold uppercase tracking-wider text-[var(--muted)]">
-                  {pageSectionTitle}
-                </p>
-                <nav className="flex flex-col gap-1">
-                  {navItems.map((item) => {
-                    const Icon = item.icon;
-                    const active =
-                      item.label === "Overview" || item.label === "Brain"
-                        ? pathname === item.activePattern
-                        : pathname.startsWith(item.activePattern);
-
-                    return (
-                      <Link
-                        key={item.label}
-                        href={item.href}
-                        onClick={() => setMobileMenuOpen(false)}
-                        className={`flex items-center gap-3 rounded-lg px-4 py-3 text-sm font-medium transition-colors ${
-                          active
-                            ? "text-[var(--foreground)]"
-                            : "text-[var(--muted)] hover:bg-[var(--hover-bg)] hover:text-[var(--foreground)]"
-                        }`}
-                      >
-                        <Icon
-                          className="h-5 w-5 shrink-0"
-                          strokeWidth={active ? 2.5 : 1.5}
-                        />
-                        {item.label}
-                      </Link>
-                    );
-                  })}
-                </nav>
-              </div>
+            {/* Workspace picker — sticky at the bottom, same width as nav items */}
+            <div className="sticky bottom-0 border-t border-[var(--border)] bg-[var(--sidebar-bg)] px-4 py-3">
+              <WorkspaceSwitcher
+                placement="up"
+                activeWorkspaceId={workspaceId}
+              />
             </div>
           </div>
         </>
