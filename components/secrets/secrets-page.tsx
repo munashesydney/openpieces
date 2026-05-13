@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { Eye, Plus, Shield, Trash2 } from "lucide-react";
+import { Eye, Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/basic/buttons/button";
 import { Input } from "@/components/basic/input/input";
 import { Sheet } from "@/components/ui/sheet";
@@ -132,10 +132,10 @@ export function SecretsPage({ initialSecrets, workspaceId }: SecretsPageProps) {
 
   return (
     <div className="flex w-full justify-center px-6 pb-20 pt-10">
-      <div className="w-full max-w-[820px] space-y-10">
+      <div className="w-full px-4 space-y-10">
         <div className="flex items-center justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-semibold text-[var(--foreground)]">
+            <h1 className="text-2xl sm:text-3xl font-medium tracking-tight text-foreground">
               Secrets
             </h1>
             <p className="mt-1 text-sm text-[var(--muted)]">
@@ -210,37 +210,18 @@ export function SecretsPage({ initialSecrets, workspaceId }: SecretsPageProps) {
         </Sheet>
 
         <section className="space-y-3">
-          <div className="flex items-center justify-between gap-4">
-            <div>
-              <h2 className="text-sm font-semibold text-[var(--foreground)]">
-                Defined secrets
-              </h2>
-              <p className="text-xs text-[var(--muted)] mt-1">
-                These values will be injected as environment variables during
-                workflow runs.
-              </p>
-            </div>
-            {secrets.length > 0 && (
+          {secrets.length > 0 && (
+            <div className="flex items-center justify-end">
               <span className="text-[11px] font-medium uppercase tracking-[0.16em] text-[var(--muted)]">
                 {secrets.length} {secrets.length === 1 ? "secret" : "secrets"}
               </span>
-            )}
-          </div>
+            </div>
+          )}
 
           <div className="overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--background-soft)]">
             {secrets.length === 0 ? (
-              <div className="flex flex-col items-center justify-center px 8 py-12 text-center">
-                <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-full bg-[var(--hover-bg)]">
-                  <Shield className="h-5 w-5 text-[var(--accent)]" />
-                </div>
-                <p className="text-sm font-medium text-[var(--foreground)]">
-                  No secrets yet
-                </p>
-                <p className="mt-1 max-w-md text-xs text-[var(--muted)]">
-                  Create your first secret above. A good start is connecting
-                  your model provider or any third-party API keys used by your
-                  workflows.
-                </p>
+              <div className="rounded-xl border border-dashed border-[var(--border)] p-10 text-center text-sm text-[var(--muted)]">
+                No secrets yet.
               </div>
             ) : (
               <div className="divide-y divide-[var(--border)]">

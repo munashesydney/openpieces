@@ -424,11 +424,11 @@ export function TasksList({
 
   return (
     <div className="flex w-full justify-center px-6 pb-20 pt-10">
-      <div className="w-full max-w-[820px] space-y-10">
+      <div className="w-full px-4 space-y-10">
         {/* Header Section */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-semibold text-[var(--foreground)]">
+            <h1 className="text-2xl sm:text-3xl font-medium tracking-tight text-foreground">
               Tasks
             </h1>
             <p className="text-sm text-[var(--muted)]">
