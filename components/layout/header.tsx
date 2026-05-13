@@ -252,10 +252,10 @@ export function Header() {
             <Link
               key={item.label}
               href={item.href}
-              className={`relative flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-colors ${
+              className={`relative flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-colors group ${
                 active
                   ? "text-[var(--foreground)]"
-                  : "text-[var(--muted)] hover:bg-[var(--hover-bg)] hover:text-[var(--foreground)]"
+                  : "text-[var(--muted)] hover:text-[var(--foreground)]"
               }`}
             >
               <Icon
@@ -264,9 +264,13 @@ export function Header() {
                 fill="none"
               />
               {item.label}
-              {active && (
-                <span className="absolute bottom-0 left-4 right-4 h-0.5 rounded-full bg-[var(--accent)] shadow-[0_0_8px_var(--accent-glow)]" />
-              )}
+              <span
+                className={`absolute bottom-0 left-4 right-4 h-0.5 rounded-full transition-all duration-200 ${
+                  active
+                    ? "bg-[var(--accent)] shadow-[0_0_8px_var(--accent-glow)]"
+                    : "bg-[var(--accent)]/0 group-hover:bg-[var(--accent)]/40"
+                }`}
+              />
             </Link>
           );
         })}
