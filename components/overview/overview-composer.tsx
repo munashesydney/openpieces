@@ -150,12 +150,15 @@ export function OverviewComposer({
           </div>
         </Card>
 
-        {/* Dynamic background gradient based on mode */}
+        {/* Dynamic ambient glow based on mode */}
         <div
-          className={`pointer-events-none absolute -inset-x-16 -top-14 h-[420px] transition-opacity duration-1000 ${
-            mode === "agent" ? "opacity-50" : "opacity-0"
-          } bg-[radial-gradient(ellipse_at_top,rgba(124,58,237,0.15)_0%,rgba(6,182,212,0.05)_40%,transparent_65%)]`}
-        />
+          className={`pointer-events-none absolute -inset-x-10 -bottom-10 -top-20 -z-10 transition-opacity duration-1000 ${
+            mode === "agent" ? "opacity-100" : "opacity-0"
+          }`}
+        >
+          <div className="absolute left-[15%] top-1/4 h-32 w-1/3 rounded-[100%] bg-[var(--accent)] opacity-25 blur-[60px]" />
+          <div className="absolute right-[15%] top-1/4 h-32 w-1/3 rounded-[100%] bg-[var(--secondary)] opacity-25 blur-[60px]" />
+        </div>
       </div>
     </div>
   );
