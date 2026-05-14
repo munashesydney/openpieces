@@ -46,22 +46,18 @@ export default async function Home(props: {
 
   return (
     <DashboardLayout>
-      <MainArea>
-        {/* Architectural background grid, matches boxy theme */}
-        <div className="pointer-events-none fixed inset-0 z-0 bg-[linear-gradient(to_right,var(--border)_1px,transparent_1px),linear-gradient(to_bottom,var(--border)_1px,transparent_1px)] bg-[size:32px_32px] [mask-image:radial-gradient(ellipse_at_top,black_20%,transparent_80%)] opacity-40" />
-        <div className="relative z-10 h-full">
-          <OverviewPersonalView
-            workspaceId={workspaceId}
-            initialChats={initialChats}
-            initialSelectedChatId={initialSelectedChatId}
-            initialMessages={initialMessages}
-            initialTotal={initialTotal}
-            initialWorkspaceModel={initialWorkspaceModel}
-            sendMessageAction={sendMessage}
-            updateWorkspaceModelAction={updateWorkspaceModel}
-            updateChatModelAction={updateChatModel}
-          />
-        </div>
+      <MainArea className="dot-grid">
+        <OverviewPersonalView
+          workspaceId={workspaceId}
+          initialChats={initialChats}
+          initialSelectedChatId={initialSelectedChatId}
+          initialMessages={initialMessages}
+          initialTotal={initialTotal}
+          initialWorkspaceModel={initialWorkspaceModel}
+          sendMessageAction={sendMessage}
+          updateWorkspaceModelAction={updateWorkspaceModel}
+          updateChatModelAction={updateChatModel}
+        />
       </MainArea>
     </DashboardLayout>
   );
