@@ -62,12 +62,6 @@ export function AgentSettings({
             </CardHeader>
             <CardContent>
               <form onSubmit={handleSubmit} className="space-y-6">
-                <div className="rounded-xl border border-[var(--border)] bg-[var(--card-bg)] p-4">
-                  <p className="text-sm text-[var(--muted)] leading-relaxed">
-                    These names are used across all AI interactions in this
-                    workspace — in chat, system prompts, and agent responses.
-                  </p>
-                </div>
 
                 <Input
                   label="Agent name"
