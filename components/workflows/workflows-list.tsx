@@ -78,20 +78,21 @@ export function WorkflowsList({
   const totalPages = Math.ceil(total / pageSize);
 
   return (
-    <div className="flex w-full justify-center px-6 pb-20 pt-10">
-      <div className="w-full px-4 space-y-10">
+    <div className="flex w-full justify-center px-6 pb-20 pt-8">
+      <div className="w-full px-4 space-y-8">
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl sm:text-3xl font-medium tracking-tight text-foreground">
+            <p className="text-[10px] uppercase tracking-[0.2em] text-[var(--secondary)] mb-1.5">Automation</p>
+            <h1 className="text-2xl font-semibold tracking-tight text-foreground">
               Workflows
             </h1>
-            <p className="text-sm text-[var(--muted)]">
+            <p className="mt-1 text-[13px] text-[var(--muted)]">
               Manage your AI-generated automation plans.
             </p>
           </div>
           <Button onClick={() => setIsSheetOpen(true)}>
-            <Plus className="h-4 w-4" />
+            <Plus className="h-3.5 w-3.5" />
             <span className="hidden sm:inline">New Workflow</span>
           </Button>
         </div>
@@ -157,7 +158,7 @@ export function WorkflowsList({
             />
           ))}
           {initialWorkflows.length === 0 && (
-            <div className="rounded-xl border border-dashed border-[var(--border)] p-12 text-center text-sm text-[var(--muted)]">
+            <div className="rounded border border-dashed border-[var(--border)] bg-[var(--surface)] p-12 text-center text-[13px] text-[var(--muted)]">
               No workflows yet. Create one to get started.
             </div>
           )}
@@ -257,7 +258,7 @@ function WorkflowCard({
         >
           <div className="flex items-start justify-between gap-4">
             <div className="flex min-w-0 flex-1 items-start gap-4">
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[var(--hover-bg)] text-[var(--accent)] transition-colors group-hover:bg-[var(--accent)] group-hover:text-white">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded border border-[var(--accent)]/15 bg-[var(--accent)]/10 text-[var(--accent)] transition-all group-hover:bg-[var(--accent)] group-hover:text-white group-hover:shadow-[0_0_16px_var(--accent-glow)]">
                 <Workflow className="h-5 w-5" />
               </div>
               <div className="min-w-0 flex-1">
@@ -266,12 +267,12 @@ function WorkflowCard({
                     {workflow.title}
                   </h3>
                   <span
-                    className={`rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider ${
+                    className={`rounded px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider ${
                       workflow.status === "active"
-                        ? "bg-emerald-500/10 text-emerald-500"
+                        ? "bg-[var(--secondary)]/10 text-[var(--secondary)] border border-[var(--secondary)]/20"
                         : workflow.status === "archived"
-                          ? "bg-red-500/10 text-red-500"
-                          : "bg-[var(--border)] text-[var(--muted)]"
+                          ? "bg-red-500/10 text-red-500 border border-red-500/20"
+                          : "bg-[var(--border)] text-[var(--muted)] border border-[var(--border)]"
                     }`}
                   >
                     {workflow.status}
@@ -282,9 +283,9 @@ function WorkflowCard({
                     {workflow.description}
                   </p>
                 )}
-                <div className="mt-3 flex flex-wrap items-center gap-4 text-[10px] font-bold uppercase tracking-tight text-[var(--muted)]">
+                <div className="mt-3 flex flex-wrap items-center gap-4 text-[10px] font-medium uppercase tracking-[0.1em] text-[var(--muted)]">
                   <div className="flex items-center gap-1.5">
-                    <Clock className="h-3.5 w-3.5" />
+                    <Clock className="h-3 w-3" />
                     <span>Updated {timeAgo(new Date(workflow.updatedAt))}</span>
                   </div>
                 </div>
@@ -308,8 +309,8 @@ function WorkflowCard({
                   ]}
                 />
               </div>
-              <div className="flex h-10 w-10 items-center justify-center rounded-full text-[var(--muted)] transition-all group-hover:bg-[var(--hover-bg)] group-hover:text-[var(--foreground)] group-hover:translate-x-1">
-                <ChevronRightIcon className="h-5 w-5" />
+              <div className="flex h-8 w-8 items-center justify-center rounded text-[var(--muted)] transition-all group-hover:bg-[var(--hover-bg)] group-hover:text-[var(--foreground)] group-hover:translate-x-0.5">
+                <ChevronRightIcon className="h-4 w-4" />
               </div>
             </div>
           </div>

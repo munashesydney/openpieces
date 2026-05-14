@@ -74,7 +74,7 @@ export function OverviewComposer({
   return (
     <div className="flex w-full justify-center px-4 pb-8 pt-8 sm:px-6 sm:pb-14 sm:pt-14">
       <div className="relative w-full max-w-[820px] min-w-0">
-        <Card className="rounded-[28px] shadow-[0_18px_60px_rgba(0,0,0,0.12)] dark:shadow-[0_18_60px_rgba(0,0,0,0.35)] transition-all duration-300">
+        <Card className="rounded border border-[var(--border)] shadow-[0_18px_60px_rgba(0,0,0,0.2)] transition-all duration-300">
           <div className="px-3 py-3 sm:px-4 sm:py-4">
             <div className="grid grid-cols-[40px_1fr] items-center gap-x-3">
               <Button
@@ -153,8 +153,8 @@ export function OverviewComposer({
         {/* Dynamic background gradient based on mode */}
         <div
           className={`pointer-events-none absolute -inset-x-16 -top-14 h-[420px] transition-opacity duration-1000 ${
-            mode === "agent" ? "opacity-60" : "opacity-0"
-          } bg-[radial-gradient(ellipse_at_top,rgba(124,58,237,0.18)_0%,transparent_55%)] dark:bg-[radial-gradient(ellipse_at_top,rgba(168,85,247,0.2)_0%,transparent_55%)]`}
+            mode === "agent" ? "opacity-50" : "opacity-0"
+          } bg-[radial-gradient(ellipse_at_top,rgba(124,58,237,0.15)_0%,rgba(6,182,212,0.05)_40%,transparent_65%)]`}
         />
       </div>
     </div>

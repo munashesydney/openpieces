@@ -16,10 +16,10 @@ export function ThemeToggle() {
     return (
       <button
         type="button"
-        className="rounded-lg p-2 text-[var(--muted)]"
+        className="rounded p-2 text-[var(--muted)]"
         aria-label="Toggle theme"
       >
-        <Sun className="h-5 w-5" />
+        <Sun className="h-4 w-4" />
       </button>
     );
   }
@@ -28,13 +28,13 @@ export function ThemeToggle() {
     <button
       type="button"
       onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-      className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-[var(--muted)] transition-colors hover:bg-[var(--hover-bg)] hover:text-[var(--foreground)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]"
+      className="flex h-8 w-8 shrink-0 items-center justify-center rounded border border-transparent text-[var(--muted)] transition-all hover:border-[var(--border)] hover:bg-[var(--hover-bg)] hover:text-[var(--foreground)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]"
       aria-label={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
     >
       {theme === "dark" ? (
-        <Sun className="h-5 w-5" strokeWidth={2} stroke="currentColor" fill="none" />
+        <Sun className="h-4 w-4" strokeWidth={2} stroke="currentColor" fill="none" />
       ) : (
-        <Moon className="h-5 w-5" strokeWidth={2} stroke="currentColor" fill="none" />
+        <Moon className="h-4 w-4" strokeWidth={2} stroke="currentColor" fill="none" />
       )}
     </button>
   );

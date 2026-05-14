@@ -61,8 +61,8 @@ export function Dropdown({
         <button
           type="button"
           onClick={() => setIsOpen(!isOpen)}
-          className={`flex w-full items-center justify-between rounded-lg border border-[var(--border)] bg-[var(--background)] px-4 py-2.5 text-left text-sm transition-colors focus:border-[var(--accent)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)] hover:bg-[var(--hover-bg)] ${
-            isOpen ? "border-[var(--accent)] ring-1 ring-[var(--accent)]" : ""
+          className={`flex w-full items-center justify-between rounded border border-[var(--border)] bg-[var(--input-bg)] px-3 py-2.5 text-left text-[13px] transition-all focus:border-[var(--accent)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)]/50 hover:bg-[var(--hover-bg)] ${
+            isOpen ? "border-[var(--accent)] ring-1 ring-[var(--accent)]/50" : ""
           } ${triggerClassName}`}
         >
           <span className={`whitespace-nowrap truncate ${selectedOption ? "text-[var(--foreground)]" : "text-[var(--muted)]"}`}>
@@ -76,15 +76,15 @@ export function Dropdown({
         </button>
 
         {isOpen && (
-          <div className="absolute z-50 mt-2 min-w-full w-max max-w-[250px] overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--background)] shadow-xl animate-in fade-in zoom-in-95 duration-150 right-0">
+          <div className="absolute z-50 mt-2 min-w-full w-max max-w-[250px] overflow-hidden rounded border border-[var(--border)] bg-[var(--sidebar-bg)] shadow-[0_12px_40px_rgba(0,0,0,0.35)] right-0">
             <div className="max-h-60 overflow-y-auto p-1.5">
               {options.map((option) => (
                 <button
                   key={option.value}
                   type="button"
                   onClick={() => handleSelect(option.value)}
-                  className={`flex w-full items-center justify-between rounded-md px-3 py-2 text-sm transition-colors hover:bg-[var(--hover-bg)] ${
-                    option.value === value ? "bg-[var(--hover-bg)] text-[var(--accent)]" : "text-[var(--foreground)]"
+                  className={`flex w-full items-center justify-between rounded px-3 py-2 text-[13px] transition-all hover:bg-[var(--hover-bg)] ${
+                    option.value === value ? "bg-[var(--hover-bg)] text-[var(--secondary)]" : "text-[var(--foreground)]"
                   }`}
                 >
                   <span className="whitespace-nowrap">{option.label}</span>

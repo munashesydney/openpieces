@@ -57,43 +57,40 @@ export function Modal({
   return createPortal(
     <>
       <div
-        className={`fixed inset-0 z-50 bg-black/45 transition-opacity duration-200 ${
-          isOpen ? "opacity-100" : "pointer-events-none opacity-0"
-        } backdrop-blur-sm`}
+        className={`fixed inset-0 z-50 bg-black/50 transition-opacity duration-200 ${isOpen ? "opacity-100" : "pointer-events-none opacity-0"
+          } backdrop-blur-sm`}
         onClick={onClose}
       />
 
       <div
-        className={`fixed inset-0 z-50 flex items-center justify-center p-4 transition-all duration-200 ${
-          isOpen ? "pointer-events-auto opacity-100" : "pointer-events-none opacity-0"
-        }`}
+        className={`fixed inset-0 z-50 flex items-center justify-center p-4 transition-all duration-200 ${isOpen ? "pointer-events-auto opacity-100" : "pointer-events-none opacity-0"
+          }`}
       >
         <div
-          className={`w-full ${maxWidthClassName} rounded-2xl border border-[var(--border)] bg-[var(--background)] shadow-2xl transition-all duration-200 ease-out ${
-            isOpen ? "translate-y-0 scale-100 opacity-100" : "translate-y-2 scale-[0.98] opacity-0"
-          }`}
+          className={`w-full ${maxWidthClassName} rounded border border-[var(--border)] bg-[var(--sidebar-bg)] shadow-[0_20px_60px_rgba(0,0,0,0.35),0_0_40px_rgba(124,58,237,0.06)] transition-all duration-200 ease-out ${isOpen ? "translate-y-0 scale-100 opacity-100" : "translate-y-2 scale-[0.98] opacity-0"
+            }`}
           role="dialog"
           aria-modal="true"
           aria-label={title || "Modal"}
           onClick={(event) => event.stopPropagation()}
         >
-          <div className="flex items-start justify-between border-b border-[var(--border)] px-6 py-4">
+          <div className="flex items-start justify-between border-b border-[var(--border)] px-5 py-3.5">
             <div className="pr-4">
               {title && (
-                <h2 className="text-lg font-semibold text-[var(--foreground)]">
+                <h2 className="text-base font-semibold text-[var(--foreground)]">
                   {title}
                 </h2>
               )}
-              {description && <p className="mt-1 text-sm text-[var(--muted)]">{description}</p>}
+              {description && <p className="mt-0.5 text-[13px] text-[var(--muted)]">{description}</p>}
             </div>
-            <Button variant="ghost" size="icon" onClick={onClose} className="h-8 w-8">
+            <Button variant="ghost" size="icon" onClick={onClose} className="h-7 w-7">
               <X className="h-4 w-4" />
             </Button>
           </div>
 
-          <div className="max-h-[70vh] overflow-y-auto px-6 py-5">{children}</div>
+          <div className="max-h-[70vh] overflow-y-auto px-5 py-4">{children}</div>
 
-          {footer && <div className="border-t border-[var(--border)] px-6 py-4">{footer}</div>}
+          {footer && <div className="border-t border-[var(--border)] px-5 py-3.5">{footer}</div>}
         </div>
       </div>
     </>,

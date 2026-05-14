@@ -1,19 +1,21 @@
 @import "tailwindcss";
 
 :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-    --sidebar-bg: #111111;
-    --card-bg: rgba(30, 30, 40, 0.6);
-    --accent: #a855f7;
-    --accent-glow: rgba(168, 85, 247, 0.4);
+    --background: #040114;
+    --foreground: #f5f3ff;
+    --sidebar-bg: #09041d;
+    --card-bg: rgba(20, 10, 48, 0.6);
+    --accent: #7c3aed;
+    --accent-glow: rgba(124, 58, 237, 0.35);
+    --secondary: #06b6d4;
+    --secondary-glow: rgba(6, 182, 212, 0.25);
     --border: rgba(255, 255, 255, 0.08);
-    --muted: #71717a;
+    --muted: #a1a1aa;
     --success: #22c55e;
-    --dot-grid: rgba(255, 255, 255, 0.06);
-    --hover-bg: rgba(255, 255, 255, 0.06);
-    --hover-bg-strong: rgba(255, 255, 255, 0.1);
-    --input-bg: rgba(0, 0, 0, 0.2);
+    --hover-bg: rgba(255, 255, 255, 0.05);
+    --hover-bg-strong: rgba(124, 58, 237, 0.12);
+    --input-bg: rgba(0, 0, 0, 0.3);
+    --surface: #0a051f;
 }
 
 .light {
@@ -23,13 +25,15 @@
     --card-bg: #ffffff;
     --accent: #7c3aed;
     --accent-glow: rgba(124, 58, 237, 0.3);
-    --border: rgba(0, 0, 0, 0.12);
+    --secondary: #0891b2;
+    --secondary-glow: rgba(8, 145, 178, 0.2);
+    --border: rgba(0, 0, 0, 0.1);
     --muted: #52525b;
     --success: #16a34a;
-    --dot-grid: rgba(0, 0, 0, 0.08);
-    --hover-bg: rgba(0, 0, 0, 0.06);
-    --hover-bg-strong: rgba(0, 0, 0, 0.1);
+    --hover-bg: rgba(0, 0, 0, 0.04);
+    --hover-bg-strong: rgba(124, 58, 237, 0.08);
     --input-bg: #f4f4f5;
+    --surface: #f9fafb;
 }
 
 @theme inline {
@@ -46,15 +50,7 @@ body {
     overflow-x: hidden;
 }
 
-/* Dot grid pattern for main area */
-.dot-grid {
-    background-image: radial-gradient(
-        circle,
-        var(--dot-grid) 1px,
-        transparent 1px
-    );
-    background-size: 20px 20px;
-}
+
 
 @keyframes messageIn {
     from {
@@ -118,8 +114,8 @@ body {
 
 /* Thin custom scrollbar */
 ::-webkit-scrollbar {
-    width: 6px;
-    height: 6px;
+    width: 5px;
+    height: 5px;
 }
 
 ::-webkit-scrollbar-track {
@@ -127,12 +123,12 @@ body {
 }
 
 ::-webkit-scrollbar-thumb {
-    background: rgba(255, 255, 255, 0.08);
-    border-radius: 3px;
+    background: rgba(124, 58, 237, 0.15);
+    border-radius: 2px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-    background: rgba(255, 255, 255, 0.15);
+    background: rgba(124, 58, 237, 0.3);
 }
 
 /* Backdrop fade in */
@@ -154,3 +150,10 @@ body {
         transform: translateX(0);
     }
 }
+
+/* ── Active nav indicator glow ── */
+.nav-indicator-active {
+    box-shadow: 0 0 12px var(--accent-glow), 0 0 4px var(--accent-glow);
+}
+
+

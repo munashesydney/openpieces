@@ -40,27 +40,27 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
         <button
           type="button"
           onClick={onToggle}
-          className="mt-2 flex h-10 w-10 items-center justify-center rounded-lg text-[var(--muted)] transition-colors hover:bg-[var(--hover-bg)] hover:text-[var(--foreground)]"
+          className="mt-3 flex h-9 w-9 items-center justify-center rounded border border-transparent text-[var(--muted)] transition-all hover:border-[var(--border)] hover:bg-[var(--hover-bg)] hover:text-[var(--foreground)]"
           aria-label="Show sidebar"
         >
-          <PanelLeftOpen className="h-5 w-5" />
+          <PanelLeftOpen className="h-4 w-4" />
         </button>
 
         {/* Brand logo */}
         <img
           src="/op-not-moving.png"
           alt="OpenPieces"
-          className="mt-2 h-8 w-8 rounded-lg object-cover"
+          className="mt-3 h-7 w-7 rounded object-cover"
         />
 
         {/* Navigation icons */}
-        <div className="mt-5 flex-1 space-y-2">
+        <div className="mt-5 flex-1 space-y-1">
           <Link
             href={personalHref}
-            className={`flex h-10 w-10 items-center justify-center rounded-lg text-[var(--muted)] transition-colors ${
+            className={`flex h-9 w-9 items-center justify-center rounded border transition-all ${
               personalActive
-                ? "bg-[var(--hover-bg-strong)] text-[var(--foreground)]"
-                : "hover:bg-[var(--hover-bg)] hover:text-[var(--foreground)]"
+                ? "border-[var(--accent)]/30 bg-[var(--hover-bg-strong)] text-[var(--foreground)] shadow-[0_0_12px_var(--accent-glow)]"
+                : "border-transparent text-[var(--muted)] hover:border-[var(--border)] hover:bg-[var(--hover-bg)] hover:text-[var(--foreground)]"
             }`}
             aria-label="Personal"
           >
@@ -72,10 +72,10 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
           </Link>
           <Link
             href={brainHref}
-            className={`flex h-10 w-10 items-center justify-center rounded-lg text-[var(--muted)] transition-colors ${
+            className={`flex h-9 w-9 items-center justify-center rounded border transition-all ${
               brainActive
-                ? "bg-[var(--hover-bg-strong)] text-[var(--foreground)]"
-                : "hover:bg-[var(--hover-bg)] hover:text-[var(--foreground)]"
+                ? "border-[var(--accent)]/30 bg-[var(--hover-bg-strong)] text-[var(--foreground)] shadow-[0_0_12px_var(--accent-glow)]"
+                : "border-transparent text-[var(--muted)] hover:border-[var(--border)] hover:bg-[var(--hover-bg)] hover:text-[var(--foreground)]"
             }`}
             aria-label="Brain"
           >
@@ -87,10 +87,10 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
           </Link>
           <Link
             href={settingsHref}
-            className={`flex h-10 w-10 items-center justify-center rounded-lg text-[var(--muted)] transition-colors ${
+            className={`flex h-9 w-9 items-center justify-center rounded border transition-all ${
               settingsActive
-                ? "bg-[var(--hover-bg-strong)] text-[var(--foreground)]"
-                : "hover:bg-[var(--hover-bg)] hover:text-[var(--foreground)]"
+                ? "border-[var(--accent)]/30 bg-[var(--hover-bg-strong)] text-[var(--foreground)] shadow-[0_0_12px_var(--accent-glow)]"
+                : "border-transparent text-[var(--muted)] hover:border-[var(--border)] hover:bg-[var(--hover-bg)] hover:text-[var(--foreground)]"
             }`}
             aria-label="Settings"
           >
@@ -115,87 +115,92 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
   }
 
   return (
-    <aside className="flex w-64 shrink-0 flex-col border-r border-[var(--border)] bg-[var(--sidebar-bg)]">
+    <aside className="flex w-60 shrink-0 flex-col border-r border-[var(--border)] bg-[var(--sidebar-bg)]">
       {/* Logo + collapse button */}
-      <div className="flex items-center justify-between gap-3 px-4 pt-5 pb-3">
-        <div className="flex items-center gap-3">
+      <div className="flex items-center justify-between gap-3 px-4 pt-4 pb-3">
+        <div className="flex items-center gap-2.5">
           <img
             src="/op-not-moving.png"
             alt="OpenPieces"
-            className="h-8 w-8 rounded-lg object-cover"
+            className="h-7 w-7 rounded object-cover"
           />
-          <span className="text-xl font-semibold text-[var(--foreground)]">
-            OpenPieces
+          <span className="text-sm font-semibold text-[var(--foreground)]">
+            openpieces
           </span>
         </div>
         <button
           type="button"
           onClick={onToggle}
-          className="flex h-7 w-7 items-center justify-center rounded-md border border-transparent text-[var(--muted)] transition-colors hover:border-[var(--border)] hover:bg-[var(--hover-bg)] hover:text-[var(--foreground)]"
+          className="flex h-7 w-7 items-center justify-center rounded border border-transparent text-[var(--muted)] transition-all hover:border-[var(--border)] hover:bg-[var(--hover-bg)] hover:text-[var(--foreground)]"
           aria-label="Hide sidebar"
         >
           <PanelLeftClose className="h-4 w-4" />
         </button>
       </div>
 
+
+
       {/* Navigation */}
-      <section className="flex-1 overflow-auto p-4">
-        <ul className="space-y-2">
+      <section className="flex-1 overflow-auto px-3">
+        <ul className="space-y-1">
           <li>
             <Link
               href={personalHref}
-              className={`flex items-start gap-2 rounded-lg p-3 transition-colors ${
+              className={`flex items-center gap-2.5 rounded px-3 py-2.5 text-[13px] font-medium transition-all ${
                 personalActive
                   ? "bg-[var(--hover-bg-strong)] text-[var(--foreground)]"
                   : "text-[var(--muted)] hover:bg-[var(--hover-bg)] hover:text-[var(--foreground)]"
               }`}
             >
               <User
-                className="mt-0.5 h-4 w-4 shrink-0"
+                className="h-4 w-4 shrink-0"
                 strokeWidth={personalActive ? 2.5 : 1.5}
                 fill="none"
               />
-              <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-medium">Personal</p>
-              </div>
+              Personal
+              {personalActive && (
+                <span className="ml-auto h-1.5 w-1.5 rounded-full bg-[var(--secondary)] shadow-[0_0_6px_var(--secondary-glow)]" />
+              )}
             </Link>
           </li>
           <li>
             <Link
               href={brainHref}
-              className={`flex items-start gap-2 rounded-lg p-3 transition-colors ${
+              className={`flex items-center gap-2.5 rounded px-3 py-2.5 text-[13px] font-medium transition-all ${
                 brainActive
                   ? "bg-[var(--hover-bg-strong)] text-[var(--foreground)]"
                   : "text-[var(--muted)] hover:bg-[var(--hover-bg)] hover:text-[var(--foreground)]"
               }`}
             >
               <Brain
-                className="mt-0.5 h-4 w-4 shrink-0"
+                className="h-4 w-4 shrink-0"
                 strokeWidth={brainActive ? 2.5 : 1.5}
                 fill="none"
               />
-              <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-medium">Brain</p>
-              </div>
+              Brain
+              {brainActive && (
+                <span className="ml-auto h-1.5 w-1.5 rounded-full bg-[var(--secondary)] shadow-[0_0_6px_var(--secondary-glow)]" />
+              )}
             </Link>
           </li>
           <li>
             <Link
               href={settingsHref}
-              className={`flex items-start gap-2 rounded-lg p-3 transition-colors ${
+              className={`flex items-center gap-2.5 rounded px-3 py-2.5 text-[13px] font-medium transition-all ${
                 settingsActive
                   ? "bg-[var(--hover-bg-strong)] text-[var(--foreground)]"
                   : "text-[var(--muted)] hover:bg-[var(--hover-bg)] hover:text-[var(--foreground)]"
               }`}
             >
               <Settings
-                className="mt-0.5 h-4 w-4 shrink-0"
+                className="h-4 w-4 shrink-0"
                 strokeWidth={settingsActive ? 2.5 : 1.5}
                 fill="none"
               />
-              <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-medium">Settings</p>
-              </div>
+              Settings
+              {settingsActive && (
+                <span className="ml-auto h-1.5 w-1.5 rounded-full bg-[var(--secondary)] shadow-[0_0_6px_var(--secondary-glow)]" />
+              )}
             </Link>
           </li>
         </ul>

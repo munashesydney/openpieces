@@ -49,8 +49,13 @@ export function AgentSettings({
   };
 
   return (
-    <div className="flex w-full px-6 pb-20">
+    <div className="flex w-full px-6 pb-20 pt-8">
       <div className="w-full px-4">
+        <div className="mb-6">
+          <p className="text-[10px] uppercase tracking-[0.2em] text-[var(--secondary)] mb-1.5">Personalization</p>
+          <h1 className="text-2xl font-semibold tracking-tight text-[var(--foreground)]">Your Open Pieces</h1>
+          <p className="mt-1 text-[13px] text-[var(--muted)]">Customize your AI agent identity and usage limits.</p>
+        </div>
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <Card>
             <CardHeader>

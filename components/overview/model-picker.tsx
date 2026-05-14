@@ -198,7 +198,7 @@ export function ModelPicker({ initialModel, onModelChange }: ModelPickerProps) {
   }, [open]);
 
   const panelClass =
-    "z-[100] overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--sidebar-bg)] p-1.5 shadow-[0_18px_45px_rgba(0,0,0,0.2)]";
+    "z-[100] overflow-hidden rounded border border-[var(--border)] bg-[var(--sidebar-bg)] p-1.5 shadow-[0_12px_40px_rgba(0,0,0,0.35)]";
 
   return (
     <div ref={rootRef} className="relative min-w-0">
@@ -211,13 +211,13 @@ export function ModelPicker({ initialModel, onModelChange }: ModelPickerProps) {
             return next;
           });
         }}
-        className="flex max-w-full min-w-0 items-center gap-2 rounded-full bg-[var(--hover-bg)] px-2 py-1.5 text-sm font-medium text-[var(--foreground)] transition-colors hover:bg-[var(--hover-bg-strong)] sm:px-3"
+        className="flex max-w-full min-w-0 items-center gap-2 rounded bg-[var(--hover-bg)] px-2 py-1.5 text-[13px] font-medium text-[var(--foreground)] transition-all hover:bg-[var(--hover-bg-strong)] sm:px-3"
         aria-haspopup="menu"
         aria-expanded={open}
       >
         <span className="truncate">{activeModel.label}</span>
         {activeModel.badge && (
-          <span className="shrink-0 rounded-full bg-[var(--accent)] px-2 py-0.5 text-[10px] font-semibold text-white">
+          <span className="shrink-0 rounded bg-[var(--accent)] px-2 py-0.5 text-[10px] font-semibold text-white">
             {activeModel.badge}
           </span>
         )}
@@ -242,7 +242,7 @@ export function ModelPicker({ initialModel, onModelChange }: ModelPickerProps) {
                   key={p.id}
                   type="button"
                   onClick={() => setMobileProviderFocus(p.id)}
-                  className="flex w-full items-center justify-between rounded-xl px-3 py-2 text-left text-sm text-[var(--muted)] transition-all hover:bg-[var(--hover-bg)] hover:text-[var(--foreground)]"
+                  className="flex w-full items-center justify-between rounded px-3 py-2 text-left text-[13px] text-[var(--muted)] transition-all hover:bg-[var(--hover-bg)] hover:text-[var(--foreground)]"
                 >
                   {p.label}
                   <ChevronRight className="h-3 w-3 opacity-50" />
@@ -254,7 +254,7 @@ export function ModelPicker({ initialModel, onModelChange }: ModelPickerProps) {
               <button
                 type="button"
                 onClick={() => setMobileProviderFocus(null)}
-                className="mb-1 flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-sm font-medium text-[var(--muted)] hover:bg-[var(--hover-bg)] hover:text-[var(--foreground)]"
+                className="mb-1 flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-[13px] font-medium text-[var(--muted)] hover:bg-[var(--hover-bg)] hover:text-[var(--foreground)]"
               >
                 <ChevronLeft className="h-4 w-4 shrink-0" />
                 Back
@@ -268,7 +268,7 @@ export function ModelPicker({ initialModel, onModelChange }: ModelPickerProps) {
                     key={m.id}
                     type="button"
                     onClick={() => handleModelSelect(m.id)}
-                    className={`flex w-full items-center justify-between rounded-xl px-3 py-2 text-left text-sm transition-all ${
+                    className={`flex w-full items-center justify-between rounded px-3 py-2 text-left text-[13px] transition-all ${
                       activeModelId === m.id
                         ? "bg-[var(--accent)] text-white"
                         : "text-[var(--muted)] hover:bg-[var(--hover-bg)] hover:text-[var(--foreground)]"
@@ -313,7 +313,7 @@ export function ModelPicker({ initialModel, onModelChange }: ModelPickerProps) {
                 key={p.id}
                 type="button"
                 onMouseEnter={() => setHoveredProviderId(p.id)}
-                className={`flex w-full items-center justify-between rounded-xl px-3 py-2 text-left text-sm transition-all ${
+                className={`flex w-full items-center justify-between rounded px-3 py-2 text-left text-[13px] transition-all ${
                   hoveredProviderId === p.id
                     ? "bg-[var(--hover-bg)] text-[var(--foreground)]"
                     : "text-[var(--muted)] hover:text-[var(--foreground)]"
@@ -338,7 +338,7 @@ export function ModelPicker({ initialModel, onModelChange }: ModelPickerProps) {
                     key={m.id}
                     type="button"
                     onClick={() => handleModelSelect(m.id)}
-                    className={`flex w-full items-center justify-between rounded-xl px-3 py-2 text-left text-sm transition-all ${
+                    className={`flex w-full items-center justify-between rounded px-3 py-2 text-left text-[13px] transition-all ${
                       activeModelId === m.id
                         ? "bg-[var(--accent)] text-white"
                         : "text-[var(--muted)] hover:bg-[var(--hover-bg)] hover:text-[var(--foreground)]"

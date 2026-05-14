@@ -423,20 +423,21 @@ export function TasksList({
   };
 
   return (
-    <div className="flex w-full justify-center px-6 pb-20 pt-10">
-      <div className="w-full px-4 space-y-10">
+    <div className="flex w-full justify-center px-6 pb-20 pt-8">
+      <div className="w-full px-4 space-y-8">
         {/* Header Section */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl sm:text-3xl font-medium tracking-tight text-foreground">
+            <p className="text-[10px] uppercase tracking-[0.2em] text-[var(--secondary)] mb-1.5">Scheduling</p>
+            <h1 className="text-2xl font-semibold tracking-tight text-foreground">
               Tasks
             </h1>
-            <p className="text-sm text-[var(--muted)]">
+            <p className="mt-1 text-[13px] text-[var(--muted)]">
               Manage your one-time and recurring scheduled actions.
             </p>
           </div>
           <Button onClick={() => setIsSheetOpen(true)}>
-            <Plus className="h-4 w-4" />
+            <Plus className="h-3.5 w-3.5" />
             <span className="hidden sm:inline">New Task</span>
           </Button>
         </div>
