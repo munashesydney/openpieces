@@ -336,7 +336,7 @@ function ServiceCard({
           <div className="flex items-start justify-between gap-4">
             <div className="flex flex-1 items-start gap-4">
               <div
-                className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[var(--hover-bg)] ${iconColor}`}
+                className={`flex h-10 w-10 shrink-0 items-center justify-center rounded transition-all ${service.type === "trigger" ? "border border-amber-500/15 bg-amber-500/10 text-amber-500 group-hover:bg-amber-500 group-hover:text-white group-hover:shadow-[0_0_16px_rgba(245,158,11,0.35)]" : "border border-[var(--accent)]/15 bg-[var(--accent)]/10 text-[var(--accent)] group-hover:bg-[var(--accent)] group-hover:text-white group-hover:shadow-[0_0_16px_var(--accent-glow)]"}`}
               >
                 <Icon className="h-5 w-5" />
               </div>

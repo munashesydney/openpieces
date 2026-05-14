@@ -231,7 +231,7 @@ function StepAgent({ form, setForm, onNext, onBack }: StepProps) {
 
   return (
     <div className="space-y-4">
-      <div className="rounded-xl border border-[var(--border)] bg-[var(--card-bg)] p-4">
+      <div className="rounded border border-[var(--border)] bg-[var(--sidebar-bg)] p-4">
         <p className="text-sm text-[var(--muted)] leading-relaxed">
           Your AI agent is how you&apos;ll interact with openpieces. Give it a
           personality that suits you.
@@ -291,7 +291,7 @@ function StepReview({
 }) {
   return (
     <div className="space-y-4">
-      <div className="rounded-xl border border-[var(--border)] bg-[var(--card-bg)] p-4 backdrop-blur-sm">
+      <div className="rounded border border-[var(--border)] bg-[var(--sidebar-bg)] p-4">
         <h3 className="mb-3 text-sm font-semibold text-[var(--foreground)]">
           Account
         </h3>
@@ -307,7 +307,7 @@ function StepReview({
         </div>
       </div>
 
-      <div className="rounded-xl border border-[var(--border)] bg-[var(--card-bg)] p-4 backdrop-blur-sm">
+      <div className="rounded border border-[var(--border)] bg-[var(--sidebar-bg)] p-4">
         <h3 className="mb-3 text-sm font-semibold text-[var(--foreground)]">
           Workspace
         </h3>
@@ -327,7 +327,7 @@ function StepReview({
         </div>
       </div>
 
-      <div className="rounded-xl border border-[var(--border)] bg-[var(--card-bg)] p-4 backdrop-blur-sm">
+      <div className="rounded border border-[var(--border)] bg-[var(--sidebar-bg)] p-4">
         <h3 className="mb-3 text-sm font-semibold text-[var(--foreground)]">
           AI Agent
         </h3>
@@ -438,7 +438,7 @@ export default function SetupForm() {
 
       <form
         onSubmit={(e) => e.preventDefault()}
-        className="rounded-xl border border-[var(--border)] bg-[var(--card-bg)] p-6 backdrop-blur-sm"
+        className="rounded border border-[var(--border)] bg-[var(--sidebar-bg)] p-6"
       >
         {step === 0 && (
           <StepAccount

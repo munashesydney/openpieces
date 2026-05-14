@@ -554,7 +554,7 @@ export function TasksList({
               <Card key={task.id} hoverable className="group p-5">
                 <div className="flex items-start justify-between gap-4">
                   <div className="flex min-w-0 flex-1 items-start gap-4">
-                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[var(--hover-bg)] text-[var(--muted)]">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded border border-[var(--accent)]/15 bg-[var(--accent)]/10 text-[var(--accent)] transition-all group-hover:bg-[var(--accent)] group-hover:text-white group-hover:shadow-[0_0_16px_var(--accent-glow)]">
                       <Clock className="h-5 w-5" />
                     </div>
                     <div className="min-w-0 flex-1">
@@ -608,7 +608,7 @@ export function TasksList({
               <Card key={task.id} hoverable className="group p-5">
                 <div className="flex items-start justify-between gap-4">
                   <div className="flex min-w-0 flex-1 items-start gap-4">
-                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[var(--hover-bg)] text-[var(--muted)]">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded border border-[var(--secondary)]/15 bg-[var(--secondary)]/10 text-[var(--secondary)] transition-all group-hover:bg-[var(--secondary)] group-hover:text-white group-hover:shadow-[0_0_16px_var(--secondary-glow)]">
                       <Calendar className="h-5 w-5" />
                     </div>
                     <div className="min-w-0 flex-1">
