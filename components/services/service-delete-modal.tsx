@@ -21,7 +21,7 @@ export function ServiceDeleteModal({
       isOpen={isOpen}
       onClose={onClose}
       danger
-      title="Delete service?"
+      title="Delete piece?"
       description="Review the impact before continuing."
       footer={
         <div className="flex justify-end gap-3">
@@ -29,7 +29,7 @@ export function ServiceDeleteModal({
             Cancel
           </Button>
           <Button variant="danger" onClick={onConfirm} disabled={isPending}>
-            {isPending ? "Deleting..." : "Delete service"}
+            {isPending ? "Deleting..." : "Delete piece"}
           </Button>
         </div>
       }
