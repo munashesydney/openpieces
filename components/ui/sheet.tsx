@@ -43,7 +43,7 @@ export function Sheet({ isOpen, onClose, title, description, children, footer }:
 
       {/* Sheet */}
       <div
-        className={`fixed inset-y-0 right-0 z-50 w-full max-w-[480px] border-l border-[var(--border)] bg-[var(--sidebar-bg)] shadow-[0_0_60px_rgba(124,58,237,0.06)] transition-all duration-300 ease-out ${
+        className={`fixed inset-y-0 right-0 z-50 w-full max-w-[480px] border-l border-[var(--border)] bg-[var(--sidebar-bg)] shadow-[0_0_60px_rgba(124,58,237,0.06)] dark:shadow-[0_0_40px_rgba(0,0,0,0.3)] transition-all duration-300 ease-out ${
           isOpen ? "translate-x-0 opacity-100" : "translate-x-full opacity-0 pointer-events-none"
         }`}
       >

@@ -67,7 +67,7 @@ export function Modal({
           }`}
       >
         <div
-          className={`w-full ${maxWidthClassName} rounded border border-[var(--border)] bg-[var(--sidebar-bg)] shadow-[0_20px_60px_rgba(0,0,0,0.35),0_0_40px_rgba(124,58,237,0.06)] transition-all duration-200 ease-out ${isOpen ? "translate-y-0 scale-100 opacity-100" : "translate-y-2 scale-[0.98] opacity-0"
+          className={`w-full ${maxWidthClassName} rounded border border-[var(--border)] bg-[var(--sidebar-bg)] shadow-[0_20px_60px_rgba(0,0,0,0.35),0_0_40px_rgba(124,58,237,0.06)] dark:shadow-[0_20px_60px_rgba(0,0,0,0.6)] transition-all duration-200 ease-out ${isOpen ? "translate-y-0 scale-100 opacity-100" : "translate-y-2 scale-[0.98] opacity-0"
             }`}
           role="dialog"
           aria-modal="true"
