@@ -219,9 +219,9 @@ export function SecretsPage({ initialSecrets, workspaceId }: SecretsPageProps) {
             </div>
           )}
 
-          <div className="overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--background-soft)]">
+          <div className="overflow-hidden rounded border border-[var(--border)] bg-[var(--background-soft)]">
             {secrets.length === 0 ? (
-              <div className="rounded-xl border border-dashed border-[var(--border)] p-10 text-center text-sm text-[var(--muted)]">
+              <div className="rounded border border-dashed border-[var(--border)] p-10 text-center text-sm text-[var(--muted)]">
                 No secrets yet.
               </div>
             ) : (

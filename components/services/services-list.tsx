@@ -88,7 +88,7 @@ export function ServicesList({
         {/* Header Section */}
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-[10px] uppercase tracking-[0.2em] text-[var(--secondary)] mb-1.5">Components</p>
+            <p className="text-[10px] uppercase tracking-[0.2em] text-[var(--secondary)] mb-1.5">Services</p>
             <h1 className="text-2xl font-semibold tracking-tight text-foreground">
               Pieces
             </h1>
