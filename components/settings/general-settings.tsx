@@ -87,7 +87,7 @@ export function GeneralSettings({
   return (
     <div className="flex w-full px-6 pb-20">
       <div className="w-full px-4">
-        <div className="lg:grid lg:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <Card>
             <CardHeader>
               <CardTitle>Workspace Identity</CardTitle>
