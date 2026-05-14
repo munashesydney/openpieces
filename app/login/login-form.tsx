@@ -45,7 +45,7 @@ export default function LoginForm() {
     >
       <form
         onSubmit={handleSubmit}
-        className="rounded-xl border border-[var(--border)] bg-[var(--card-bg)] p-6 backdrop-blur-sm"
+        className="rounded border border-[var(--border)] bg-[var(--sidebar-bg)] p-6"
       >
         <div className="space-y-4">
           <Input

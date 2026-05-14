@@ -423,20 +423,21 @@ export function TasksList({
   };
 
   return (
-    <div className="flex w-full justify-center px-6 pb-20 pt-10">
-      <div className="w-full px-4 space-y-10">
+    <div className="flex w-full justify-center px-6 pb-20 pt-8">
+      <div className="w-full px-4 space-y-8">
         {/* Header Section */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl sm:text-3xl font-medium tracking-tight text-foreground">
+            <p className="text-[10px] uppercase tracking-[0.2em] text-[var(--secondary)] mb-1.5">Scheduling</p>
+            <h1 className="text-2xl font-semibold tracking-tight text-foreground">
               Tasks
             </h1>
-            <p className="text-sm text-[var(--muted)]">
+            <p className="mt-1 text-[13px] text-[var(--muted)]">
               Manage your one-time and recurring scheduled actions.
             </p>
           </div>
           <Button onClick={() => setIsSheetOpen(true)}>
-            <Plus className="h-4 w-4" />
+            <Plus className="h-3.5 w-3.5" />
             <span className="hidden sm:inline">New Task</span>
           </Button>
         </div>
@@ -553,7 +554,7 @@ export function TasksList({
               <Card key={task.id} hoverable className="group p-5">
                 <div className="flex items-start justify-between gap-4">
                   <div className="flex min-w-0 flex-1 items-start gap-4">
-                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[var(--hover-bg)] text-[var(--muted)]">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded border border-[var(--accent)]/15 bg-[var(--accent)]/10 text-[var(--accent)] transition-all group-hover:bg-[var(--accent)] group-hover:text-white group-hover:shadow-[0_0_16px_var(--accent-glow)]">
                       <Clock className="h-5 w-5" />
                     </div>
                     <div className="min-w-0 flex-1">
@@ -607,7 +608,7 @@ export function TasksList({
               <Card key={task.id} hoverable className="group p-5">
                 <div className="flex items-start justify-between gap-4">
                   <div className="flex min-w-0 flex-1 items-start gap-4">
-                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[var(--hover-bg)] text-[var(--muted)]">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded border border-[var(--secondary)]/15 bg-[var(--secondary)]/10 text-[var(--secondary)] transition-all group-hover:bg-[var(--secondary)] group-hover:text-white group-hover:shadow-[0_0_16px_var(--secondary-glow)]">
                       <Calendar className="h-5 w-5" />
                     </div>
                     <div className="min-w-0 flex-1">

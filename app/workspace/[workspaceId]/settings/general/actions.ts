@@ -17,6 +17,7 @@ export async function updateGeneralSettingsAction(
 
   const name = (formData.get("name") as string)?.trim();
   const description = (formData.get("description") as string)?.trim() ?? "";
+  const timezone = (formData.get("timezone") as string)?.trim();
 
   if (!name) {
     return { error: "Workspace name is required." };
@@ -27,40 +28,20 @@ export async function updateGeneralSettingsAction(
   }
 
   try {
+    // Update workspace core details
     await db
       .update(workspaces)
       .set({ name, description, updatedAt: new Date() })
       .where(
         and(eq(workspaces.id, workspaceId), eq(workspaces.userId, user.id)),
       );
-  } catch (err) {
-    console.error("Unexpected error updating workspace:", err);
-    return { error: "Something went wrong. Please try again." };
-  }
 
-  revalidatePath(`/workspace/${workspaceId}/settings/general`);
-  return { success: true };
-}
-
-export async function updateTimezoneAction(
-  workspaceId: string,
-  formData: FormData,
-): Promise<ActionResult> {
-  await requireWorkspaceOwner(workspaceId);
-
-  const timezone = (formData.get("timezone") as string)?.trim();
-
-  if (!timezone) {
-    return { error: "Timezone is required." };
-  }
-
-  try {
-    const result = await updateWorkspaceTimezone(workspaceId, timezone);
-    if (!result) {
-      return { error: "Failed to update timezone." };
+    // Update workspace timezone if provided
+    if (timezone) {
+      await updateWorkspaceTimezone(workspaceId, timezone);
     }
   } catch (err) {
-    console.error("Unexpected error updating timezone:", err);
+    console.error("Unexpected error updating workspace:", err);
     return { error: "Something went wrong. Please try again." };
   }
 

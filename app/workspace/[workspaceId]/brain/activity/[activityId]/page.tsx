@@ -59,21 +59,22 @@ export default async function ActivityDetailPage(props: {
       </Link>
 
       <div className="mb-8">
-        <h1 className="text-2xl font-semibold text-[var(--foreground)]">
+        <p className="text-[10px] uppercase tracking-[0.2em] text-[var(--secondary)] mb-1.5">Audit Log</p>
+        <h1 className="text-2xl font-semibold tracking-tight text-[var(--foreground)]">
           Activity Details
         </h1>
-        <p className="mt-1 text-sm text-[var(--muted)]">
+        <p className="mt-1 text-[13px] text-[var(--muted)]">
           View the details of this activity log entry
         </p>
       </div>
 
-      <div className="rounded-xl border border-[var(--border)] bg-[var(--sidebar-bg)] p-6">
+      <div className="rounded border border-[var(--border)] bg-[var(--sidebar-bg)] p-6">
         <div className="mb-6 flex items-center gap-4">
-          <div className={`flex h-12 w-12 items-center justify-center rounded-full ${getOperationColor(operation)}`}>
-            <Tag className="h-6 w-6" />
+          <div className={`flex h-10 w-10 items-center justify-center rounded ${getOperationColor(operation)}`}>
+            <Tag className="h-5 w-5" />
           </div>
           <div>
-            <p className="text-lg font-medium text-[var(--foreground)]">
+            <p className="text-base font-medium text-[var(--foreground)]">
               {recordType.charAt(0).toUpperCase() + recordType.slice(1)} {getOperationText(operation)}
             </p>
             <p className="text-sm text-[var(--muted)]">ID: {id}</p>
@@ -111,7 +112,7 @@ export default async function ActivityDetailPage(props: {
         {oldData != null && (
           <div className="mt-6">
             <p className="mb-2 text-xs font-medium text-[var(--muted)]">Old Data</p>
-            <pre className="overflow-auto rounded-lg bg-[var(--hover-bg)] p-4 text-xs text-[var(--foreground)]">
+            <pre className="overflow-auto rounded bg-[var(--hover-bg)] p-4 text-xs text-[var(--foreground)]">
               {JSON.stringify(oldData as object, null, 2)}
             </pre>
           </div>
@@ -120,7 +121,7 @@ export default async function ActivityDetailPage(props: {
         {newData != null && (
           <div className="mt-6">
             <p className="mb-2 text-xs font-medium text-[var(--muted)]">New Data</p>
-            <pre className="overflow-auto rounded-lg bg-[var(--hover-bg)] p-4 text-xs text-[var(--foreground)]">
+            <pre className="overflow-auto rounded bg-[var(--hover-bg)] p-4 text-xs text-[var(--foreground)]">
               {JSON.stringify(newData as object, null, 2)}
             </pre>
           </div>

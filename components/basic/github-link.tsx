@@ -18,7 +18,7 @@ export function GithubLink({
       target="_blank" 
       rel="noopener noreferrer" 
       aria-label="GitHub Repository"
-      className={`group flex items-center overflow-hidden rounded-md border border-[var(--border)] bg-[var(--card)] text-sm font-medium text-[var(--foreground)] transition-all hover:border-[var(--muted)]/50 ${className}`}
+      className={`group flex items-center overflow-hidden rounded border border-[var(--border)] bg-[var(--sidebar-bg)] text-[13px] font-medium text-[var(--foreground)] transition-all hover:border-[var(--accent)]/20 ${className}`}
     >
       <div className="flex items-center gap-2 border-r border-[var(--border)] bg-[var(--hover-bg)] px-3 py-1.5 transition-colors group-hover:bg-[var(--hover-bg-strong)]">
         <Github className="h-4 w-4" />

@@ -94,7 +94,7 @@ export function CreateWorkspaceClient({
 
       <form
         onSubmit={(e) => e.preventDefault()}
-        className="rounded-xl border border-[var(--border)] bg-[var(--card-bg)] p-6 backdrop-blur-sm"
+        className="rounded border border-[var(--border)] bg-[var(--sidebar-bg)] p-6"
       >
         {/* Step 1 — Workspace */}
         {step === 0 && (
@@ -118,7 +118,7 @@ export function CreateWorkspaceClient({
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 rows={3}
-                className="w-full rounded-lg border border-[var(--border)] bg-[var(--background)] px-4 py-2.5 text-sm transition-all focus:border-[var(--accent)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)] placeholder:text-[var(--muted)] resize-none"
+                className="w-full rounded border border-[var(--border)] bg-[var(--input-bg)] px-4 py-2.5 text-[13px] transition-all focus:border-[var(--accent)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)] placeholder:text-[var(--muted)] resize-none"
               />
             </div>
             <Button
@@ -171,7 +171,7 @@ export function CreateWorkspaceClient({
         {/* Step 3 — Agent */}
         {step === 2 && (
           <div className="space-y-4">
-            <div className="rounded-xl border border-[var(--border)] bg-[var(--card-bg)] p-4">
+            <div className="rounded border border-[var(--border)] bg-[var(--sidebar-bg)] p-4">
               <p className="text-sm text-[var(--muted)] leading-relaxed">
                 Set how your AI agent presents itself in this workspace.
               </p>
@@ -218,7 +218,7 @@ export function CreateWorkspaceClient({
         {/* Step 4 — Review */}
         {step === 3 && (
           <div className="space-y-4">
-            <div className="rounded-xl border border-[var(--border)] bg-[var(--card-bg)] p-4 backdrop-blur-sm">
+            <div className="rounded border border-[var(--border)] bg-[var(--sidebar-bg)] p-4">
               <h3 className="mb-3 text-sm font-semibold text-[var(--foreground)]">
                 Workspace
               </h3>
@@ -244,7 +244,7 @@ export function CreateWorkspaceClient({
               </div>
             </div>
 
-            <div className="rounded-xl border border-[var(--border)] bg-[var(--card-bg)] p-4 backdrop-blur-sm">
+            <div className="rounded border border-[var(--border)] bg-[var(--sidebar-bg)] p-4">
               <h3 className="mb-3 text-sm font-semibold text-[var(--foreground)]">
                 AI Agent
               </h3>
