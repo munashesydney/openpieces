@@ -47,25 +47,28 @@ export default function SecurityPage() {
   };
 
   return (
-    <div className="flex w-full px-6 pb-20">
+    <div className="flex w-full px-6 pb-20 pt-8">
       <div className="w-full max-w-[820px] px-4 space-y-8">
-        <section className="rounded-2xl border border-[var(--border)] bg-[var(--sidebar-bg)] p-8 shadow-sm">
+        <div>
+          <p className="text-[10px] uppercase tracking-[0.2em] text-[var(--secondary)] mb-1.5">Protection</p>
+          <h1 className="text-2xl font-semibold tracking-tight text-[var(--foreground)]">Security</h1>
+          <p className="mt-1 text-[13px] text-[var(--muted)]">Manage how you secure your account access.</p>
+        </div>
+
+        <section className="rounded border border-[var(--border)] bg-[var(--sidebar-bg)] p-6">
           <div className="flex items-center gap-3">
-            <Shield className="h-5 w-5 text-[var(--muted)]" />
-            <h2 className="text-xl font-semibold text-[var(--foreground)]">
+            <Shield className="h-4 w-4 text-[var(--muted)]" />
+            <h2 className="text-base font-semibold text-[var(--foreground)]">
               Authentication
             </h2>
           </div>
-          <p className="mt-1 text-sm text-[var(--muted)]">
-            Manage how you secure your account access.
-          </p>
 
-          <div className="mt-8 space-y-6">
-            <div className="flex items-center justify-between py-4">
+          <div className="mt-6 space-y-4">
+            <div className="flex items-center justify-between py-3">
               <div className="flex items-center gap-3">
                 <Key className="h-4 w-4 text-[var(--muted)]" />
                 <div>
-                  <h3 className="text-sm font-medium">Change Password</h3>
+                  <h3 className="text-[13px] font-medium text-[var(--foreground)]">Change Password</h3>
                   <p className="text-xs text-[var(--muted)]">
                     Update your account password.
                   </p>
@@ -81,45 +84,30 @@ export default function SecurityPage() {
             </div>
 
             {isChangingPassword && (
-              <div className="rounded-lg border border-[var(--border)] bg-[var(--background)] p-4 space-y-4">
-                <div className="space-y-2">
-                  <label className="text-xs font-medium text-[var(--foreground)]">
-                    Current Password
-                  </label>
-                  <Input
-                    type="password"
-                    value={currentPassword}
-                    onChange={(e) => setCurrentPassword(e.target.value)}
-                    placeholder="Enter current password"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <label className="text-xs font-medium text-[var(--foreground)]">
-                    New Password
-                  </label>
-                  <Input
-                    type="password"
-                    value={newPassword}
-                    onChange={(e) => setNewPassword(e.target.value)}
-                    placeholder="Enter new password"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <label className="text-xs font-medium text-[var(--foreground)]">
-                    Confirm New Password
-                  </label>
-                  <Input
-                    type="password"
-                    value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
-                    placeholder="Confirm new password"
-                  />
-                </div>
+              <div className="rounded border border-[var(--border)] bg-[var(--background)] p-4 space-y-4">
+                <Input
+                  label="Current Password"
+                  type="password"
+                  value={currentPassword}
+                  onChange={(e) => setCurrentPassword(e.target.value)}
+                  placeholder="Enter current password"
+                />
+                <Input
+                  label="New Password"
+                  type="password"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  placeholder="Enter new password"
+                />
+                <Input
+                  label="Confirm New Password"
+                  type="password"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  placeholder="Confirm new password"
+                />
 
                 {error && <p className="text-xs text-red-500">{error}</p>}
-
                 {success && <p className="text-xs text-green-500">{success}</p>}
 
                 <div className="flex justify-end gap-2">
