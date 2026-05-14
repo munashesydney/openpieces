@@ -224,6 +224,7 @@ export function Header() {
   const brandHref = workspaceId ? personalHref : "/";
 
   return (
+    <>
     <header className="relative z-50 flex h-14 shrink-0 items-center border-b border-[var(--border)] bg-[var(--sidebar-bg)]/80 backdrop-blur-sm">
       <Link
         href={brandHref}
@@ -294,19 +295,20 @@ export function Header() {
           )}
         </button>
       </div>
+    </header>
 
       {mobileMenuOpen && (
         <>
           {/* Full-screen backdrop */}
           <button
             type="button"
-            className="fixed inset-0 z-40 bg-black/50 backdrop-blur-sm lg:hidden animate-[fadeIn_0.2s_ease-out]"
+            className="fixed inset-0 z-[60] bg-black/50 backdrop-blur-sm lg:hidden animate-[fadeIn_0.2s_ease-out]"
             aria-label="Close menu"
             onClick={() => setMobileMenuOpen(false)}
           />
 
           {/* Sidebar drawer from the left — boxy */}
-          <div className="fixed left-0 top-0 bottom-0 z-50 flex w-72 flex-col border-r border-[var(--border)] bg-[var(--sidebar-bg)] shadow-[0_0_60px_rgba(124,58,237,0.08)] lg:hidden animate-[slideRight_0.25s_ease-out]">
+          <div className="fixed left-0 top-0 bottom-0 z-[70] flex w-72 flex-col border-r border-[var(--border)] bg-[var(--sidebar-bg)] shadow-[0_0_60px_rgba(124,58,237,0.08)] lg:hidden animate-[slideRight_0.25s_ease-out]">
             {/* Sidebar header */}
             <div className="flex items-center justify-between px-4 pt-4 pb-3 border-b border-[var(--border)]">
               <Link
@@ -349,7 +351,7 @@ export function Header() {
                       onClick={() => setMobileMenuOpen(false)}
                       className={`flex items-center gap-3 rounded px-3 py-2.5 text-[13px] font-medium transition-all ${
                         item.active
-                          ? "sidebar-active-bar bg-[var(--hover-bg-strong)] text-[var(--foreground)]"
+                          ? "bg-[var(--hover-bg-strong)] text-[var(--foreground)]"
                           : "text-[var(--muted)] hover:bg-[var(--hover-bg)] hover:text-[var(--foreground)]"
                       }`}
                     >
@@ -385,7 +387,7 @@ export function Header() {
                       onClick={() => setMobileMenuOpen(false)}
                       className={`flex items-center gap-3 rounded px-3 py-2.5 text-[13px] font-medium transition-all ${
                         active
-                          ? "sidebar-active-bar bg-[var(--hover-bg-strong)] text-[var(--foreground)]"
+                          ? "bg-[var(--hover-bg-strong)] text-[var(--foreground)]"
                           : "text-[var(--muted)] hover:bg-[var(--hover-bg)] hover:text-[var(--foreground)]"
                       }`}
                     >
@@ -403,8 +405,8 @@ export function Header() {
               </nav>
             </div>
 
-            {/* Workspace picker — sticky at the bottom, same width as nav items */}
-            <div className="sticky bottom-0 border-t border-[var(--border)] bg-[var(--sidebar-bg)] px-3 py-3">
+            {/* Workspace picker — sticky at the bottom */}
+            <div className="border-t border-[var(--border)] bg-[var(--sidebar-bg)] px-3 py-3">
               <WorkspaceSwitcher
                 placement="up"
                 activeWorkspaceId={workspaceId}
@@ -413,6 +415,6 @@ export function Header() {
           </div>
         </>
       )}
-    </header>
+    </>
   );
 }
