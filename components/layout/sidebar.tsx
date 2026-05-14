@@ -35,7 +35,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
 
   if (collapsed) {
     return (
-      <aside className="flex h-full w-14 shrink-0 flex-col items-center border-r border-[var(--border)] bg-[var(--sidebar-bg)]">
+      <aside className="relative z-20 flex h-full w-14 shrink-0 flex-col items-center border-r border-[var(--border)] bg-[var(--sidebar-bg)]">
         {/* Top expand */}
         <button
           type="button"
@@ -115,7 +115,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
   }
 
   return (
-    <aside className="flex w-60 shrink-0 flex-col border-r border-[var(--border)] bg-[var(--sidebar-bg)]">
+    <aside className="relative z-20 flex w-60 shrink-0 flex-col border-r border-[var(--border)] bg-[var(--sidebar-bg)]">
       {/* Logo + collapse button */}
       <div className="flex items-center justify-between gap-3 px-4 pt-4 pb-3">
         <div className="flex items-center gap-2.5">
