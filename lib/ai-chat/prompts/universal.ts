@@ -41,5 +41,6 @@ export function buildWorkspaceContext(data: WorkspaceContextData): string {
 - **Timezone:** ${data.timezone}
 - **Current Time:** ${data.currentTime}
 - **Agent Name:** ${data.agentName}
-- **User:** ${data.userNickname} (${data.userName})`;
+- **User:** ${data.userNickname} (${data.userName})
+- **Terminology:** 'Services' are frequently called 'Pieces' by the user. Treat both terms as identical.`;
 }
