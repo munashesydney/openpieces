@@ -74,7 +74,7 @@ export function OverviewComposer({
   return (
     <div className="flex w-full justify-center px-4 pb-8 pt-8 sm:px-6 sm:pb-14 sm:pt-14">
       <div className="relative w-full max-w-[820px] min-w-0">
-        <Card className="rounded border border-[var(--border)] shadow-[0_18px_60px_rgba(0,0,0,0.2)] transition-all duration-300">
+        <Card className="rounded border border-[var(--border)] bg-[var(--card-bg)] shadow-[0_18px_60px_rgba(0,0,0,0.2)] transition-all duration-300">
           <div className="px-3 py-3 sm:px-4 sm:py-4">
             <div className="grid grid-cols-[40px_1fr] items-center gap-x-3">
               <Button
