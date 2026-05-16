@@ -87,8 +87,8 @@ export function OverviewAiChatsSidebar({
     <aside
       className={`flex h-full min-h-0 w-56 shrink-0 flex-col border-r border-[var(--border)] bg-[var(--sidebar-bg)] ${className ?? ""}`}
     >
-      <div className="flex items-center justify-between gap-2 px-4 py-4">
-        <h2 className="text-sm font-semibold text-[var(--foreground)]">
+      <div className="flex items-center justify-between gap-2 px-3 py-3 border-b border-[var(--border)]">
+        <h2 className="text-[13px] font-semibold text-[var(--foreground)]">
           Chats
         </h2>
         <div className="flex items-center gap-1">
@@ -137,8 +137,8 @@ export function OverviewAiChatsSidebar({
             role="status"
             aria-live="polite"
           >
-            <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-[var(--hover-bg)] text-[var(--muted)] ring-1 ring-[var(--border)]">
-              <MessageSquare className="h-6 w-6" strokeWidth={1.5} />
+            <div className="mb-3 flex h-10 w-10 items-center justify-center rounded border border-[var(--border)] bg-[var(--surface)] text-[var(--muted)]">
+              <MessageSquare className="h-5 w-5" strokeWidth={1.5} />
             </div>
             <p className="text-sm font-medium text-[var(--foreground)]">No chats yet</p>
             <p className="mt-1.5 max-w-[13rem] text-xs leading-relaxed text-[var(--muted)]">
@@ -154,16 +154,16 @@ export function OverviewAiChatsSidebar({
                 <button
                   type="button"
                   onClick={() => onSelectChat(chat.id)}
-                  className={`w-full rounded-lg px-3 py-2.5 text-left text-sm transition-colors hover:bg-[var(--hover-bg)] hover:text-[var(--foreground)] ${
+                  className={`w-full rounded px-3 py-2 text-left text-[13px] transition-all hover:bg-[var(--hover-bg)] hover:text-[var(--foreground)] ${
                     selectedChatId === chat.id
-                      ? "bg-[var(--hover-bg-strong)] text-[var(--foreground)]"
+                      ? "sidebar-active-bar bg-[var(--hover-bg-strong)] text-[var(--foreground)]"
                       : "text-[var(--muted)]"
                   }`}
                 >
                   <div className="flex items-start justify-between gap-2">
                     <span className="line-clamp-2">{chat.title}</span>
                     {chat.status === "pending" || chat.status === "processing" ? (
-                      <span className="mt-1 h-2 w-2 shrink-0 rounded-full bg-[var(--accent)]" />
+                      <span className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--secondary)] shadow-[0_0_6px_var(--secondary-glow)]" />
                     ) : null}
                   </div>
                 </button>

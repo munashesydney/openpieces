@@ -46,18 +46,22 @@ export default async function Home(props: {
 
   return (
     <DashboardLayout>
-      <MainArea className="dot-grid">
-        <OverviewPersonalView
-          workspaceId={workspaceId}
-          initialChats={initialChats}
-          initialSelectedChatId={initialSelectedChatId}
-          initialMessages={initialMessages}
-          initialTotal={initialTotal}
-          initialWorkspaceModel={initialWorkspaceModel}
-          sendMessageAction={sendMessage}
-          updateWorkspaceModelAction={updateWorkspaceModel}
-          updateChatModelAction={updateChatModel}
-        />
+      <MainArea>
+        {/* Dot background grid */}
+        <div className="pointer-events-none fixed inset-0 z-0 dot-grid opacity-40" />
+        <div className="relative z-10 h-full">
+          <OverviewPersonalView
+            workspaceId={workspaceId}
+            initialChats={initialChats}
+            initialSelectedChatId={initialSelectedChatId}
+            initialMessages={initialMessages}
+            initialTotal={initialTotal}
+            initialWorkspaceModel={initialWorkspaceModel}
+            sendMessageAction={sendMessage}
+            updateWorkspaceModelAction={updateWorkspaceModel}
+            updateChatModelAction={updateChatModel}
+          />
+        </div>
       </MainArea>
     </DashboardLayout>
   );

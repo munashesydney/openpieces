@@ -30,17 +30,17 @@ export function ProfileDropdown() {
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
-        className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-[var(--muted)] transition-colors hover:bg-[var(--hover-bg)] hover:text-[var(--foreground)]"
+        className="flex h-8 w-8 shrink-0 items-center justify-center rounded border border-transparent text-[var(--muted)] transition-all hover:border-[var(--border)] hover:bg-[var(--hover-bg)] hover:text-[var(--foreground)]"
         aria-label="Profile"
       >
-        <User className="h-5 w-5" />
+        <User className="h-4 w-4" />
       </button>
 
       {isOpen && (
-        <div className="absolute right-0 top-full z-50 mt-2 w-64 rounded-xl border border-[var(--border)] bg-[var(--sidebar-bg)] p-3 shadow-lg">
-          <div className="mb-3 border-b border-[var(--border)] pb-3">
-            <p className="text-xs text-[var(--muted)]">Signed in as</p>
-            <p className="truncate text-sm font-medium text-[var(--foreground)]">
+        <div className="absolute right-0 top-full z-50 mt-2 w-60 rounded border border-[var(--border)] bg-[var(--sidebar-bg)] p-2.5 shadow-[0_12px_40px_rgba(0,0,0,0.35)]">
+          <div className="mb-2.5 border-b border-[var(--border)] pb-2.5 px-1">
+            <p className="text-[10px] uppercase tracking-[0.15em] text-[var(--muted)]/60">Signed in as</p>
+            <p className="mt-1 truncate text-[13px] font-medium text-[var(--foreground)]">
               {session.user.email}
             </p>
           </div>
@@ -50,7 +50,7 @@ export function ProfileDropdown() {
             className="w-full justify-start gap-2"
             onClick={() => signOut({ callbackUrl: `${window.location.origin}/login` })}
           >
-            <LogOut className="h-4 w-4" />
+            <LogOut className="h-3.5 w-3.5" />
             Log out
           </Button>
         </div>

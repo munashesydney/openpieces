@@ -146,13 +146,13 @@ export function BrainView({
 
   return (
     <div className="h-full overflow-y-auto">
-      <div className="flex w-full justify-center px-6 pb-20 pt-10">
-        <div className="w-full px-4 space-y-10">
+      <div className="flex w-full justify-center px-6 pb-20 pt-8">
+        <div className="w-full px-4 space-y-8">
           <BrainHeader onOpenSettings={() => setSettingsSheetOpen(true)} />
 
           {message && (
             <div
-              className={`rounded-2xl px-4 py-3 text-sm ${
+              className={`rounded px-4 py-3 text-[13px] ${
                 message.type === "success"
                   ? "bg-green-500/12 text-green-500"
                   : "bg-red-500/12 text-red-500"

@@ -70,13 +70,18 @@ export default function HubSettingsPage() {
   }
 
   return (
-    <div className="flex w-full px-6 pb-20">
+    <div className="flex w-full px-6 pb-20 pt-8">
       <div className="w-full max-w-[820px] px-4 space-y-8">
+        <div>
+          <p className="text-[10px] uppercase tracking-[0.2em] text-[var(--secondary)] mb-1.5">Integration</p>
+          <h1 className="text-2xl font-semibold tracking-tight text-[var(--foreground)]">Hub Connection</h1>
+          <p className="mt-1 text-[13px] text-[var(--muted)]">Connect your workspace to the OpenPieces Hub marketplace.</p>
+        </div>
         {/* Setup prompt when client ID is missing */}
         {!clientIdConfigured && (
-          <div className="rounded-xl border border-amber-500/15 bg-amber-500/5 p-5">
+          <div className="rounded border border-amber-500/15 bg-amber-500/5 p-5">
             <div className="flex items-start gap-3">
-              <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-amber-500/10 text-amber-400">
+              <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded bg-amber-500/10 text-amber-400">
                 <KeyRound size={16} />
               </span>
               <div>
@@ -115,7 +120,7 @@ export default function HubSettingsPage() {
           <CardHeader>
             <div className="flex items-center gap-3">
               <span
-                className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg ${
+                className={`flex h-10 w-10 shrink-0 items-center justify-center rounded ${
                   connected
                     ? "bg-emerald-500/10 text-emerald-400"
                     : "bg-white/5 text-white/25"
@@ -150,7 +155,7 @@ export default function HubSettingsPage() {
               <div className="flex items-center gap-2">
                 <span className="shrink-0 text-white/30">Status</span>
                 <span
-                  className={`inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[10px] font-medium ${
+                  className={`inline-flex items-center gap-1.5 rounded px-2 py-0.5 text-[10px] font-medium ${
                     connected
                       ? "bg-emerald-500/10 text-emerald-400"
                       : "bg-white/5 text-white/30"

@@ -158,7 +158,7 @@ export function ActivityView({ workspaceId, getActivityAction }: ActivityViewPro
             <button
               key={mode}
               onClick={() => handleModeChange(mode)}
-              className={`flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-colors ${
+              className={`flex items-center gap-2 rounded px-4 py-2 text-[13px] font-medium transition-colors ${
                 isActive
                   ? "bg-[var(--accent)] text-white"
                   : "text-[var(--muted)] hover:bg-[var(--hover-bg)] hover:text-[var(--foreground)]"
@@ -185,13 +185,13 @@ export function ActivityView({ workspaceId, getActivityAction }: ActivityViewPro
                 if (searchQuery.length > 0) setIsDropdownOpen(true);
               }}
               placeholder={`Search ${modeConfig[selectedMode].label.toLowerCase()}...`}
-              className="w-full rounded-xl border border-[var(--border)] bg-[var(--sidebar-bg)] py-3 pl-12 pr-4 text-sm text-[var(--foreground)] placeholder:text-[var(--muted)] transition-all focus:border-[var(--accent)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/20"
+              className="w-full rounded border border-[var(--border)] bg-[var(--sidebar-bg)] py-3 pl-12 pr-4 text-[13px] text-[var(--foreground)] placeholder:text-[var(--muted)] transition-all focus:border-[var(--accent)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)]/20"
             />
           </div>
 
           {/* Dropdown */}
           {isDropdownOpen && !selectedResult && (
-            <div className="absolute left-0 right-0 top-full z-50 mt-2 overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--sidebar-bg)] shadow-xl animate-in fade-in zoom-in-95 duration-150">
+            <div className="absolute left-0 right-0 top-full z-50 mt-2 overflow-hidden rounded border border-[var(--border)] bg-[var(--sidebar-bg)] shadow-xl animate-in fade-in zoom-in-95 duration-150">
               <div className="max-h-60 overflow-y-auto p-1.5">
                 {filteredResults.length > 0 ? (
                   filteredResults.map((result) => {
@@ -200,9 +200,9 @@ export function ActivityView({ workspaceId, getActivityAction }: ActivityViewPro
                       <button
                         key={result.id}
                         onClick={() => handleSelectResult(result)}
-                        className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left transition-colors hover:bg-[var(--hover-bg)]"
+                        className="flex w-full items-center gap-3 rounded px-3 py-2.5 text-left transition-colors hover:bg-[var(--hover-bg)]"
                       >
-                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[var(--hover-bg)]">
+                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded bg-[var(--hover-bg)]">
                           <Icon className="h-4 w-4 text-[var(--accent)]" />
                         </div>
                         <div className="min-w-0 flex-1">
@@ -230,7 +230,7 @@ export function ActivityView({ workspaceId, getActivityAction }: ActivityViewPro
         {/* Selected result indicator */}
         {selectedResult && (
           <div className="mt-4 flex items-center gap-3">
-            <div className="flex items-center gap-2 rounded-lg bg-[var(--hover-bg)] px-3 py-1.5">
+            <div className="flex items-center gap-2 rounded bg-[var(--hover-bg)] px-3 py-1.5">
               {React.createElement(modeConfig[selectedResult.type].icon, {
                 className: "h-4 w-4 text-[var(--accent)]",
               })}
@@ -261,7 +261,7 @@ export function ActivityView({ workspaceId, getActivityAction }: ActivityViewPro
                 <Link
                   key={activity.id}
                   href={`/workspace/${workspaceId}/brain/activity/${activity.id}`}
-                  className="flex items-center justify-between rounded-xl border border-[var(--border)] bg-[var(--sidebar-bg)] px-4 py-3 transition-colors hover:bg-[var(--hover-bg)]"
+                  className="flex items-center justify-between rounded border border-[var(--border)] bg-[var(--sidebar-bg)] px-4 py-3 transition-colors hover:bg-[var(--hover-bg)]"
                 >
                   <div className="flex items-center gap-3">
                     <div
@@ -288,7 +288,7 @@ export function ActivityView({ workspaceId, getActivityAction }: ActivityViewPro
             </div>
           ) : (
             <div className="flex flex-col items-center justify-center py-16 text-center">
-              <div className="flex h-14 w-14 items-center justify-center rounded-full bg-[var(--hover-bg)]">
+              <div className="flex h-14 w-14 items-center justify-center rounded bg-[var(--hover-bg)]">
                 <Search className="h-6 w-6 text-[var(--muted)]" />
               </div>
               <h3 className="mt-4 text-base font-medium text-[var(--foreground)]">

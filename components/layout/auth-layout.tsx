@@ -66,7 +66,7 @@ export function AuthLayout({
       </div>
 
       {/* Right — Form Panel */}
-      <div className="relative flex w-full flex-col items-center justify-center bg-[var(--background)] px-6 lg:w-1/2">
+      <div className="relative flex w-full flex-col items-center justify-center border-l border-[var(--border)] bg-[var(--sidebar-bg)] px-6 lg:w-1/2">
         {/* Theme toggle */}
         <div className="absolute right-6 top-6 z-10">
           <ThemeToggle />

@@ -44,16 +44,16 @@ export function ActionMenu({ options, onSelect, className = "" }: ActionMenuProp
           e.stopPropagation();
           setIsOpen(!isOpen);
         }}
-        className={`flex h-8 w-8 items-center justify-center rounded-md text-[var(--muted)] transition-colors hover:bg-[var(--hover-bg)] hover:text-[var(--foreground)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)]`}
+        className={`flex h-7 w-7 items-center justify-center rounded border border-transparent text-[var(--muted)] transition-all hover:border-[var(--border)] hover:bg-[var(--hover-bg)] hover:text-[var(--foreground)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)]`}
         aria-expanded={isOpen}
         aria-haspopup="true"
       >
         <span className="sr-only">Open options</span>
-        <MoreVertical className="h-5 w-5" aria-hidden="true" />
+        <MoreVertical className="h-4 w-4" aria-hidden="true" />
       </button>
 
       {isOpen && (
-        <div className="absolute right-0 z-50 mt-1 w-48 origin-top-right overflow-hidden rounded-md border border-[var(--border)] bg-[var(--background)] shadow-lg animate-in fade-in zoom-in-95 duration-100">
+        <div className="absolute right-0 z-50 mt-1 w-44 origin-top-right overflow-hidden rounded border border-[var(--border)] bg-[var(--sidebar-bg)] shadow-[0_12px_40px_rgba(0,0,0,0.35)]">
           <div className="py-0 flex flex-col" role="menu" aria-orientation="vertical">
             {options.map((option) => (
               <button
@@ -63,8 +63,8 @@ export function ActionMenu({ options, onSelect, className = "" }: ActionMenuProp
                   e.stopPropagation();
                   handleSelect(option.value);
                 }}
-                className={`flex w-full items-center px-4 py-2 text-sm transition-colors hover:bg-[var(--hover-bg)] ${
-                  option.destructive ? "text-red-500 hover:text-red-600" : "text-[var(--foreground)]"
+                className={`flex w-full items-center px-3 py-2 text-[13px] transition-all hover:bg-[var(--hover-bg)] ${
+                  option.destructive ? "text-red-500 hover:text-red-400" : "text-[var(--foreground)]"
                 }`}
                 role="menuitem"
               >

@@ -13,11 +13,12 @@ export default async function OpenCodePageRoute(props: {
     <DashboardLayout>
       <MainArea>
         <div className="flex flex-col h-full bg-[var(--background)]">
-          <div className="p-6 border-b border-[var(--border)]">
-            <h1 className="text-2xl font-bold flex items-center gap-2">
+          <div className="px-6 pt-8 pb-4 border-b border-[var(--border)]">
+            <p className="text-[10px] uppercase tracking-[0.2em] text-[var(--secondary)] mb-1.5">Development</p>
+            <h1 className="text-2xl font-semibold tracking-tight text-[var(--foreground)]">
               OpenCode Integration
             </h1>
-            <p className="text-sm text-[var(--muted)] mt-1">
+            <p className="mt-1 text-[13px] text-[var(--muted)]">
               Manage code generation sessions directly with the OpenCode container
             </p>
           </div>

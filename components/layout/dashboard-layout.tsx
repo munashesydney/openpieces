@@ -24,7 +24,7 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <div className="flex h-screen overflow-x-hidden bg-[var(--background)]">
+    <div className="flex h-screen bg-[var(--background)]">
       <div className="hidden h-full shrink-0 lg:flex">
         <Sidebar collapsed={isSidebarCollapsed} onToggle={handleToggle} />
       </div>

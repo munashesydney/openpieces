@@ -83,20 +83,21 @@ export function ServicesList({
   };
 
   return (
-    <div className="flex w-full justify-center px-6 pb-20 pt-10">
-      <div className="w-full px-4 space-y-10">
+    <div className="flex w-full justify-center px-6 pb-20 pt-8">
+      <div className="w-full px-4 space-y-8">
         {/* Header Section */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl sm:text-3xl font-medium tracking-tight text-foreground">
+            <p className="text-[10px] uppercase tracking-[0.2em] text-[var(--secondary)] mb-1.5">Services</p>
+            <h1 className="text-2xl font-semibold tracking-tight text-foreground">
               Pieces
             </h1>
-            <p className="text-sm text-[var(--muted)]">
+            <p className="mt-1 text-[13px] text-[var(--muted)]">
               Manage and deploy AI-generated pieces within your workspace.
             </p>
           </div>
           <Button onClick={() => setIsSheetOpen(true)}>
-            <Plus className="h-4 w-4" />
+            <Plus className="h-3.5 w-3.5" />
             <span className="hidden sm:inline">New Piece</span>
           </Button>
         </div>
@@ -335,7 +336,7 @@ function ServiceCard({
           <div className="flex items-start justify-between gap-4">
             <div className="flex flex-1 items-start gap-4">
               <div
-                className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[var(--hover-bg)] ${iconColor}`}
+                className={`flex h-10 w-10 shrink-0 items-center justify-center rounded transition-all ${service.type === "trigger" ? "border border-amber-500/15 bg-amber-500/10 text-amber-500 group-hover:bg-amber-500 group-hover:text-white group-hover:shadow-[0_0_16px_rgba(245,158,11,0.35)]" : "border border-[var(--accent)]/15 bg-[var(--accent)]/10 text-[var(--accent)] group-hover:bg-[var(--accent)] group-hover:text-white group-hover:shadow-[0_0_16px_var(--accent-glow)]"}`}
               >
                 <Icon className="h-5 w-5" />
               </div>

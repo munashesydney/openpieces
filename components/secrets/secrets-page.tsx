@@ -131,14 +131,15 @@ export function SecretsPage({ initialSecrets, workspaceId }: SecretsPageProps) {
   };
 
   return (
-    <div className="flex w-full justify-center px-6 pb-20 pt-10">
-      <div className="w-full px-4 space-y-10">
+    <div className="flex w-full justify-center px-6 pb-20 pt-8">
+      <div className="w-full px-4 space-y-8">
         <div className="flex items-center justify-between gap-4">
           <div>
-            <h1 className="text-2xl sm:text-3xl font-medium tracking-tight text-foreground">
+            <p className="text-[10px] uppercase tracking-[0.2em] text-[var(--secondary)] mb-1.5">Security</p>
+            <h1 className="text-2xl font-semibold tracking-tight text-foreground">
               Secrets
             </h1>
-            <p className="mt-1 text-sm text-[var(--muted)]">
+            <p className="mt-1 text-[13px] text-[var(--muted)]">
               Manage environment variables used by your personal workflows and
               services.
             </p>
@@ -148,7 +149,7 @@ export function SecretsPage({ initialSecrets, workspaceId }: SecretsPageProps) {
             className="gap-2"
             onClick={() => setIsSheetOpen(true)}
           >
-            <Plus className="h-4 w-4" />
+            <Plus className="h-3.5 w-3.5" />
             Add secret
           </Button>
         </div>
@@ -218,9 +219,9 @@ export function SecretsPage({ initialSecrets, workspaceId }: SecretsPageProps) {
             </div>
           )}
 
-          <div className="overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--background-soft)]">
+          <div className="overflow-hidden rounded border border-[var(--border)] bg-[var(--background-soft)]">
             {secrets.length === 0 ? (
-              <div className="rounded-xl border border-dashed border-[var(--border)] p-10 text-center text-sm text-[var(--muted)]">
+              <div className="rounded border border-dashed border-[var(--border)] p-10 text-center text-sm text-[var(--muted)]">
                 No secrets yet.
               </div>
             ) : (

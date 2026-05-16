@@ -16,7 +16,7 @@ export function ModeToggle({ mode, onChange }: ModeToggleProps) {
     <button
       type="button"
       onClick={() => onChange(isAgent ? "chat" : "agent")}
-      className={`group relative inline-flex items-center gap-2 rounded-full border border-[var(--border)] bg-[var(--background)] px-3 py-1.5 text-sm font-medium transition-all hover:border-[var(--accent)] hover:bg-[var(--hover-bg)] active:scale-95 shadow-sm`}
+      className={`group relative inline-flex items-center gap-2 rounded border border-[var(--border)] bg-[var(--input-bg)] px-3 py-1.5 text-[13px] font-medium transition-all hover:border-[var(--accent)]/20 hover:bg-[var(--hover-bg)] active:scale-[0.98] shadow-sm`}
     >
       <div
         className={`flex h-5 w-5 items-center justify-center rounded-full transition-all duration-300 ${
