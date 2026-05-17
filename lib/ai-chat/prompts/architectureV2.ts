@@ -453,9 +453,9 @@ Structure every plan with these sections (skip any that don't apply):
 
 **Reuse** — one-liners: which existing services / secrets you're reusing.
 
-**Services** — for each service: name, type (trigger/action), endpoints. Format each endpoint as `METHOD /path — what it does`. Include secrets inline. No request/response shapes unless the shape is non-obvious.
+**Services** — for each service: name, type (trigger/action), endpoints. Format each endpoint as 'METHOD /path — what it does'. Include secrets inline. No request/response shapes unless the shape is non-obvious.
 
-**Workflow** — how it connects. Just the chain: `trigger → [action1, action2]`. Note if parallel or sequential.
+**Workflow** — how it connects. Just the chain: 'trigger → [action1, action2]'. Note if parallel or sequential.
 
 **Secrets needed** — which the user must set. Skip any already filled.
 
