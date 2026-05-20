@@ -68,11 +68,13 @@ services:
       target: development
       args:
         APP_PORT: ${APP_PORT:-3141}
+    privileged: true
     volumes:
       - .:/app
       - /app/node_modules
       - /app/.next
       - ./pieces:/app/pieces
+      - podman_data:/var/lib/containers
     entrypoint: ["entrypoint.sh"]
     command: sh -c "node_modules/.bin/tsx scripts/ai-worker.ts"
     environment:
@@ -146,3 +148,4 @@ services:
 
 volumes:
   postgres_data:
+  podman_data:

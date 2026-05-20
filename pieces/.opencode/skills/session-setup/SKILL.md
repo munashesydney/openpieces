@@ -25,6 +25,8 @@ That directory is **yours**. You own it completely. You can create files, subdir
 >
 > This is not a suggestion. The orchestrator will only execute `index.ts`. If you name it `main.ts` or anything else, the service will not run. Every session, start with `index.ts`.
 
+> **⚠️ EXCEPTION: Podman runtime.** If the piece needs a non-Deno runtime (Python, Go, native dependencies), create a `piece.json` manifest and a `Dockerfile` instead of `index.ts`. See the `podman-runtime` skill for full instructions.
+
 ## Typical Directory Layout
 
 ```

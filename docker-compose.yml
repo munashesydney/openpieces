@@ -70,10 +70,12 @@ services:
       target: worker
       args:
         APP_PORT: ${APP_PORT:-3141}
+    privileged: true
     env_file:
       - .env
     volumes:
       - pieces:/app/pieces
+      - podman_data:/var/lib/containers
     environment:
       - NODE_ENV=production
       - DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
@@ -154,3 +156,4 @@ volumes:
   pieces:
   postgres_data:
   opencode_data:
+  podman_data:
