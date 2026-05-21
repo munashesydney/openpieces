@@ -95,7 +95,7 @@ export const AGENT_TOOL_POLICY: Record<
     web_search: "all",
   },
 
-  // ── Events: read-only + call_endpoint (spawns orchestrator for writes) ──
+  // ── Events: manages brain entries directly; read-only elsewhere + call_endpoint (spawns orchestrator for writes) ──
   events: {
     call_endpoint: "all",
     manage_workflows: ["list", "get"],
@@ -106,7 +106,7 @@ export const AGENT_TOOL_POLICY: Record<
     manage_secrets: ["list", "get"],
     manage_service_endpoints: ["list", "get"],
     manage_workflow_action_links: ["list_linked"],
-    manage_brain: ["list", "search", "get"],
+    manage_brain: "all",
     // runtime's own definition permits spawn_agent → orchestrator for "events"
     runtime: "all",
     web_search: "all",
