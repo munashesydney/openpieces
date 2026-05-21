@@ -17,6 +17,10 @@ export interface PieceManifest {
   entrypoint?: string[];
   /** Port the container process listens on internally (default: 8000) */
   exposePort?: number;
+  /** Memory limit for the container (e.g. "256m", "512m", "1g"). Passed as --memory to podman run. */
+  memory?: string;
+  /** CPU limit for the container (e.g. "0.5", "1.0", "2.0"). Passed as --cpus to podman run. */
+  cpus?: string;
 }
 
 // ── Manifest reading ─────────────────────────────────────────────────────────
@@ -33,10 +37,7 @@ export function readPieceManifest(directory: string): PieceManifest | null {
     const raw = fs.readFileSync(manifestPath, "utf8");
     const manifest = JSON.parse(raw) as PieceManifest;
 
-    if (
-      !manifest.runtime ||
-      !["deno", "podman"].includes(manifest.runtime)
-    ) {
+    if (!manifest.runtime || !["deno", "podman"].includes(manifest.runtime)) {
       console.warn(
         `[podman-runtime] Invalid or missing "runtime" in ${manifestPath}, falling back to deno`,
       );
@@ -144,6 +145,10 @@ export interface SpawnContainerOptions {
   directory: string;
   /** Environment variables injected into the container */
   env: Record<string, string>;
+  /** Memory limit passed as --memory to podman run (e.g. "512m", "1g") */
+  memory?: string;
+  /** CPU limit passed as --cpus to podman run (e.g. "1.0", "2.0") */
+  cpus?: string;
 }
 
 /**
@@ -171,6 +176,10 @@ export function spawnContainer(
         args.push("-e", `${key}=${value}`);
       }
     }
+
+    // Resource limits
+    if (opts.memory) args.push("--memory", opts.memory);
+    if (opts.cpus) args.push("--cpus", opts.cpus);
 
     // Image and entrypoint
     args.push(opts.image);
@@ -218,9 +227,7 @@ export function spawnContainer(
  * Stops and removes a podman container by name or ID.
  * Sends SIGTERM first, then force-removes after a 5-second grace period.
  */
-export async function stopContainer(
-  containerNameOrId: string,
-): Promise<void> {
+export async function stopContainer(containerNameOrId: string): Promise<void> {
   // Graceful stop
   try {
     execSync(`podman stop --time 5 ${containerNameOrId}`, {
@@ -270,9 +277,7 @@ export async function stopAllPieceContainers(): Promise<void> {
   const ids = collectPieceContainerIds();
   if (ids.length === 0) return;
 
-  console.log(
-    `[podman-runtime] Stopping ${ids.length} piece container(s)...`,
-  );
+  console.log(`[podman-runtime] Stopping ${ids.length} piece container(s)...`);
 
   for (const id of ids) {
     await stopContainer(id);

@@ -126,7 +126,7 @@ async function pollHealth(
 }
 
 async function executeServiceSpawnJob(job: ServiceSpawnJob) {
-  const { serviceId, workspaceId, sessionId } = job;
+  const { serviceId, workspaceId } = job;
 
   const service = await getServiceById(serviceId, workspaceId);
   if (!service) {
@@ -436,6 +436,8 @@ async function executeServiceSpawnJob(job: ServiceSpawnJob) {
       containerName,
       directory,
       env: podmanEnv,
+      memory: manifest!.memory,
+      cpus: manifest!.cpus,
     });
 
     // Track container name for cleanup
@@ -635,16 +637,6 @@ async function executeServiceSpawnJob(job: ServiceSpawnJob) {
       } catch {
         /* already dead */
       }
-    }
-    // Notify OpenCode only within the configured retry limit to avoid spam when
-    // the spawn_fail_count keeps being reset by cleanupStuckDeployments.
-    if ((service.spawnFailCount ?? 0) < MAX_SPAWN_FAIL_RETRIES) {
-      await sendSpawnFailureMessage(
-        service,
-        workspaceId,
-        sessionId,
-        `Service did not become healthy on port ${port}`,
-      );
     }
     // Release port from in-memory reservation
     _reservedPorts.delete(port);
@@ -1025,15 +1017,14 @@ export async function startServiceWorker() {
       try {
         await executeServiceSpawnJob(job.data as ServiceSpawnJob);
       } catch (error) {
-        const { serviceId, workspaceId } = job.data as ServiceSpawnJob;
+        const { serviceId, workspaceId, sessionId } =
+          job.data as ServiceSpawnJob;
         console.error(
           `[service-worker] Service spawn failed for ${serviceId}:`,
           error,
         );
         try {
           // Release any port that may have been reserved before the failure
-          // (port was allocated inside executeServiceSpawnJob but may not
-          // have been cleaned up if the error occurred before the else branch)
           const reservedPort = _reservedServicePorts.get(serviceId);
           if (reservedPort !== undefined) {
             _reservedPorts.delete(reservedPort);
@@ -1041,9 +1032,6 @@ export async function startServiceWorker() {
           }
           _spawningServices.delete(serviceId);
 
-          // Soft errors (missing index.ts, missing Dockerfile, missing required
-          // secrets, etc.) should NOT increment spawnFailCount — they are
-          // permanent conditions that retrying won't fix.
           const errMessage =
             error instanceof Error ? error.message : String(error);
           const isSoftError =
@@ -1059,11 +1047,38 @@ export async function startServiceWorker() {
               sql`UPDATE ${services} SET port = NULL, pid = NULL, status = 'stopped' WHERE id = ${serviceId}`,
             );
           } else {
-            // Atomically increment spawnFailCount so concurrent failures
-            // don't race on read-then-write and all see the same value.
-            await db.execute(
-              sql`UPDATE ${services} SET spawn_fail_count = spawn_fail_count + 1, port = NULL, pid = NULL, status = 'crashed' WHERE id = ${serviceId}`,
+            // Atomically increment spawnFailCount
+            const [updated] = await db.execute(
+              sql`UPDATE ${services} SET spawn_fail_count = spawn_fail_count + 1, port = NULL, pid = NULL, status = 'crashed' WHERE id = ${serviceId} RETURNING spawn_fail_count`,
             );
+            const newFailCount: number | undefined = (
+              updated as { spawn_fail_count: number } | undefined
+            )?.spawn_fail_count;
+
+            // Notify OpenCode so the AI can see the error and fix it — but only
+            // within the retry limit to avoid spam across crash loops.
+            if (
+              newFailCount !== undefined &&
+              newFailCount <= MAX_SPAWN_FAIL_RETRIES
+            ) {
+              const failedService = await getServiceById(
+                serviceId,
+                workspaceId,
+              );
+              if (failedService) {
+                sendSpawnFailureMessage(
+                  failedService,
+                  workspaceId,
+                  sessionId,
+                  errMessage,
+                ).catch((notifyErr) => {
+                  console.error(
+                    `[service-worker] Failed to send spawn failure notification for ${serviceId}:`,
+                    notifyErr,
+                  );
+                });
+              }
+            }
           }
         } catch (updateError) {
           const targetStatus =

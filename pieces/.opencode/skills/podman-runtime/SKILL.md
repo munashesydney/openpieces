@@ -48,7 +48,9 @@ Every podman piece needs exactly two files in its root:
   "dockerfile": "Dockerfile",
   "image": "python:3.12-slim",
   "entrypoint": ["python", "main.py"],
-  "exposePort": 8000
+  "exposePort": 8000,
+  "memory": "512m",
+  "cpus": "1.0"
 }
 ```
 
@@ -61,6 +63,8 @@ Every podman piece needs exactly two files in its root:
 | `image` | **Yes** | — | Image name. When `build: true`, this is the base image used in `FROM` (the built image is tagged as `piece-<serviceId>:latest`). When `build: false`, this is pulled and run directly. |
 | `entrypoint` | **Yes** | — | Command + args to execute inside the container. The `PORT` env var is injected automatically — your code should read it. |
 | `exposePort` | No | `8000` | The port your process listens on inside the container. The worker maps this to a dynamic host port. Your code MUST read the `PORT` environment variable (not hardcode a port). |
+| `memory` | No | — | Memory limit for the container, passed as `--memory` to podman. Use for memory-heavy frameworks (Next.js, Spring Boot, etc.). Examples: `"256m"`, `"512m"`, `"1g"`. |
+| `cpus` | No | — | CPU limit for the container, passed as `--cpus` to podman. Examples: `"0.5"`, `"1.0"`, `"2.0"`. |
 
 ### 2. `Dockerfile`
 
@@ -151,3 +155,4 @@ signal.signal(signal.SIGTERM, shutdown)
 - **Keep images small** — use `-slim` variants, clean up package caches in the Dockerfile
 - **No multi-stage builds required** — keep it simple
 - **The piece directory is the build context** — put all source files there, reference them with relative paths
+- **Set memory for heavy frameworks** — Next.js, Spring Boot, Django, etc. need at least `"memory": "512m"` or `"1g"` to avoid OOM kills. Python and simple Node.js services are usually fine without it.
