@@ -64,11 +64,12 @@ export function PushToHubButton({
   return (
     <>
       <div className="flex items-center gap-3">
-        <button
-          type="button"
+        <Button
+          variant="secondary"
+          size="sm"
           onClick={handlePush}
           disabled={status === "connecting" || status === "pushing"}
-          className="inline-flex items-center gap-1.5 rounded border border-violet-500/20 bg-violet-500/8 px-3 py-1.5 text-[11px] font-medium text-violet-300 transition-colors hover:bg-violet-500/15 hover:text-violet-200 disabled:opacity-50 disabled:cursor-not-allowed"
+          isLoading={status === "connecting" || status === "pushing"}
         >
           <ExternalLink size={12} />
           {status === "connecting"
@@ -76,7 +77,7 @@ export function PushToHubButton({
             : status === "pushing"
               ? "Pushing…"
               : "Push to Hub"}
-        </button>
+        </Button>
         {status === "done" && (
           <span className="text-[11px] text-emerald-400/80">{message}</span>
         )}
