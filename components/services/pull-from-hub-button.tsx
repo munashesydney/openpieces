@@ -246,7 +246,7 @@ export function PullFromHubButton({
         <div className="space-y-4">
           {/* Search input */}
           <div>
-            <label className="mb-1.5 block font-mono text-[10px] font-medium uppercase tracking-wider text-white/40">
+            <label className="mb-1.5 block font-mono text-[10px] font-medium uppercase tracking-wider text-[var(--muted)]">
               Search pieces
             </label>
             <input
@@ -257,19 +257,19 @@ export function PullFromHubButton({
                 if (e.target.value) setDirectUuid("");
               }}
               placeholder="e.g. GitHub connector"
-              className="w-full rounded border border-white/[0.08] bg-white/[0.03] px-3 py-2 text-[13px] text-white outline-none transition-colors placeholder:text-white/20 focus:border-violet-500/40"
+              className="w-full rounded border border-[var(--border)] bg-[var(--hover-bg)] px-3 py-2 text-[13px] text-[var(--foreground)] outline-none transition-colors placeholder:text-[var(--muted)] focus:border-violet-500/40"
             />
           </div>
 
           <div className="flex items-center gap-2">
-            <div className="flex-1 border-t border-white/6" />
-            <span className="text-[10px] text-white/30">OR</span>
-            <div className="flex-1 border-t border-white/6" />
+            <div className="flex-1 border-t border-[var(--border)]" />
+            <span className="text-[10px] text-[var(--muted)]">OR</span>
+            <div className="flex-1 border-t border-[var(--border)]" />
           </div>
 
           {/* Direct UUID input */}
           <div>
-            <label className="mb-1.5 block font-mono text-[10px] font-medium uppercase tracking-wider text-white/40">
+            <label className="mb-1.5 block font-mono text-[10px] font-medium uppercase tracking-wider text-[var(--muted)]">
               Enter piece UUID
             </label>
             <input
@@ -283,7 +283,7 @@ export function PullFromHubButton({
                 }
               }}
               placeholder="d02128b5-f1da-470a-9a31-5abc6d7de500"
-              className="w-full rounded border border-white/[0.08] bg-white/[0.03] px-3 py-2 text-[13px] font-mono text-white outline-none transition-colors placeholder:text-white/20 focus:border-violet-500/40"
+              className="w-full rounded border border-[var(--border)] bg-[var(--hover-bg)] px-3 py-2 text-[13px] font-mono text-[var(--foreground)] outline-none transition-colors placeholder:text-[var(--muted)] focus:border-violet-500/40"
             />
           </div>
 
@@ -298,7 +298,7 @@ export function PullFromHubButton({
           {/* Search results */}
           {searchQuery && !useDirectId && (
             <div className="space-y-1.5">
-              <p className="font-mono text-[10px] font-medium uppercase tracking-wider text-white/30">
+              <p className="font-mono text-[10px] font-medium uppercase tracking-wider text-[var(--muted)]">
                 {searching
                   ? "Searching…"
                   : `${results.length} result${results.length !== 1 ? "s" : ""}`}
@@ -306,12 +306,15 @@ export function PullFromHubButton({
 
               {searching && results.length === 0 && (
                 <div className="flex items-center justify-center py-8">
-                  <Loader2 size={16} className="animate-spin text-white/30" />
+                  <Loader2
+                    size={16}
+                    className="animate-spin text-[var(--muted)]"
+                  />
                 </div>
               )}
 
               {!searching && results.length === 0 && searchQuery && (
-                <p className="py-6 text-center text-[11px] text-white/30">
+                <p className="py-6 text-center text-[11px] text-[var(--muted)]">
                   No pieces found.
                 </p>
               )}
@@ -331,11 +334,11 @@ export function PullFromHubButton({
                       className={`w-full rounded border px-3 py-2.5 text-left transition-colors ${
                         selectedPiece?.id === piece.id
                           ? "border-violet-500/40 bg-violet-500/10"
-                          : "border-white/[0.06] bg-white/[0.02] hover:border-white/[0.12]"
+                          : "border-[var(--border)] bg-[var(--hover-bg)] hover:border-[var(--border-strong)]"
                       }`}
                     >
                       <div className="flex items-center justify-between gap-2">
-                        <p className="truncate text-[12px] font-medium text-white/80">
+                        <p className="truncate text-[12px] font-medium text-[var(--foreground)]">
                           {piece.title}
                         </p>
                         <span
@@ -349,11 +352,11 @@ export function PullFromHubButton({
                         </span>
                       </div>
                       {piece.description && (
-                        <p className="mt-0.5 line-clamp-1 text-[10px] text-white/30">
+                        <p className="mt-0.5 line-clamp-1 text-[10px] text-[var(--muted)]">
                           {piece.description}
                         </p>
                       )}
-                      <p className="mt-0.5 font-mono text-[8px] text-white/20">
+                      <p className="mt-0.5 font-mono text-[8px] text-[var(--muted)]">
                         {piece.id}
                       </p>
                     </button>
@@ -379,10 +382,10 @@ export function PullFromHubButton({
               >
                 {hasTypeMatch ? "Selected" : "Type mismatch"}
               </p>
-              <p className="mt-0.5 text-[13px] font-medium text-white/80">
+              <p className="mt-0.5 text-[13px] font-medium text-[var(--foreground)]">
                 {selectedPiece.title}
               </p>
-              <p className="mt-0.5 text-[10px] text-white/40">
+              <p className="mt-0.5 text-[10px] text-[var(--muted)]">
                 {selectedPiece.category} &middot; {serviceType}
               </p>
             </div>
@@ -393,10 +396,10 @@ export function PullFromHubButton({
               <p className="text-[10px] font-medium text-amber-300/80">
                 Pulling by UUID
               </p>
-              <p className="mt-0.5 break-all font-mono text-[11px] text-white/60">
+              <p className="mt-0.5 break-all font-mono text-[11px] text-[var(--foreground)]">
                 {resolvedPieceId}
               </p>
-              <p className="mt-0.5 text-[10px] text-white/40">
+              <p className="mt-0.5 text-[10px] text-[var(--muted)]">
                 Type will be checked when you click Pull
               </p>
             </div>
