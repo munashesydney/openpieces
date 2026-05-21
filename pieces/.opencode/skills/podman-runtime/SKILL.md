@@ -156,3 +156,28 @@ signal.signal(signal.SIGTERM, shutdown)
 - **No multi-stage builds required** — keep it simple
 - **The piece directory is the build context** — put all source files there, reference them with relative paths
 - **Set memory for heavy frameworks** — Next.js, Spring Boot, Django, etc. need at least `"memory": "512m"` or `"1g"` to avoid OOM kills. Python and simple Node.js services are usually fine without it.
+
+---
+
+## Validation (pre-deploy check)
+
+Before triggering a deploy, use the **validate** tool to catch errors early. The tool spawns an ephemeral container matching your piece's image, mounts your piece directory at `/work`, and runs your command. The container is killed after 120 seconds automatically — no long-running processes can survive.
+
+**Workflow:**
+1. Call **scaffold** to copy a pre-built template into your piece directory (e.g. `scaffold` with `"scaffold": "nextjs"`)
+2. Customize the files — change the title, content, styling, add components, etc.
+3. Call **validate** with your image and a check command
+4. If it fails, read the output, fix the issues, validate again
+5. Once it passes, write your `piece.json` + `Dockerfile` and trigger the deploy
+
+**Commands by runtime:**
+
+| Runtime | Validation command |
+|---|---|
+| Next.js (TypeScript) | `npm install && npm run lint && tsc --noEmit` |
+| Node.js (plain JS) | `npm install && npm run lint` |
+| Python | `pip install -r requirements.txt && python -m py_compile *.py` |
+| Go | `go vet ./... && go build ./...` |
+| Rust | `cargo check` |
+
+**Validate tool args:** `{ "image": "node:20-slim", "command": "npm install && npm run lint && tsc --noEmit", "directory": "<userId>/<workspaceId>/<slug>" }`
