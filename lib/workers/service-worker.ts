@@ -112,13 +112,17 @@ async function pollHealth(
     try {
       const controller = new AbortController();
       const timer = setTimeout(() => controller.abort(), 1500);
-      const res = await fetch(`http://localhost:${port}/health`, {
+      // Any response at all means the server is alive — no special /health
+      // endpoint required. A 404, 200, 500, redirect, anything counts.
+      const res = await fetch(`http://localhost:${port}/`, {
         signal: controller.signal,
       });
       clearTimeout(timer);
-      if (res.ok) return true;
+      // If we got here, the server accepted a TCP connection and sent an HTTP
+      // response.  That is proof of life regardless of status code.
+      return true;
     } catch {
-      // not ready yet
+      // not ready yet (connection refused, timeout, etc.)
     }
     await new Promise((r) => setTimeout(r, intervalMs));
   }
@@ -410,6 +414,9 @@ async function executeServiceSpawnJob(job: ServiceSpawnJob) {
         dockerfilePath,
         contextDir: `./pieces/${directory}`,
         imageTag: image,
+        onLog: (line: string) => {
+          void appendServiceLog(directory, "info", line);
+        },
       });
       await appendServiceLog(
         directory,

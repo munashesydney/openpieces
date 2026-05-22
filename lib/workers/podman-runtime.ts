@@ -82,6 +82,8 @@ export interface BuildImageOptions {
   contextDir: string;
   /** Tag applied to the built image */
   imageTag: string;
+  /** Optional callback for streaming build output in real time */
+  onLog?: (line: string) => void;
 }
 
 /**
@@ -106,8 +108,21 @@ export function buildImage(opts: BuildImageOptions): Promise<void> {
     );
 
     let stderr = "";
+
+    proc.stdout?.on("data", (d: Buffer) => {
+      const text = d.toString().trim();
+      if (text) {
+        stderr += text + "\n";
+        opts.onLog?.(text);
+      }
+    });
+
     proc.stderr?.on("data", (d: Buffer) => {
-      stderr += d.toString();
+      const text = d.toString().trim();
+      if (text) {
+        stderr += text + "\n";
+        opts.onLog?.(text);
+      }
     });
 
     proc.on("exit", (code) => {

@@ -42,8 +42,7 @@ For standard TypeScript services with no native dependencies:
 
 1. Write `index.ts` as the entrypoint (the worker executes `deno run index.ts <port>`)
 2. The port comes from `Deno.args[0]` — read it, don't hardcode
-3. Include a `/health` endpoint returning `{"status": "ok"}`
-4. See the `service-boilerplate` skill for the canonical template
+3. See the `service-boilerplate` skill for the canonical template
 
 ---
 
@@ -143,7 +142,6 @@ Before declaring the service complete, confirm the following based on the runtim
 1. **`piece.json` exists and is valid** — `runtime` is `"podman"`, `image`, `entrypoint`, and other required fields are present. See the `podman-runtime` skill for the schema.
 2. **`Dockerfile` exists and is correct** — the build copies source files, installs dependencies, and builds. The CMD reads `$PORT` for the listening port.
 3. **Local validation passed** — you ran the appropriate checks for your language (e.g. `npm run build`, `go build`, `cargo check`, `python -m py_compile *.py`) and all passed.
-4. **`/health` endpoint exists** — every service (Deno or Podman) must serve `{"status": "ok"}` at `/health`.
-5. **Secrets and resource limits** — if the service needs secrets, they are created and registered. If it's a heavy framework (Next.js), `piece.json` includes `"memory": "1g"`.
+4. **Secrets and resource limits** — if the service needs secrets, they are created and registered. If it's a heavy framework (Next.js), `piece.json` includes `"memory": "1g"`.
 
 **Do not skip these checks.** A service that passes its checklist is ready for deployment.

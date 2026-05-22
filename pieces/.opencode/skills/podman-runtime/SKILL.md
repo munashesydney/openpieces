@@ -81,7 +81,7 @@ COPY . .
 
 ## Mandatory: /health endpoint
 
-Every podman piece MUST serve a `/health` endpoint that returns `{"status": "ok"}` with `Content-Type: application/json`. The worker polls this endpoint to confirm the container is ready.
+A `/health` endpoint returning `{"status": "ok"}` is recommended for fastest startup detection, but **not required**. The worker detects your service is alive by any HTTP response on the port — even a 404 or a redirect counts. If you include `/health`, keep it simple:
 
 Example in Python:
 ```python
@@ -151,7 +151,7 @@ signal.signal(signal.SIGTERM, shutdown)
 
 - **Must listen on 0.0.0.0** (not 127.0.0.1) — the port mapping forwards from the host to the container
 - **Must read PORT from environment** — never hardcode the port
-- **Must include /health endpoint** — same requirement as Deno services
+- **A `/health` endpoint is recommended but optional** — the worker detects liveness from any HTTP response on the port
 - **Keep images small** — use `-slim` variants, clean up package caches in the Dockerfile
 - **No multi-stage builds required** — keep it simple
 - **The piece directory is the build context** — put all source files there, reference them with relative paths
