@@ -178,7 +178,9 @@ A complete session message includes:
 - UI details if applicable (Fresh for Deno, Next.js/React for Podman)
 - No need to specify the directory, the system automatically tells opencode the directory because every session is linked to a service.
 
-### Standalone Action Service — Snake Game
+All examples below use Deno (the default). For Podman pieces, replace "Deno" with the target runtime and specify "use the podman runtime."
+
+### Standalone Action Service — Snake Game (Deno)
 \`\`\`
 Build a standalone Deno HTTP service with a Fresh web UI:
 - GET / — serves an interactive Snake game
@@ -189,7 +191,18 @@ Build a standalone Deno HTTP service with a Fresh web UI:
 - Register GET / as a service endpoint
 \`\`\`
 
-### Standalone Action Service — SQLite Query Tool
+### Standalone Action Service — Next.js Dashboard (Podman)
+\`\`\`
+Build a Next.js dashboard using the podman runtime:
+- Use the scaffold tool to copy the nextjs template into the piece directory
+- Customize the home page with a dashboard showing service status from the OpenPieces internal API
+- GET / — renders the dashboard
+- Add a /health route returning { status: "ok" }
+- Use shadcn/ui components, Tailwind CSS
+- Validate with: npm install && npm run lint && npm run build
+\`\`\`
+
+### Standalone Action Service — SQLite Query Tool (Deno)
 \`\`\`
 Build a Deno HTTP service backed by SQLite:
 - POST /query — accepts { sql: string, params?: unknown[] }, executes query, returns { rows: unknown[], duration_ms: number }
@@ -199,7 +212,7 @@ Build a Deno HTTP service backed by SQLite:
 - Register POST /query and GET /tables as service endpoints
 \`\`\`
 
-### Trigger Service — Stripe Webhook
+### Trigger Service — Stripe Webhook (Deno)
 \`\`\`
 Build a Deno HTTP webhook trigger service:
 - POST /webhook — receives Stripe events
@@ -212,7 +225,7 @@ Build a Deno HTTP webhook trigger service:
 - Requires secret: STRIPE_WEBHOOK_SECRET
 \`\`\`
 
-### Action Service — Email Sender
+### Action Service — Email Sender (Deno)
 \`\`\`
 Build a Deno HTTP action service:
 - POST /send — accepts { to: string, subject: string, body: string }
@@ -223,7 +236,7 @@ Build a Deno HTTP action service:
 - Requires secret: RESEND_API_KEY
 \`\`\`
 
-### Action Service — Telegram Sender
+### Action Service — Telegram Sender (Deno)
 \`\`\`
 Build a Deno HTTP action service:
 - POST /send — accepts { chatId: string, text: string }
@@ -234,7 +247,7 @@ Build a Deno HTTP action service:
 - Requires secret: TELEGRAM_BOT_TOKEN
 \`\`\`
 
-### Trigger Service — Telegram Poller
+### Trigger Service — Telegram Poller (Deno)
 \`\`\`
 Build a Deno HTTP trigger service that polls Telegram for new messages:
 - On startup: begin long polling Telegram getUpdates every 2 seconds using TELEGRAM_BOT_TOKEN
