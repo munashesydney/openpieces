@@ -388,13 +388,21 @@ export function ServiceDetail({
                     <div className="flex items-center gap-2">
                       {service.status === "deploying" ? (
                         <div className="h-2 w-2 rounded-full bg-amber-500 animate-pulse" />
+                      ) : service.status === "running" ? (
+                        <div className="h-2 w-2 rounded-full bg-emerald-500" />
+                      ) : service.status === "crashed" ? (
+                        <div className="h-2 w-2 rounded-full bg-red-500" />
                       ) : (
                         <div className="h-2 w-2 rounded-full bg-[var(--muted)]" />
                       )}
                       <span className="text-sm font-semibold text-[var(--muted)]">
                         {service.status === "deploying"
                           ? "Deploying..."
-                          : "Stopped"}
+                          : service.status === "running"
+                            ? "Running"
+                            : service.status === "crashed"
+                              ? "Crashed"
+                              : "Stopped"}
                       </span>
                     </div>
                   )}

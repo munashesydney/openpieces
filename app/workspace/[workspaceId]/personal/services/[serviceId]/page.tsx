@@ -33,18 +33,22 @@ export default async function ServiceIdPage({ params }: PageProps) {
   let workspaceSecrets: { key: string; id: string; value: string }[] = [];
   if (userId) {
     const { data } = await getSecrets(workspaceId, userId, 1, 100);
-    workspaceSecrets = data.map(s => ({ key: s.key, id: s.id, value: s.value }));
+    workspaceSecrets = data.map((s) => ({
+      key: s.key,
+      id: s.id,
+      value: s.value,
+    }));
   }
 
   return (
     <DashboardLayout>
       <MainArea>
-        <ServiceDetail 
-          service={service} 
-          endpoints={endpoints} 
+        <ServiceDetail
+          service={service}
+          endpoints={endpoints}
           requiredSecrets={requiredSecrets}
           workspaceSecrets={workspaceSecrets}
-          workspaceId={workspaceId} 
+          workspaceId={workspaceId}
         />
       </MainArea>
     </DashboardLayout>
