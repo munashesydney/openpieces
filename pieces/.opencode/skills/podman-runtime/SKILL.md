@@ -159,23 +159,25 @@ signal.signal(signal.SIGTERM, shutdown)
 
 ---
 
-## Local validation (npm / node available)
+## Local validation (pre-deploy check)
 
-Node.js, npm, and npx are installed in the OpenCode environment. Use them to install dependencies, run linters, and type-check BEFORE triggering a deploy.
+Node.js and npm are preinstalled in the OpenCode environment. You can install additional runtimes via `apk add` (Alpine): `apk add python3 py3-pip`, `apk add go`, `apk add rust cargo`, etc. Use them to validate your code BEFORE triggering a deploy.
 
 **Workflow:**
-1. Call **scaffold** to copy a pre-built template into your piece directory (e.g. `scaffold` with `"scaffold": "nextjs"`)
-2. `cd` into the piece directory and run `npm install` to install dependencies
-3. Run `npm run lint` and `npx tsc --noEmit` to catch errors locally
-4. Fix any issues, repeat step 3 until clean
+1. Call **scaffold** to copy a pre-built template into your piece directory (e.g. `scaffold` with `"scaffold": "nextjs"`), or create the project manually for non-Node.js languages
+2. Install any additional tooling: `apk add python3 py3-pip`, `apk add go`, etc.
+3. `cd` into the piece directory and run language-appropriate validation commands
+4. Fix any issues, repeat until clean
 5. Write your `piece.json` + `Dockerfile` and trigger the deploy
 
-**Commands by runtime:**
+**Validation commands by language:**
 
-| Runtime | Validation command |
+| Language | Validation command |
 |---|---|
-| Next.js (TypeScript) | `npm install && npm run lint && npx tsc --noEmit` |
-| Node.js (plain JS) | `npm install && npm run lint` |
-| React (CRA) | `npm install && npx tsc --noEmit` |
+| Node.js / Next.js | `npm install && npm run lint && npm run build` |
+| React (CRA) | `npm install && npm run build` |
+| Python | `pip install -r requirements.txt && python -m py_compile *.py` |
+| Go | `go vet ./... && go build ./...` |
+| Rust | `cargo check` |
 
-**⚠️ Never run dev servers.** `npm run dev`, `npm start`, `npm run serve`, and similar commands are blocked — the worker deploys the piece, not a local dev server.
+**⚠️ Never run dev servers.** Dev server commands (`npm run dev`, `python -m http.server`, `go run`, `cargo run`, `rails server`, etc.) are blocked — the worker deploys the piece, not a local dev server.

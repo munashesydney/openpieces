@@ -17,9 +17,20 @@ OpenPieces supports two runtimes:
 
 The first message tells you which directory to `cd` into, the service type (trigger or action), and what to build. **Immediately `cd` into that directory and stay there for the entire session.**
 
-**Do NOT install runtimes.** Deno, Node.js, and npm are already available in the environment. Your only job is to write correct code.
+**Do NOT install runtimes.** Node.js and npm are preinstalled. You can install additional tools via `apk add`, `pip install`, `go install`, `cargo install`, etc. — the container is yours to provision. Your only job is to write correct code.
 
-**⚠️ NEVER run dev servers or long-running processes.** The following are blocked or forbidden: `npm run dev`, `npm start`, `npm run serve`, `npm run watch`, `npx *`, and any command that starts a persistent server. Run only finite commands: `npm install`, `npm run lint`, `npx tsc --noEmit`, `npm run build`.
+**⚠️ NEVER run dev servers or long-running processes.** Every major runtime is blocked from starting persistent servers. The following (and anything like them) are forbidden:
+
+- **Node:** `npm run dev`, `npm start`, `npm run serve`, `npm run preview`, `npm run watch`, `npx serve`, `npx nodemon`, `npx next dev`, `npx vite`, `node server.js`
+- **Deno:** `deno run`, `deno serve`, `deno task dev`, `deno task start`
+- **Python:** `python app.py`, `python -m http.server`, `python -m flask run`, `uvicorn`, `gunicorn`, `fastapi dev`, `python manage.py runserver`
+- **Go:** `go run`
+- **Rust:** `cargo run`, `cargo watch`
+- **Ruby:** `rails server`, `rails s`, `ruby app.rb`
+- **PHP:** `php -S`, `php artisan serve`
+- **.NET:** `dotnet run`, `dotnet watch`
+
+Run only finite commands: `npm install`, `npm run lint`, `npm run build`, `pip install`, `go build`, `cargo build`, `python -c`, etc.
 
 ---
 
@@ -38,16 +49,16 @@ For standard TypeScript services with no native dependencies:
 
 For services that need a non-Deno runtime or native dependencies:
 
-1. **Scaffold** — use the `scaffold` tool to copy a pre-built template (`nextjs`, `reactjs`) into your piece directory
-2. **Customize** — edit the scaffolded files: update the title, content, styling, add components
-3. **Validate locally** — `cd` into the piece directory and run:
-   - `npm install` — install dependencies
-   - `npm run lint` — check for code issues
-   - `npx tsc --noEmit` — type-check (TypeScript scaffolds only)
+1. **Scaffold** — use the `scaffold` tool to copy a pre-built template (`nextjs`, `reactjs`) into your piece directory. For languages without a scaffold (Python, Go, Rust), create the project structure manually.
+2. **Customize** — edit the files: update the title, content, styling, add components, implement the service logic.
+3. **Provision** — install any tools you need: `apk add python3 py3-pip`, `apk add go`, `apk add rust cargo`, etc. Node.js and npm are already installed.
+4. **Validate locally** — run finite checks against your code:
+   - Node.js: `npm install && npm run lint && npm run build`
+   - Python: `pip install -r requirements.txt && python -m py_compile *.py`
+   - Go: `go vet ./... && go build ./...`
+   - Rust: `cargo check`
    - Fix any errors, repeat until clean
-4. **Deploy** — write `piece.json` + `Dockerfile` (the scaffold includes both). The worker reads `piece.json`, builds the image, and spawns the container.
-
-See the `podman-runtime` skill for full details on `piece.json` fields, environment variables, logging, and resource limits.
+5. **Deploy** — write `piece.json` + `Dockerfile`. The scaffold includes both for Node.js scaffolds; for other languages write them yourself (see the `podman-runtime` skill). The worker reads `piece.json`, builds the image, and spawns the container.
 
 ---
 
@@ -129,7 +140,7 @@ Before declaring the service complete, confirm the following based on the runtim
 
 1. **`piece.json` exists and is valid** — `runtime` is `"podman"`, `image`, `entrypoint`, and other required fields are present. See the `podman-runtime` skill for the schema.
 2. **`Dockerfile` exists and is correct** — the build copies source files, installs dependencies, and builds. The CMD reads `$PORT` for the listening port.
-3. **Local validation passed** — you ran `npm install && npm run lint && npx tsc --noEmit` (or the equivalent for your runtime) and all checks passed.
+3. **Local validation passed** — you ran the appropriate checks for your language (e.g. `npm run build`, `go build`, `cargo check`, `python -m py_compile *.py`) and all passed.
 4. **`/health` endpoint exists** — every service (Deno or Podman) must serve `{"status": "ok"}` at `/health`.
 5. **Secrets and resource limits** — if the service needs secrets, they are created and registered. If it's a heavy framework (Next.js), `piece.json` includes `"memory": "1g"`.
 
