@@ -57,7 +57,7 @@ export async function stopServiceAction(
 
   const service = await getServiceById(serviceId, workspaceId);
   if (!service) return { error: "Service not found" };
-  if (!service.pid) return { error: "Service is not running" };
+  if (service.status !== "running") return { error: "Service is not running" };
 
   await enqueueServiceStop({ serviceId, workspaceId });
   revalidatePath(`/workspace/${workspaceId}/personal/services/${serviceId}`);
