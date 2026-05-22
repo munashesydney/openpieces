@@ -121,7 +121,9 @@ services:
         max-file: "3"
 
   opencode:
-    image: ghcr.io/anomalyco/opencode:latest
+    build:
+      context: .
+      dockerfile: Dockerfile.opencode
     command: serve --hostname 0.0.0.0 --port ${OPENCODE_PORT:-4096}
     working_dir: /pieces
     expose:
@@ -130,7 +132,6 @@ services:
       - pieces:/pieces
       - opencode_data:/root/.local/share/opencode
     environment:
-      - OPENCODE_CONFIG_CONTENT={"permission":"allow"}
       - PORT=${OPENCODE_PORT:-4096}
       - HOSTNAME_OVERRIDE=0.0.0.0
       - AI_GATEWAY_API_KEY=${AI_GATEWAY_API_KEY}

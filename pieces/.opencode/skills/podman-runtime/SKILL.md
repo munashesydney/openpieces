@@ -159,25 +159,23 @@ signal.signal(signal.SIGTERM, shutdown)
 
 ---
 
-## Validation (pre-deploy check)
+## Local validation (npm / node available)
 
-Before triggering a deploy, use the **validate** tool to catch errors early. The tool spawns an ephemeral container matching your piece's image, mounts your piece directory at `/work`, and runs your command. The container is killed after 120 seconds automatically — no long-running processes can survive.
+Node.js, npm, and npx are installed in the OpenCode environment. Use them to install dependencies, run linters, and type-check BEFORE triggering a deploy.
 
 **Workflow:**
 1. Call **scaffold** to copy a pre-built template into your piece directory (e.g. `scaffold` with `"scaffold": "nextjs"`)
-2. Customize the files — change the title, content, styling, add components, etc.
-3. Call **validate** with your image and a check command
-4. If it fails, read the output, fix the issues, validate again
-5. Once it passes, write your `piece.json` + `Dockerfile` and trigger the deploy
+2. `cd` into the piece directory and run `npm install` to install dependencies
+3. Run `npm run lint` and `npx tsc --noEmit` to catch errors locally
+4. Fix any issues, repeat step 3 until clean
+5. Write your `piece.json` + `Dockerfile` and trigger the deploy
 
 **Commands by runtime:**
 
 | Runtime | Validation command |
 |---|---|
-| Next.js (TypeScript) | `npm install && npm run lint && tsc --noEmit` |
+| Next.js (TypeScript) | `npm install && npm run lint && npx tsc --noEmit` |
 | Node.js (plain JS) | `npm install && npm run lint` |
-| Python | `pip install -r requirements.txt && python -m py_compile *.py` |
-| Go | `go vet ./... && go build ./...` |
-| Rust | `cargo check` |
+| React (CRA) | `npm install && npx tsc --noEmit` |
 
-**Validate tool args:** `{ "image": "node:20-slim", "command": "npm install && npm run lint && tsc --noEmit", "directory": "<userId>/<workspaceId>/<slug>" }`
+**⚠️ Never run dev servers.** `npm run dev`, `npm start`, `npm run serve`, and similar commands are blocked — the worker deploys the piece, not a local dev server.

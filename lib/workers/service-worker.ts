@@ -38,7 +38,7 @@ import { services, type Service } from "@/lib/db/schema";
 
 const PORT_START = 8001;
 const PORT_END = 9000;
-const MAX_DEPLOYMENT_TIME_MS = 120 * 1000; // 120 seconds
+const MAX_DEPLOYMENT_TIME_MS = 600 * 1000; // 120 seconds
 const MAX_SPAWN_FAIL_RETRIES = 3;
 const QA_SPAWN_MAX_RETRIES = 1;
 
