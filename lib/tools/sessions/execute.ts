@@ -3,12 +3,17 @@ import {
   listSessionsForWorkspace,
   getSessionInfo,
   setService,
+  abortOpenCodeSession,
+  updateDbSessionStatus,
 } from "@/lib/services/opencode-session.service";
 import { getServiceById } from "@/lib/services/service.service";
 import type { ToolContext } from "@/lib/tools/registry";
 import type { SessionsToolInput } from "./definition";
 
-export async function executeSessions(input: SessionsToolInput, context: ToolContext) {
+export async function executeSessions(
+  input: SessionsToolInput,
+  context: ToolContext,
+) {
   const { action, sessionId, serviceId, page, limit } = input;
   const { workspaceId } = context;
 
@@ -18,7 +23,12 @@ export async function executeSessions(input: SessionsToolInput, context: ToolCon
 
   switch (action) {
     case "list": {
-      return await listSessionsForWorkspace(workspaceId, page ?? 1, limit ?? 20, serviceId);
+      return await listSessionsForWorkspace(
+        workspaceId,
+        page ?? 1,
+        limit ?? 20,
+        serviceId,
+      );
     }
 
     case "get": {
@@ -49,7 +59,7 @@ export async function executeSessions(input: SessionsToolInput, context: ToolCon
       const directory = service.directory?.trim();
       if (!directory) {
         throw new Error(
-          "Selected service has no directory set. Use manage_services to create or update a service with a directory first."
+          "Selected service has no directory set. Use manage_services to create or update a service with a directory first.",
         );
       }
       const session = await createSession();
@@ -58,12 +68,41 @@ export async function executeSessions(input: SessionsToolInput, context: ToolCon
         throw new Error("OpenCode did not return a session id");
       }
       await setService(id, serviceId);
-      return { ...session, sessionId: id, serviceTitle: service.title, directory };
+      return {
+        ...session,
+        sessionId: id,
+        serviceTitle: service.title,
+        directory,
+      };
+    }
+
+    case "abort": {
+      if (!sessionId) {
+        throw new Error("sessionId is required for action 'abort'");
+      }
+
+      const session = await getSessionInfo(sessionId, workspaceId);
+      if (!session) {
+        throw new Error(`Session not found: ${sessionId}`);
+      }
+
+      const aborted = await abortOpenCodeSession(sessionId);
+      if (!aborted) {
+        throw new Error(`Failed to abort session ${sessionId}`);
+      }
+
+      await updateDbSessionStatus(sessionId, "failed");
+
+      return {
+        sessionId,
+        status: "failed",
+        message: `Session ${sessionId} has been aborted.`,
+      };
     }
 
     default: {
       throw new Error(
-        `Unknown action: ${action}. Valid actions are: list, get, create.`
+        `Unknown action: ${action}. Valid actions are: list, get, create, abort.`,
       );
     }
   }

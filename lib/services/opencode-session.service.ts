@@ -255,7 +255,7 @@ export async function abortOpenCodeSession(
 /**
  * Update the status of a session in the database.
  */
-async function updateDbSessionStatus(
+export async function updateDbSessionStatus(
   sessionId: string,
   status: string,
 ): Promise<void> {
