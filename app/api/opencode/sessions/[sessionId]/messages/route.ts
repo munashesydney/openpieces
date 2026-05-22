@@ -62,7 +62,7 @@ export async function POST(
     // Guard: check if another session for this service is already working
     const serviceId = await getServiceId(sessionId);
     if (serviceId) {
-      const hasWorking = await serviceHasWorkingSession(serviceId, sessionId);
+      const hasWorking = await serviceHasWorkingSession(serviceId);
       if (hasWorking) {
         return NextResponse.json(
           {

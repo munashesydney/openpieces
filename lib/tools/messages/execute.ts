@@ -1,12 +1,22 @@
-import { sendMessageWithContext, getMessages, getMessagesForAi } from "@/lib/services/opencode.service";
-import { getSessionInfo, serviceHasWorkingSession } from "@/lib/services/opencode-session.service";
+import {
+  sendMessageWithContext,
+  getMessages,
+  getMessagesForAi,
+} from "@/lib/services/opencode.service";
+import {
+  getSessionInfo,
+  serviceHasWorkingSession,
+} from "@/lib/services/opencode-session.service";
 import { db } from "@/lib/db";
 import { opencodeSessions } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import type { ToolContext } from "@/lib/tools/registry";
 import type { MessagesToolInput } from "./definition";
 
-export async function executeMessages(input: MessagesToolInput, context: ToolContext) {
+export async function executeMessages(
+  input: MessagesToolInput,
+  context: ToolContext,
+) {
   const { action, sessionId, content } = input;
 
   if (action === "list") {
@@ -28,7 +38,9 @@ export async function executeMessages(input: MessagesToolInput, context: ToolCon
   }
 
   if (action !== "send") {
-    throw new Error(`Unknown action: ${action}. Valid actions are: send, list.`);
+    throw new Error(
+      `Unknown action: ${action}. Valid actions are: send, list.`,
+    );
   }
   const { workspaceId, userId } = context;
 
@@ -46,9 +58,11 @@ export async function executeMessages(input: MessagesToolInput, context: ToolCon
   }
 
   // Check if service already has a working session before sending
-  const hasWorking = await serviceHasWorkingSession(session.serviceId, sessionId);
+  const hasWorking = await serviceHasWorkingSession(session.serviceId);
   if (hasWorking) {
-    throw new Error("Cannot send message: service is already processing another request");
+    throw new Error(
+      "Cannot send message: service is already processing another request",
+    );
   }
 
   // Fire-and-forget: do not block the AI/tool call on long-running OpenCode processing

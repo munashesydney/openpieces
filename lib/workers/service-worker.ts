@@ -680,7 +680,7 @@ async function sendSpawnFailureMessage(
     if (sessionId) {
       const { serviceHasWorkingSession } =
         await import("@/lib/services/opencode-session.service");
-      const hasWorking = await serviceHasWorkingSession(service.id, sessionId);
+      const hasWorking = await serviceHasWorkingSession(service.id);
       if (hasWorking) {
         const errMsg = `Cannot send spawn failure message: Another opencode session linked to this service is running - opencode session id: ${sessionId}`;
         console.error(`[service-worker] ${errMsg}`);
