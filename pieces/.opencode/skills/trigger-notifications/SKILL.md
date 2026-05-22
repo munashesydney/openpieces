@@ -14,11 +14,15 @@ Trigger services receive inbound events (webhooks, polls) and forward them to th
 
 ## When to use me
 
-Only use this skill when building a **trigger service**. Action services never call `notifyEventsAi`.
+Use this skill when building a **trigger service**. Action services can also call `notifyEventsAi` to report notable events or errors back to the Orchestrator — it's just an HTTP POST to the internal chat endpoint, available to any runtime.
 
 ---
 
 ## The notify helper
+
+This is a Deno/TypeScript implementation. For Podman pieces (Python, Go, etc.), implement the same logic: POST to `${OPENPIECES_INTERNAL_URL}/api/internal/chat` with the `x-internal-secret` header set to `INTERNAL_API_KEY`.
+
+### Deno helper
 
 Place this in a shared `notify.ts` file and import it from your trigger service:
 

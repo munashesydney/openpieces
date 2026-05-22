@@ -90,7 +90,7 @@ Skills live in `.opencode/skills/<name>/SKILL.md` relative to the pieces root. R
 | `public-url` | When constructing server-to-server URLs or webhook callbacks — the only legitimate use of `OPENPIECES_SERVICE_PUBLIC_URL` |
 | `environment-secrets` | When using `Deno.env.get()` for user-supplied credentials — secrets tool workflow, required secrets |
 | `endpoint-registry` | After writing every route handler (except `/health`) — register endpoints with JSON Schema |
-| `trigger-notifications` | Only for trigger services — the `notifyEventsAi` helper, message format, chatId |
+| `trigger-notifications` | For trigger services (and action services that want to report events) — the notifyEventsAi helper, message format, chatId. Works for both Deno and Podman. |
 | `service-types` | At the start to understand the pattern — trigger vs action vs web UI |
 | `pieceignore` | When adding large dependencies or data files — controls what gets pushed to the hub via `.pieceignore` |
 | `code-standards` | Every service — error handling, logging, graceful shutdown, TypeScript discipline |

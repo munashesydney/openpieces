@@ -83,7 +83,7 @@ An HTTP server (Deno or Podman). Reusable across workflows. Can stand alone (gam
 - ✅ Can use SQLite for persistence
 
 **Trigger Service**
-A Deno HTTP server that receives inbound events (webhooks, polls). Lives inside exactly one workflow. When an event arrives, it calls \`notifyEventsAi\` — a built-in function in every Deno service sandbox that POSTs the event to an internal OpenPieces endpoint, starting a new conversation with the Events pipeline (you), which then executes the linked workflow.
+An HTTP server (Deno or Podman) that receives inbound events (webhooks, polls). Lives inside exactly one workflow. When an event arrives, it calls notifyEventsAi — a helper that POSTs the event to the internal chat endpoint (OPENPIECES_INTERNAL_URL/api/internal/chat with x-internal-secret header), starting a new conversation with the Events pipeline (you), which then executes the linked workflow.
 - ❌ Never reuse trigger services — one trigger per workflow, always
 - ✅ Validates events (signatures, auth) before notifying
 

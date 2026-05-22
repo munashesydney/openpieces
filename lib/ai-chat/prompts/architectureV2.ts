@@ -46,11 +46,12 @@ An HTTP server (Deno or Podman). Reusable across workflows. Can stand alone (a g
 - ✅ Use Deno by default. Use Podman when the piece needs: Python, native dependencies (ffmpeg, pandas), heavy frameworks (Next.js), or non-JS languages
 
 **Trigger Service**
-A Deno HTTP server (Deno-only — notifyEventsAi is a Deno built-in) that receives inbound events (webhooks, polls). Lives inside exactly one workflow. When an event arrives, it calls notifyEventsAi — a built-in function available in every Deno service sandbox that POSTs the event payload to an internal OpenPieces endpoint, which starts a new conversation with the Events pipeline (you). The Events pipeline then reads the event, decides what to do, and calls the appropriate action services.
+An HTTP server (Deno or Podman) that receives inbound events (webhooks, polls). Lives inside exactly one workflow. When an event arrives, it calls notifyEventsAi — a helper that POSTs the event to the internal OpenPieces chat endpoint, which starts a new conversation with the Events pipeline (you). The Events pipeline then reads the event, decides what to do, and calls the appropriate action services.
 
 - ❌ Never reuse trigger services across workflows — one trigger per workflow, always
 - ✅ Handles validation (webhook signatures, auth headers) before notifying
 - ✅ Calls notifyEventsAi with a clean, structured payload
+- ✅ For Podman triggers: the same pattern works — POST to OPENPIECES_INTERNAL_URL/api/internal/chat with x-internal-secret header
 
 **Task**
 A cron-based scheduler. No code required — it is pure configuration (a cron expression + a linked workflow). When a Task fires, OpenPieces automatically pings the Events pipeline (you) to signal it is time to execute the linked workflow. The Events pipeline then runs the workflow by calling the appropriate action services.
