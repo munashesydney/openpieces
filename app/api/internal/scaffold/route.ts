@@ -79,9 +79,7 @@ export async function POST(request: NextRequest) {
 function handleList(): NextResponse {
   try {
     const entries = fs.readdirSync(SCAFFOLDS_DIR, { withFileTypes: true });
-    const scaffolds = entries
-      .filter((e) => e.isDirectory())
-      .map((e) => e.name);
+    const scaffolds = entries.filter((e) => e.isDirectory()).map((e) => e.name);
 
     return NextResponse.json({ scaffolds });
   } catch (err) {
@@ -121,7 +119,10 @@ function handleCopy(body: ScaffoldRequestBody): NextResponse {
   // Validate target directory
   if (!isSafeDirectory(directory)) {
     return NextResponse.json(
-      { error: "Invalid directory path" },
+      {
+        error:
+          "Invalid directory path. Must be a relative path from pieces/ root (e.g. 'userId/workspaceId/slug'). No leading slash, no '..' traversal.",
+      },
       { status: 400 },
     );
   }

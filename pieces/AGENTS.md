@@ -19,6 +19,8 @@ The first message tells you which directory to `cd` into, the service type (trig
 
 **Do NOT install runtimes.** Node.js and npm are preinstalled. You can install additional tools via `apk add`, `pip install`, `go install`, `cargo install`, etc. — the container is yours to provision. Your only job is to write correct code.
 
+**If you need to ask a question**, just respond with it directly in your message — do not use any question tool. The Orchestrator or user will reply.
+
 **⚠️ NEVER run dev servers or long-running processes.** Every major runtime is blocked from starting persistent servers. The following (and anything like them) are forbidden:
 
 - **Node:** `npm run dev`, `npm start`, `npm run serve`, `npm run preview`, `npm run watch`, `npx serve`, `npx nodemon`, `npx next dev`, `npx vite`, `node server.js`

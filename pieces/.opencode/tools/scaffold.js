@@ -2,12 +2,12 @@ import { tool } from "@opencode-ai/plugin";
 
 export const scaffold = tool({
   description:
-    "Scaffold a new piece from a pre-built template. Use this to get a working project skeleton instantly. Call with action 'list' to see available scaffolds, then 'copy' to copy one into your piece directory. This copies all scaffold files into the piece folder — then you customize them.",
+    "Scaffold a new piece from a pre-built template. Use this to get a working project skeleton instantly. Call with action 'list' to see available scaffolds, then 'copy' to copy one into your piece directory. The directory must be the relative path from pieces/ root (e.g. 'userId/workspaceId/slug' — NOT absolute like '/pieces/...').",
   args: {
     input: tool.schema
       .string()
       .describe(
-        'JSON object with fields: action (required, one of: "list", "copy"), scaffold (for "copy", the scaffold name e.g. "nextjs" or "reactjs"), directory (for "copy", the piece directory relative to pieces/ root)'
+        'JSON object with fields: action (required, one of: "list", "copy"), scaffold (for "copy", the scaffold name e.g. "nextjs" or "reactjs"), directory (for "copy", the piece directory relative to pieces/ root)',
       ),
   },
   async execute(args) {
