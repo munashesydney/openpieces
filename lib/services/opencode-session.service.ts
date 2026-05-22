@@ -221,7 +221,9 @@ async function fetchOpenCodeSessionStatuses(
  * Abort a session on the opencode server that is stuck in a retry loop.
  * Returns true if the abort was acknowledged, false otherwise.
  */
-async function abortOpenCodeSession(sessionId: string): Promise<boolean> {
+export async function abortOpenCodeSession(
+  sessionId: string,
+): Promise<boolean> {
   try {
     const response = await fetch(
       `${getBaseUrl()}/session/${encodeURIComponent(sessionId)}/abort`,
