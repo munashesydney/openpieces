@@ -248,7 +248,7 @@ export async function sendMessageWithContext(
         .where(
           and(
             eq(opencodeSessions.serviceId, serviceId),
-            eq(opencodeSessions.status, "working"),
+            eq(opencodeSessions.status, "busy"),
             ne(opencodeSessions.sessionId, sessionId),
           ),
         )

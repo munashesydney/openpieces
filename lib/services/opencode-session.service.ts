@@ -168,13 +168,13 @@ export async function setService(
     .values({
       sessionId,
       serviceId,
-      status: "active",
+      status: "idle",
     })
     .onConflictDoUpdate({
       target: opencodeSessions.sessionId,
       set: {
         serviceId,
-        status: "active",
+        status: "idle",
         updatedAt: new Date(),
       },
     });
@@ -265,7 +265,7 @@ export async function updateDbSessionStatus(
     .where(eq(opencodeSessions.sessionId, sessionId));
 }
 
-export async function serviceHasWorkingSession(
+export async function serviceHasBusySession(
   serviceId: string,
 ): Promise<boolean> {
   // Step 1: Get ALL sessions for this service (don't trust any DB status)
@@ -279,7 +279,7 @@ export async function serviceHasWorkingSession(
   // Step 2: Verify actual status from opencode server
   const statusMap = await fetchOpenCodeSessionStatuses();
 
-  // If opencode is unreachable, fall back to DB "working" status (conservative)
+  // If opencode is unreachable, fall back to DB "busy" status (conservative)
   if (statusMap === null) {
     const dbWorkingRows = await db
       .select({ sessionId: opencodeSessions.sessionId })
@@ -287,7 +287,7 @@ export async function serviceHasWorkingSession(
       .where(
         and(
           eq(opencodeSessions.serviceId, serviceId),
-          eq(opencodeSessions.status, "working"),
+          eq(opencodeSessions.status, "busy"),
         ),
       )
       .limit(1);
@@ -310,7 +310,7 @@ export async function serviceHasWorkingSession(
 
     if (!actualStatus) {
       // Session doesn't exist in opencode — DB is stale
-      await updateDbSessionStatus(sessionId, "completed");
+      await updateDbSessionStatus(sessionId, "idle");
       continue;
     }
 
@@ -321,7 +321,7 @@ export async function serviceHasWorkingSession(
 
       case "idle":
         // Session exists but is idle — DB status may be out of sync
-        await updateDbSessionStatus(sessionId, "completed");
+        await updateDbSessionStatus(sessionId, "idle");
         break;
 
       case "retry":
@@ -330,10 +330,7 @@ export async function serviceHasWorkingSession(
           `[opencode-session] Session ${sessionId} is retrying (attempt ${actualStatus.attempt}): "${actualStatus.message}" — aborting`,
         );
         const aborted = await abortOpenCodeSession(sessionId);
-        await updateDbSessionStatus(
-          sessionId,
-          aborted ? "failed" : "completed",
-        );
+        await updateDbSessionStatus(sessionId, aborted ? "error" : "idle");
         break;
     }
   }

@@ -106,11 +106,11 @@ export function OpenCodePage({
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, events]);
 
-  // Backup polling: if selectedSessionStatus is "working" for more than 10 seconds with no SSE activity,
+  // Backup polling: if selectedSessionStatus is "busy" for more than 10 seconds with no SSE activity,
   // start polling for updates. This handles both UI-sent and AI-sent messages when SSE is broken.
   // Triggered by selectedSessionStatus rather than isSending so AI-initiated messages also get covered.
   useEffect(() => {
-    if (selectedSessionStatus !== "working" || !selectedSessionId) return;
+    if (selectedSessionStatus !== "busy" || !selectedSessionId) return;
 
     const pollTimeout = setTimeout(() => {
       console.log(
@@ -136,7 +136,7 @@ export function OpenCodePage({
           );
           if (
             !session ||
-            (session.status !== "working" && session.status !== "active")
+            (session.status !== "busy" && session.status !== "idle")
           ) {
             clearInterval(interval);
             setSessions(sessionsList);
@@ -205,8 +205,8 @@ export function OpenCodePage({
           stopPolling();
           return;
         }
-        // Check if session is still working via selectedSessionStatus (DB-driven)
-        if (selectedSessionStatus !== "working") {
+        // Check if session is still busy via selectedSessionStatus (DB-driven)
+        if (selectedSessionStatus !== "busy") {
           stopPolling();
           await loadMessages(selectedSessionId);
           await loadSessions();
@@ -222,7 +222,7 @@ export function OpenCodePage({
         const ev = JSON.parse(e.data) as SessionEvent;
         if (ev.type === "session.idle" || ev.type === "session.error") {
           stopPolling();
-          const newStatus = ev.type === "session.idle" ? "completed" : "failed";
+          const newStatus = ev.type === "session.idle" ? "idle" : "error";
           const content =
             (ev as any).content ??
             (ev as any).message?.content ??
@@ -252,9 +252,9 @@ export function OpenCodePage({
       es.close();
       sessionSseRef.current = null;
       // Don't poll immediately - SSE might recover
-      // Only start polling if the session is still "working" (DB is source of truth)
+      // Only start polling if the session is still "busy" (DB is source of truth)
       setTimeout(() => {
-        if (selectedSessionStatus === "working" && selectedSessionId) {
+        if (selectedSessionStatus === "busy" && selectedSessionId) {
           startPolling();
         }
       }, 5000);
@@ -375,7 +375,7 @@ export function OpenCodePage({
 
         // Update session status in-memory from SSE event immediately
         if (ev.type === "session.idle" || ev.type === "session.error") {
-          const newStatus = ev.type === "session.idle" ? "completed" : "failed";
+          const newStatus = ev.type === "session.idle" ? "idle" : "error";
           const content =
             (ev as any).content ??
             (ev as any).message?.content ??
@@ -423,11 +423,11 @@ export function OpenCodePage({
     setIsSending(true);
 
     // Update status immediately in UI
-    setSelectedSessionStatus("working");
+    setSelectedSessionStatus("busy");
     setSessions((prev) =>
       prev.map((s) =>
         (s.sessionId || s.session_id || s.id) === selectedSessionId
-          ? { ...s, status: "working" }
+          ? { ...s, status: "busy" }
           : s,
       ),
     );
@@ -454,11 +454,11 @@ export function OpenCodePage({
         console.error("Failed to send message", errData);
         setSendError(errData.error || "Failed to send message");
         setIsSending(false);
-        setSelectedSessionStatus("active");
+        setSelectedSessionStatus("idle");
         setSessions((prev) =>
           prev.map((s) =>
             (s.sessionId || s.session_id || s.id) === selectedSessionId
-              ? { ...s, status: "active" }
+              ? { ...s, status: "idle" }
               : s,
           ),
         );
@@ -467,11 +467,11 @@ export function OpenCodePage({
       console.error(e);
       setSendError("Failed to send message. Please try again.");
       setIsSending(false);
-      setSelectedSessionStatus("active");
+      setSelectedSessionStatus("idle");
       setSessions((prev) =>
         prev.map((s) =>
           (s.sessionId || s.session_id || s.id) === selectedSessionId
-            ? { ...s, status: "active" }
+            ? { ...s, status: "idle" }
             : s,
         ),
       );
@@ -491,11 +491,11 @@ export function OpenCodePage({
       );
 
       if (res.ok) {
-        setSelectedSessionStatus("failed");
+        setSelectedSessionStatus("error");
         setSessions((prev) =>
           prev.map((s) =>
             (s.sessionId || s.session_id || s.id) === selectedSessionId
-              ? { ...s, status: "failed" }
+              ? { ...s, status: "error" }
               : s,
           ),
         );
@@ -691,15 +691,13 @@ export function OpenCodePage({
                   {selectedSessionStatus && (
                     <span
                       className={`shrink-0 px-2 py-0.5 rounded-full text-[10px] font-medium ${
-                        selectedSessionStatus === "active"
+                        selectedSessionStatus === "idle"
                           ? "bg-green-500/20 text-green-400"
-                          : selectedSessionStatus === "working"
+                          : selectedSessionStatus === "busy"
                             ? "bg-yellow-500/20 text-yellow-400"
-                            : selectedSessionStatus === "completed"
-                              ? "bg-blue-500/20 text-blue-400"
-                              : selectedSessionStatus === "failed"
-                                ? "bg-red-500/20 text-red-400"
-                                : "bg-gray-500/20 text-gray-400"
+                            : selectedSessionStatus === "error"
+                              ? "bg-red-500/20 text-red-400"
+                              : "bg-gray-500/20 text-gray-400"
                       }`}
                     >
                       {selectedSessionStatus}

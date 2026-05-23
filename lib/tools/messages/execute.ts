@@ -73,7 +73,7 @@ export async function executeMessages(
   // Update DB status so UI polling fallback picks it up (DB is single source of truth)
   await db
     .update(opencodeSessions)
-    .set({ status: "working", updatedAt: new Date() })
+    .set({ status: "busy", updatedAt: new Date() })
     .where(eq(opencodeSessions.sessionId, sessionId));
 
   return {
