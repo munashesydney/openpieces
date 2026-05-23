@@ -16,6 +16,7 @@ services:
       target: development
       args:
         APP_PORT: ${APP_PORT:-3141}
+    privileged: true
     volumes:
       # Mount source so edits hot-reload inside the container
       - .:/app
@@ -68,11 +69,13 @@ services:
       target: development
       args:
         APP_PORT: ${APP_PORT:-3141}
+    privileged: true
     volumes:
       - .:/app
       - /app/node_modules
       - /app/.next
       - ./pieces:/app/pieces
+      - podman_data:/var/lib/containers
     entrypoint: ["entrypoint.sh"]
     command: sh -c "node_modules/.bin/tsx scripts/ai-worker.ts"
     environment:
@@ -124,7 +127,9 @@ services:
         max-file: "2"
 
   opencode:
-    image: ghcr.io/anomalyco/opencode:latest
+    build:
+      context: .
+      dockerfile: Dockerfile.opencode
     command: serve --hostname 0.0.0.0 --port ${OPENCODE_PORT:-4096}
     working_dir: /pieces
     ports:
@@ -133,7 +138,6 @@ services:
       - ./pieces:/pieces
       - ./opencode-data:/root/.local/share/opencode
     environment:
-      - OPENCODE_CONFIG_CONTENT={"permission":"allow"}
       - PORT=${OPENCODE_PORT:-4096}
       - HOSTNAME_OVERRIDE=0.0.0.0
       - AI_GATEWAY_API_KEY=${AI_GATEWAY_API_KEY}
@@ -146,3 +150,4 @@ services:
 
 volumes:
   postgres_data:
+  podman_data:

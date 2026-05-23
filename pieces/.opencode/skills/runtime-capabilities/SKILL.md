@@ -51,3 +51,15 @@ Deno's standard library is well-maintained and available. Use it for:
 ## Key Constraint
 
 **Do not try to install Deno or any runtime.** Deno is already installed in the execution environment. Your only job is to write code — use imports directly.
+
+---
+
+## Non-Deno Runtimes (Podman)
+
+If the piece needs a non-JS runtime (Python, Go, Rust, etc.) or system dependencies (ffmpeg, chromium, pandas, numpy, etc.), do NOT use Deno. Instead, use the **podman runtime**:
+
+1. Create a `piece.json` manifest with `"runtime": "podman"`
+2. Create a `Dockerfile` with the required runtime and dependencies
+3. The entrypoint is your main file (e.g. `["python", "main.py"]`)
+
+See the `podman-runtime` skill for complete instructions, including how to handle the PORT env var and /health endpoint.

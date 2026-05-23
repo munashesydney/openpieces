@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 const serviceTypeEnum = z.enum(["trigger", "action"]);
+const runtimeEnum = z.enum(["deno", "podman"]);
 
 export const serviceToolDefinition = {
   name: "manage_services",
@@ -62,6 +63,11 @@ export const serviceToolDefinition = {
           .describe(
             "Directory path for the service. Required for OpenCode sessions.",
           ),
+        runtime: runtimeEnum
+          .optional()
+          .describe(
+            'Runtime for the service. "deno" (default) for TypeScript/JS, "podman" for container-based pieces (Python, Next.js, Go, etc.).',
+          ),
       })
       .optional()
       .describe("Details for create action"),
@@ -77,6 +83,7 @@ export const serviceToolDefinition = {
           .string()
           .optional()
           .describe("New directory path for OpenCode sessions"),
+        runtime: runtimeEnum.optional().describe("New runtime: deno or podman"),
       })
       .optional()
       .describe("Details for update action. At least one field required."),

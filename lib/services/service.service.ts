@@ -186,6 +186,7 @@ async function loadPieceignoreRules(
 }
 
 const VALID_SERVICE_TYPES = ["trigger", "action"] as const;
+const VALID_RUNTIMES = ["deno", "podman"] as const;
 
 /** Validates user-provided directory slug (single segment). Returns trimmed slug. */
 function parseDirectorySlug(raw: string): string {
@@ -236,6 +237,31 @@ export async function createService(data: NewService): Promise<Service> {
     throw new ValidationError(
       `Invalid service type "${data.type}". Must be one of: ${VALID_SERVICE_TYPES.join(", ")}.`,
     );
+  }
+
+  // ── Validate runtime ────────────────────────────────────────────────────
+  const runtime = (data as Record<string, unknown>).runtime as
+    | string
+    | undefined;
+  if (
+    runtime &&
+    !VALID_RUNTIMES.includes(runtime as (typeof VALID_RUNTIMES)[number])
+  ) {
+    throw new ValidationError(
+      `Invalid runtime "${runtime}". Must be one of: ${VALID_RUNTIMES.join(", ")}.`,
+    );
+  }
+
+  // ── Gate podman via feature flag ──────────────────────────────────────
+  if (runtime === "podman") {
+    const { isFeatureEnabled } =
+      await import("@/lib/services/feature-flags.service");
+    const podmanEnabled = await isFeatureEnabled("podman");
+    if (!podmanEnabled) {
+      throw new ValidationError(
+        "Podman runtime is not enabled. Enable it in Settings → Features.",
+      );
+    }
   }
 
   // ── Validate workflowId ───────────────────────────────────────────────────

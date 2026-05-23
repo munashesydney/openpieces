@@ -33,6 +33,8 @@ FROM gcr.io/distroless/cc AS deno-cc
 FROM base AS development
 ENV NODE_ENV=development
 ENV NEXT_TELEMETRY_DISABLED=1
+# Install podman for containerised piece runtimes (rootless, inside Docker)
+RUN apk add --no-cache podman crun fuse-overlayfs iptables
 # Glibc libs isolated in /opt/deno-glibc so they don't interfere with musl Node.js
 COPY --from=deno-cc --chown=root:root --chmod=755 /lib/*-linux-gnu/* /opt/deno-glibc/
 COPY --from=deno-cc --chown=root:root --chmod=755 /lib/ld-linux-* /opt/deno-glibc/
@@ -68,6 +70,8 @@ RUN npm run build
 # =============================================================================
 FROM base AS worker
 ENV NODE_ENV=production
+# Install podman for containerised piece runtimes (rootless, inside Docker)
+RUN apk add --no-cache podman crun fuse-overlayfs iptables
 # Glibc libs isolated in /opt/deno-glibc so they don't interfere with musl Node.js
 COPY --from=deno-cc --chown=root:root --chmod=755 /lib/*-linux-gnu/* /opt/deno-glibc/
 COPY --from=deno-cc --chown=root:root --chmod=755 /lib/ld-linux-* /opt/deno-glibc/

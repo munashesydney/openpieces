@@ -3,6 +3,18 @@ import fs from "fs";
 import net from "net";
 import { and, eq, sql } from "drizzle-orm";
 import {
+  readPieceManifest,
+  isPodmanAvailable,
+  buildImage,
+  spawnContainer,
+  stopContainer,
+  stopAllPieceContainers,
+  containerNameForService,
+  imageTagForService,
+} from "@/lib/workers/podman-runtime";
+import { isFeatureEnabled } from "@/lib/services/feature-flags.service";
+import { seedFeatureFlags } from "@/lib/services/feature-flags.service";
+import {
   SERVICE_SPAWN_QUEUE,
   SERVICE_STOP_QUEUE,
   type ServiceSpawnJob,
@@ -28,7 +40,7 @@ import { services, type Service } from "@/lib/db/schema";
 
 const PORT_START = 8001;
 const PORT_END = 9000;
-const MAX_DEPLOYMENT_TIME_MS = 120 * 1000; // 120 seconds
+const MAX_DEPLOYMENT_TIME_MS = 600 * 1000; // 120 seconds
 const MAX_SPAWN_FAIL_RETRIES = 3;
 const QA_SPAWN_MAX_RETRIES = 1;
 
@@ -48,6 +60,10 @@ const _spawningServices = new Set<string>();
 // explicitly killed during worker shutdown, preventing orphan accumulation
 // across container restarts (Docker restart: always preserves PID namespace).
 const _childPids = new Set<number>();
+
+// Tracks podman container names (piece-<serviceId>) for services running under
+// the podman runtime. Used for cleanup on stop / worker shutdown.
+const _containerIds = new Map<string, string>();
 
 async function isPortBoundByOS(port: number): Promise<boolean> {
   return new Promise((resolve) => {
@@ -98,13 +114,17 @@ async function pollHealth(
     try {
       const controller = new AbortController();
       const timer = setTimeout(() => controller.abort(), 1500);
-      const res = await fetch(`http://localhost:${port}/health`, {
+      // Any response at all means the server is alive — no special /health
+      // endpoint required. A 404, 200, 500, redirect, anything counts.
+      const res = await fetch(`http://localhost:${port}/`, {
         signal: controller.signal,
       });
       clearTimeout(timer);
-      if (res.ok) return true;
+      // If we got here, the server accepted a TCP connection and sent an HTTP
+      // response.  That is proof of life regardless of status code.
+      return true;
     } catch {
-      // not ready yet
+      // not ready yet (connection refused, timeout, etc.)
     }
     await new Promise((r) => setTimeout(r, intervalMs));
   }
@@ -112,7 +132,7 @@ async function pollHealth(
 }
 
 async function executeServiceSpawnJob(job: ServiceSpawnJob) {
-  const { serviceId, workspaceId, sessionId } = job;
+  const { serviceId, workspaceId } = job;
 
   const service = await getServiceById(serviceId, workspaceId);
   if (!service) {
@@ -132,6 +152,10 @@ async function executeServiceSpawnJob(job: ServiceSpawnJob) {
     );
   }
   _spawningServices.add(serviceId);
+
+  // ── Read piece manifest (if it exists) to determine runtime ────────────
+  const manifest = readPieceManifest(service.directory.trim());
+  const runtime = manifest?.runtime ?? "deno";
 
   // If the service was stuck in "deploying" status (e.g. orphaned after a
   // worker crash), reset it so the spawn can proceed.
@@ -155,23 +179,64 @@ async function executeServiceSpawnJob(job: ServiceSpawnJob) {
     }
   }
 
-  const indexPath = `./pieces/${service.directory.trim()}/index.ts`;
-  if (!fs.existsSync(indexPath)) {
-    const msg = `Service ${serviceId} has no index.ts at ${indexPath} - skipping spawn`;
-    await appendServiceLog(service.directory.trim(), "error", msg);
+  // ── Validate entrypoint exists ───────────────────────────────────────
+  // For Deno: index.ts must exist.
+  // For Podman: Dockerfile must exist (checked later during build).
+  if (runtime === "deno") {
+    const indexPath = `./pieces/${service.directory.trim()}/index.ts`;
+    if (!fs.existsSync(indexPath)) {
+      const msg = `Service ${serviceId} has no index.ts at ${indexPath} - skipping spawn`;
+      await appendServiceLog(service.directory.trim(), "error", msg);
 
-    if (service.pid) {
-      try {
-        process.kill(service.pid, "SIGKILL");
-      } catch {
-        // Ignore errors if process doesn't exist
+      if (service.pid) {
+        try {
+          process.kill(service.pid, "SIGKILL");
+        } catch {
+          // Ignore errors if process doesn't exist
+        }
       }
+      throw new Error(msg);
     }
-    throw new Error(msg);
+  } else {
+    // Podman: validate the Dockerfile exists (either from manifest or default)
+    const dockerfileRel = manifest?.dockerfile ?? "Dockerfile";
+    const dockerfilePath = `./pieces/${service.directory.trim()}/${dockerfileRel}`;
+    if (!fs.existsSync(dockerfilePath)) {
+      const msg = `Service ${serviceId} has no Dockerfile at ${dockerfilePath} - skipping spawn`;
+      await appendServiceLog(service.directory.trim(), "error", msg);
+      throw new Error(msg);
+    }
+    if (!manifest?.image) {
+      const msg = `Service ${serviceId} piece.json is missing required "image" field`;
+      await appendServiceLog(service.directory.trim(), "error", msg);
+      throw new Error(msg);
+    }
+    if (!manifest?.entrypoint || manifest.entrypoint.length === 0) {
+      const msg = `Service ${serviceId} piece.json is missing required "entrypoint" field`;
+      await appendServiceLog(service.directory.trim(), "error", msg);
+      throw new Error(msg);
+    }
   }
 
-  // If service has a PID, check if it's still alive and kill it (force restart)
-  if (service.pid) {
+  // ── Kill any existing process / container before restart ─────────────
+  if (runtime === "podman") {
+    // Stop any existing container with the same name
+    const containerName = containerNameForService(serviceId);
+    try {
+      await stopContainer(containerName);
+      console.log(
+        `[service-worker] Service ${serviceId} stopped existing podman container for force restart`,
+      );
+      await appendServiceLog(
+        service.directory.trim(),
+        "info",
+        `Force restarting service (stopped existing container)`,
+      );
+    } catch {
+      // Container may not exist — fine
+    }
+  } else if (service.pid) {
+    // Deno: check if PID is alive and kill it
     try {
       process.kill(service.pid, 0); // Signal 0 = check if process exists
       // Process is alive, kill it first
@@ -291,60 +356,142 @@ async function executeServiceSpawnJob(job: ServiceSpawnJob) {
 
   const port = await findFreePort();
   _reservedServicePorts.set(serviceId, port);
-  const entryPoint = "index.ts";
   const directory = service.directory.trim();
 
-  await resetServiceLog(directory);
-  await appendServiceLog(
-    directory,
-    "info",
-    `Spawning service "${service.title}" on port ${port}: ${entryPoint}`,
-  );
+  // ── Build the common environment object ───────────────────────────────
+  const baseEnv = {
+    ...process.env,
+    ...secretEnv,
+  };
+  const commonEnv = {
+    ...baseEnv,
+    LD_LIBRARY_PATH: "/opt/deno-glibc",
+    OPENPIECES_USER_ID: workspaceOwnerId,
+    OPENPIECES_WORKSPACE_ID: service.workspaceId,
+    OPENPIECES_SERVICE_ID: serviceId,
+    OPENPIECES_WORKFLOW_ID: service.workflowId ?? "",
+    OPENPIECES_INTERNAL_URL:
+      process.env.OPENPIECES_INTERNAL_URL ??
+      `http://app:${process.env.APP_PORT ?? 3141}`,
+    OPENPIECES_SERVICE_PUBLIC_URL: (() => {
+      const domain = (process.env.SERVICE_DOMAIN ?? "").trim();
+      if (domain) {
+        const protocol = domain === "localhost" ? "http" : "https";
+        const port =
+          domain === "localhost" ? `:${process.env.APP_PORT ?? "3141"}` : "";
+        return `${protocol}://${serviceId}.${domain}${port}`;
+      }
+      return `${process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3141"}/api/s/${serviceId}`;
+    })(),
+  };
 
-  const proc = spawn(
-    "deno",
-    [
-      "run",
-      "--allow-net",
-      "--allow-read",
-      "--allow-env",
-      "--allow-write",
-      "--allow-run", // if the piece needs to spawn subprocesses
-      "--allow-sys", // for OS info: hostname, osRelease, etc.
-      "--allow-ffi", // if using native/FFI libraries
-      entryPoint,
-      String(port),
-    ],
-    {
-      detached: true,
-      stdio: ["ignore", "pipe", "pipe"],
-      cwd: `./pieces/${directory}`,
-      env: {
-        ...process.env,
-        ...secretEnv,
-        LD_LIBRARY_PATH: "/opt/deno-glibc",
-        OPENPIECES_USER_ID: workspaceOwnerId,
-        OPENPIECES_WORKSPACE_ID: service.workspaceId,
-        OPENPIECES_SERVICE_ID: serviceId,
-        OPENPIECES_WORKFLOW_ID: service.workflowId ?? "",
-        OPENPIECES_INTERNAL_URL:
-          process.env.OPENPIECES_INTERNAL_URL ??
-          `http://app:${process.env.APP_PORT ?? 3141}`,
-        OPENPIECES_SERVICE_PUBLIC_URL: (() => {
-          const domain = (process.env.SERVICE_DOMAIN ?? "").trim();
-          if (domain) {
-            const protocol = domain === "localhost" ? "http" : "https";
-            const port =
-              domain === "localhost"
-                ? `:${process.env.APP_PORT ?? "3141"}`
-                : "";
-            return `${protocol}://${serviceId}.${domain}${port}`;
-          }
-          return `${process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3141"}/api/s/${serviceId}`;
-        })(),
+  let proc: import("child_process").ChildProcess;
+
+  if (runtime === "podman") {
+    // ── Podman path ────────────────────────────────────────
+    if (!isPodmanAvailable()) {
+      throw new Error(
+        `Service ${serviceId} requires podman runtime but podman is not available on this worker`,
+      );
+    }
+
+    // Check feature flag — admin can disable podman globally
+    const podmanEnabled = await isFeatureEnabled("podman");
+    if (!podmanEnabled) {
+      throw new Error(
+        `Service ${serviceId} requires podman runtime but the podman feature flag is disabled`,
+      );
+    }
+
+    const containerName = containerNameForService(serviceId);
+    const entrypoint = manifest!.entrypoint!;
+    const containerPort = manifest!.exposePort ?? 8000;
+    const dockerfileRel = manifest!.dockerfile ?? "Dockerfile";
+    const dockerfilePath = `./pieces/${directory}/${dockerfileRel}`;
+
+    // Determine the image to run: built tag when build:true, otherwise the manifest image
+    let image = manifest!.image!;
+
+    // Build image if requested
+    if (manifest!.build) {
+      image = imageTagForService(serviceId);
+      await appendServiceLog(
+        directory,
+        "info",
+        `Building podman image "${image}" from ${dockerfileRel}...`,
+      );
+      await buildImage({
+        dockerfilePath,
+        contextDir: `./pieces/${directory}`,
+        imageTag: image,
+        onLog: (line: string) => {
+          void appendServiceLog(directory, "info", line);
+        },
+      });
+      await appendServiceLog(
+        directory,
+        "info",
+        `Podman image "${image}" built successfully`,
+      );
+    }
+
+    await resetServiceLog(directory);
+    await appendServiceLog(
+      directory,
+      "info",
+      `Spawning podman container "${containerName}" on port ${port} (image: ${image})`,
+    );
+
+    // Inject PORT so the container knows what port to listen on (containerPort, not hostPort)
+    const podmanEnv = { ...commonEnv, PORT: String(containerPort) };
+
+    proc = await spawnContainer({
+      image,
+      entrypoint,
+      hostPort: port,
+      containerPort,
+      containerName,
+      directory,
+      env: podmanEnv,
+      memory: manifest!.memory,
+      cpus: manifest!.cpus,
+    });
+
+    // Track container name for cleanup
+    _containerIds.set(serviceId, containerName);
+  } else {
+    // ── Deno path (existing behaviour) ──────────────────────────
+    const entryPoint = "index.ts";
+
+    await resetServiceLog(directory);
+    await appendServiceLog(
+      directory,
+      "info",
+      `Spawning service "${service.title}" on port ${port}: ${entryPoint}`,
+    );
+
+    proc = spawn(
+      "deno",
+      [
+        "run",
+        "--allow-net",
+        "--allow-read",
+        "--allow-env",
+        "--allow-write",
+        "--allow-run",
+        "--allow-sys",
+        "--allow-ffi",
+        entryPoint,
+        String(port),
+      ],
+      {
+        detached: true,
+        stdio: ["ignore", "pipe", "pipe"],
+        cwd: `./pieces/${directory}`,
+        env: commonEnv,
       },
-    },
-  );
+    );
+  }
 
   // Track PID so killChildProcesses() can clean it up on worker shutdown.
   if (proc.pid !== undefined) {
@@ -365,6 +512,7 @@ async function executeServiceSpawnJob(job: ServiceSpawnJob) {
   });
   proc.on("error", (err) => {
     if (proc.pid !== undefined) _childPids.delete(proc.pid);
+    if (runtime === "podman") _containerIds.delete(serviceId);
     console.error(
       `[service-worker][${service.title}] spawn error:`,
       err.message,
@@ -373,6 +521,7 @@ async function executeServiceSpawnJob(job: ServiceSpawnJob) {
   });
   proc.on("exit", (code, signal) => {
     if (proc.pid !== undefined) _childPids.delete(proc.pid);
+    if (runtime === "podman") _containerIds.delete(serviceId);
     if (code !== null) {
       console.error(
         `[service-worker][${service.title}] exited with code ${code}`,
@@ -408,13 +557,22 @@ async function executeServiceSpawnJob(job: ServiceSpawnJob) {
       await updateService(
         serviceId,
         workspaceId,
-        { port, pid: proc.pid, status: "running", spawnFailCount: 0 },
+        {
+          port,
+          pid: runtime === "podman" ? null : proc.pid,
+          status: "running",
+          spawnFailCount: 0,
+        },
         "system",
       );
     } catch (err) {
       // DB update failed after a successful spawn — kill the orphaned
-      // child process so it doesn't become a zombie.
-      if (proc.pid) {
+      // child process / container so it doesn't become a zombie.
+      if (runtime === "podman") {
+        const containerName = containerNameForService(serviceId);
+        stopContainer(containerName).catch(() => {});
+        _containerIds.delete(serviceId);
+      } else if (proc.pid) {
         try {
           process.kill(proc.pid, "SIGKILL");
         } catch {
@@ -485,23 +643,17 @@ async function executeServiceSpawnJob(job: ServiceSpawnJob) {
       "error",
       `Service did not become healthy on port ${port}`,
     );
-    // Kill the unresponsive child process so it doesn't linger as a zombie
-    if (proc.pid) {
+    // Kill the unresponsive child process / container so it doesn't linger
+    if (runtime === "podman") {
+      const containerName = containerNameForService(serviceId);
+      stopContainer(containerName).catch(() => {});
+      _containerIds.delete(serviceId);
+    } else if (proc.pid) {
       try {
         process.kill(proc.pid, "SIGKILL");
       } catch {
         /* already dead */
       }
-    }
-    // Notify OpenCode only within the configured retry limit to avoid spam when
-    // the spawn_fail_count keeps being reset by cleanupStuckDeployments.
-    if ((service.spawnFailCount ?? 0) < MAX_SPAWN_FAIL_RETRIES) {
-      await sendSpawnFailureMessage(
-        service,
-        workspaceId,
-        sessionId,
-        `Service did not become healthy on port ${port}`,
-      );
     }
     // Release port from in-memory reservation
     _reservedPorts.delete(port);
@@ -538,7 +690,7 @@ async function sendSpawnFailureMessage(
     if (sessionId) {
       const { serviceHasWorkingSession } =
         await import("@/lib/services/opencode-session.service");
-      const hasWorking = await serviceHasWorkingSession(service.id, sessionId);
+      const hasWorking = await serviceHasWorkingSession(service.id);
       if (hasWorking) {
         const errMsg = `Cannot send spawn failure message: Another opencode session linked to this service is running - opencode session id: ${sessionId}`;
         console.error(`[service-worker] ${errMsg}`);
@@ -581,6 +733,30 @@ async function executeServiceStopJob(job: ServiceStopJob) {
   }
 
   const directory = service.directory?.trim() ?? "";
+
+  // Check if this is a podman service via the manifest or in-memory tracking
+  const manifest = readPieceManifest(directory);
+  const containerName =
+    _containerIds.get(serviceId) ?? containerNameForService(serviceId);
+  const isPodman =
+    manifest?.runtime === "podman" || _containerIds.has(serviceId);
+
+  if (isPodman) {
+    await appendServiceLog(
+      directory,
+      "info",
+      `Stopping podman container "${containerName}"`,
+    );
+    await stopContainer(containerName);
+    _containerIds.delete(serviceId);
+    await updateService(serviceId, workspaceId, {
+      port: null,
+      pid: null,
+      status: "stopped",
+    });
+    await appendServiceLog(directory, "info", "Service stopped successfully");
+    return;
+  }
 
   if (!service.pid) {
     await appendServiceLog(
@@ -763,14 +939,19 @@ async function cleanupStuckDeployments() {
 }
 
 /**
- * Kills all tracked child Deno processes. Called during graceful shutdown
- * so detached children don't survive as orphans across container restarts.
+ * Kills all tracked child Deno processes and podman containers.
+ * Called during graceful shutdown so detached children don't survive
+ * as orphans across container restarts.
  *
- * 1. Sends SIGTERM to all tracked PIDs for graceful shutdown.
- * 2. Waits up to 5 seconds for them to exit.
- * 3. Sends SIGKILL to any that remain.
+ * 1. Stops all podman piece containers.
+ * 2. Sends SIGTERM to all tracked PIDs for graceful shutdown.
+ * 3. Waits up to 5 seconds for them to exit.
+ * 4. Sends SIGKILL to any that remain.
  */
 export async function killChildProcesses(): Promise<void> {
+  // ── Phase 0: stop all podman piece containers ────────────────────────
+  await stopAllPieceContainers();
+
   const pids = Array.from(_childPids);
   if (pids.length === 0) return;
 
@@ -821,6 +1002,9 @@ export async function killChildProcesses(): Promise<void> {
 export async function startServiceWorker() {
   const boss = await getPgBoss();
 
+  // ── Seed feature flags (safe no-op for existing flags) ───────────────────
+  await seedFeatureFlags();
+
   // ── Purge any stale spawn jobs left over from a previous worker ──────────
   // This prevents pre-existing queue entries from colliding with the fresh
   // enqueues that recoverAndStartAllServices() is about to issue.
@@ -853,15 +1037,14 @@ export async function startServiceWorker() {
       try {
         await executeServiceSpawnJob(job.data as ServiceSpawnJob);
       } catch (error) {
-        const { serviceId, workspaceId } = job.data as ServiceSpawnJob;
+        const { serviceId, workspaceId, sessionId } =
+          job.data as ServiceSpawnJob;
         console.error(
           `[service-worker] Service spawn failed for ${serviceId}:`,
           error,
         );
         try {
           // Release any port that may have been reserved before the failure
-          // (port was allocated inside executeServiceSpawnJob but may not
-          // have been cleaned up if the error occurred before the else branch)
           const reservedPort = _reservedServicePorts.get(serviceId);
           if (reservedPort !== undefined) {
             _reservedPorts.delete(reservedPort);
@@ -869,12 +1052,15 @@ export async function startServiceWorker() {
           }
           _spawningServices.delete(serviceId);
 
-          // Soft errors (missing index.ts, missing/empty required secrets)
-          // should NOT increment spawnFailCount - they are permanent conditions.
           const errMessage =
             error instanceof Error ? error.message : String(error);
           const isSoftError =
             errMessage.includes("has no index.ts") ||
+            errMessage.includes("has no Dockerfile") ||
+            errMessage.includes(`missing required "image"`) ||
+            errMessage.includes(`missing required "entrypoint"`) ||
+            errMessage.includes("podman is not available") ||
+            errMessage.includes("podman feature flag is disabled") ||
             errMessage.includes("Missing or empty required secrets");
 
           if (isSoftError) {
@@ -882,16 +1068,48 @@ export async function startServiceWorker() {
               sql`UPDATE ${services} SET port = NULL, pid = NULL, status = 'stopped' WHERE id = ${serviceId}`,
             );
           } else {
-            // Atomically increment spawnFailCount so concurrent failures
-            // don't race on read-then-write and all see the same value.
-            await db.execute(
-              sql`UPDATE ${services} SET spawn_fail_count = spawn_fail_count + 1, port = NULL, pid = NULL, status = 'crashed' WHERE id = ${serviceId}`,
+            // Atomically increment spawnFailCount
+            const [updated] = await db.execute(
+              sql`UPDATE ${services} SET spawn_fail_count = spawn_fail_count + 1, port = NULL, pid = NULL, status = 'crashed' WHERE id = ${serviceId} RETURNING spawn_fail_count`,
             );
+            const newFailCount: number | undefined = (
+              updated as { spawn_fail_count: number } | undefined
+            )?.spawn_fail_count;
+
+            // Notify OpenCode so the AI can see the error and fix it — but only
+            // within the retry limit to avoid spam across crash loops.
+            if (
+              newFailCount !== undefined &&
+              newFailCount <= MAX_SPAWN_FAIL_RETRIES
+            ) {
+              const failedService = await getServiceById(
+                serviceId,
+                workspaceId,
+              );
+              if (failedService) {
+                sendSpawnFailureMessage(
+                  failedService,
+                  workspaceId,
+                  sessionId,
+                  errMessage,
+                ).catch((notifyErr) => {
+                  console.error(
+                    `[service-worker] Failed to send spawn failure notification for ${serviceId}:`,
+                    notifyErr,
+                  );
+                });
+              }
+            }
           }
         } catch (updateError) {
           const targetStatus =
             error instanceof Error &&
             (error.message.includes("has no index.ts") ||
+              error.message.includes("has no Dockerfile") ||
+              error.message.includes(`missing required "image"`) ||
+              error.message.includes(`missing required "entrypoint"`) ||
+              error.message.includes("podman is not available") ||
+              error.message.includes("podman feature flag is disabled") ||
               error.message.includes("Missing or empty required secrets"))
               ? "stopped"
               : "crashed";

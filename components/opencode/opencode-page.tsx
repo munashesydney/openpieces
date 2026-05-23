@@ -56,6 +56,7 @@ export function OpenCodePage({
   const [sessionsHasMore, setSessionsHasMore] = useState(false);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [sendError, setSendError] = useState<string | null>(null);
+  const [isAborting, setIsAborting] = useState(false);
   const [showSessions, setShowSessions] = useState(true);
 
   const showSessionsPanel = showSessions || !selectedSessionId;
@@ -477,6 +478,40 @@ export function OpenCodePage({
     }
   };
 
+  const abortSession = async () => {
+    if (!selectedSessionId) return;
+
+    setIsAborting(true);
+    try {
+      const res = await fetch(
+        `/api/opencode/sessions/${selectedSessionId}/abort`,
+        {
+          method: "POST",
+        },
+      );
+
+      if (res.ok) {
+        setSelectedSessionStatus("failed");
+        setSessions((prev) =>
+          prev.map((s) =>
+            (s.sessionId || s.session_id || s.id) === selectedSessionId
+              ? { ...s, status: "failed" }
+              : s,
+          ),
+        );
+        setIsSending(false);
+        await loadMessages(selectedSessionId);
+      } else {
+        const errData = await res.json().catch(() => ({}));
+        console.error("Failed to abort session", errData);
+      }
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setIsAborting(false);
+    }
+  };
+
   if (isSessionsLoading && sessions.length === 0) {
     return <OpenCodePageSkeleton />;
   }
@@ -669,6 +704,21 @@ export function OpenCodePage({
                     >
                       {selectedSessionStatus}
                     </span>
+                  )}
+                  {selectedSessionStatus && (
+                    <button
+                      onClick={abortSession}
+                      disabled={isAborting}
+                      className="shrink-0 flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-red-500/20 text-red-400 hover:bg-red-500/30 transition-colors disabled:opacity-50"
+                      title="Abort session"
+                    >
+                      {isAborting ? (
+                        <Loader2 className="h-3 w-3 animate-spin" />
+                      ) : (
+                        <X className="h-3 w-3" />
+                      )}
+                      Abort
+                    </button>
                   )}
                 </div>
               </div>

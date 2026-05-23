@@ -1,0 +1,8 @@
+{
+  "runtime": "podman",
+  "build": true,
+  "dockerfile": "Dockerfile",
+  "image": "node:20-slim",
+  "entrypoint": ["sh", "-c", "npx serve -s build -l $PORT"],
+  "exposePort": 8000
+}

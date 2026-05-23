@@ -18,11 +18,11 @@ export default auth(async (req) => {
 export const config = {
   matcher: [
     /*
-     * All paths except Next.js internals.
-     * Service subdomains need full coverage (including static files).
-     * Auth exclusions are handled inside the auth middleware.
+     * Match all paths.  The middleware only rewrites when it detects a
+     * service subdomain — otherwise it returns null and Next.js handles
+     * the request normally (including _next/static, favicon, etc.).
      */
-    "/((?!_next/static|_next/image|favicon.ico).*)",
+    "/((?!favicon.ico).*)",
   ],
 };
 

@@ -33,6 +33,7 @@ export function ServicesList({
   currentPage,
   pageSize,
   workflows,
+  podmanEnabled,
 }: {
   initialServices: Service[];
   workspaceId: string;
@@ -40,10 +41,12 @@ export function ServicesList({
   currentPage: number;
   pageSize: number;
   workflows: Workflow[];
+  podmanEnabled?: boolean;
 }) {
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
   const [newServiceType, setNewServiceType] = useState("trigger");
+  const [newServiceRuntime, setNewServiceRuntime] = useState("deno");
   const [selectedWorkflow, setSelectedWorkflow] = useState("");
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -88,7 +91,9 @@ export function ServicesList({
         {/* Header Section */}
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-[10px] uppercase tracking-[0.2em] text-[var(--secondary)] mb-1.5">Services</p>
+            <p className="text-[10px] uppercase tracking-[0.2em] text-[var(--secondary)] mb-1.5">
+              Services
+            </p>
             <h1 className="text-2xl font-semibold tracking-tight text-foreground">
               Pieces
             </h1>
@@ -132,6 +137,18 @@ export function ServicesList({
                   { label: "Action (Endpoint)", value: "action" },
                 ]}
               />
+              <Dropdown
+                label="Runtime"
+                value={newServiceRuntime}
+                onChange={setNewServiceRuntime}
+                options={[
+                  { label: "Deno (TypeScript)", value: "deno" },
+                  ...(podmanEnabled
+                    ? [{ label: "Podman (Docker/Container)", value: "podman" }]
+                    : []),
+                ]}
+              />
+              <input type="hidden" name="runtime" value={newServiceRuntime} />
               <Dropdown
                 label={
                   newServiceType === "trigger"
@@ -349,6 +366,11 @@ function ServiceCard({
                   <span className="text-[10px] font-medium uppercase tracking-wider text-[var(--muted)]">
                     {service.type}
                   </span>
+                  {service.runtime && service.runtime !== "deno" && (
+                    <span className="rounded border border-[var(--accent)]/20 bg-[var(--accent)]/10 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wider text-[var(--accent)]">
+                      {service.runtime}
+                    </span>
+                  )}
                 </div>
                 <p className="mt-1 text-sm text-[var(--muted)]">
                   {service.description}

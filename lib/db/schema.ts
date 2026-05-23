@@ -117,6 +117,9 @@ export const services = pgTable("services", {
   title: text("title").notNull(),
   description: text("description").notNull().default(""),
   type: text("type", { enum: ["trigger", "action"] }).notNull(),
+  runtime: text("runtime", { enum: ["deno", "podman"] })
+    .notNull()
+    .default("deno"),
   directory: text("directory"),
   port: integer("port"),
   pid: integer("pid"),
@@ -421,6 +424,29 @@ export const workspaceSettings = pgTable("workspace_settings", {
 
 export type WorkspaceSettings = typeof workspaceSettings.$inferSelect;
 export type NewWorkspaceSettings = typeof workspaceSettings.$inferInsert;
+
+// ── Feature Flags ────────────────────────────────────────────────────────────
+
+/** All known feature flags. Add new flags here to register them. */
+export const FEATURE_FLAG_DEFINITIONS = [
+  {
+    key: "podman",
+    description:
+      "Podman container runtime — allows pieces to run in containers with custom Dockerfiles (Python, Next.js, Go, etc.)",
+  },
+] as const;
+
+export type FeatureFlagKey = (typeof FEATURE_FLAG_DEFINITIONS)[number]["key"];
+
+export const featureFlags = pgTable("feature_flags", {
+  key: text("key").primaryKey(),
+  enabled: boolean("enabled").notNull().default(false),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export type FeatureFlag = typeof featureFlags.$inferSelect;
+export type NewFeatureFlag = typeof featureFlags.$inferInsert;
 
 export const workflowExecutions = pgTable("workflow_executions", {
   id: uuid("id").defaultRandom().primaryKey(),

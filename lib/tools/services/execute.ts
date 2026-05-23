@@ -81,9 +81,10 @@ export async function executeService(
         title: createDetails.title,
         description: createDetails.description ?? "",
         type: createDetails.type,
+        runtime: createDetails.runtime as "deno" | "podman" | undefined,
         workflowId: createDetails.workflowId ?? null,
         directory: createDetails.directory.trim(),
-      });
+      } as Parameters<typeof createService>[0]);
     }
 
     case "update": {
@@ -103,13 +104,16 @@ export async function executeService(
           description: updateDetails.description,
         }),
         ...(updateDetails.type !== undefined && { type: updateDetails.type }),
+        ...(updateDetails.runtime !== undefined && {
+          runtime: updateDetails.runtime,
+        }),
         ...(updateDetails.workflowId !== undefined && {
           workflowId: updateDetails.workflowId || null,
         }),
         ...(updateDetails.directory !== undefined && {
           directory: updateDetails.directory.trim() || null,
         }),
-      });
+      } as Parameters<typeof updateService>[2]);
       if (!updated) {
         throw new Error(`Service not found or update failed: ${serviceId}`);
       }

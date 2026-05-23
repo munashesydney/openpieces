@@ -1,0 +1,8 @@
+# =============================================================================
+# OpenCode image with Node.js — gives the AI npm / node / npx for validation
+# and package management directly inside the OpenCode container.
+# Base image is Alpine, so we use apk.
+# =============================================================================
+FROM ghcr.io/anomalyco/opencode:latest
+
+RUN apk add --no-cache nodejs npm python3 py3-pip

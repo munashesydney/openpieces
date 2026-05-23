@@ -1,4 +1,4 @@
-import { and, desc, eq, count, ne } from "drizzle-orm";
+import { and, desc, eq, count } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { opencodeSessions, services } from "@/lib/db/schema";
 import { getAuthHeaders, getBaseUrl } from "@/lib/services/opencode.service";
@@ -221,7 +221,9 @@ async function fetchOpenCodeSessionStatuses(
  * Abort a session on the opencode server that is stuck in a retry loop.
  * Returns true if the abort was acknowledged, false otherwise.
  */
-async function abortOpenCodeSession(sessionId: string): Promise<boolean> {
+export async function abortOpenCodeSession(
+  sessionId: string,
+): Promise<boolean> {
   try {
     const response = await fetch(
       `${getBaseUrl()}/session/${encodeURIComponent(sessionId)}/abort`,
@@ -253,7 +255,7 @@ async function abortOpenCodeSession(sessionId: string): Promise<boolean> {
 /**
  * Update the status of a session in the database.
  */
-async function updateDbSessionStatus(
+export async function updateDbSessionStatus(
   sessionId: string,
   status: string,
 ): Promise<void> {
@@ -265,20 +267,12 @@ async function updateDbSessionStatus(
 
 export async function serviceHasWorkingSession(
   serviceId: string,
-  excludeSessionId?: string,
 ): Promise<boolean> {
   // Step 1: Get ALL sessions for this service (don't trust any DB status)
   const rows = await db
     .select({ sessionId: opencodeSessions.sessionId })
     .from(opencodeSessions)
-    .where(
-      and(
-        eq(opencodeSessions.serviceId, serviceId),
-        excludeSessionId
-          ? ne(opencodeSessions.sessionId, excludeSessionId)
-          : undefined,
-      ),
-    );
+    .where(eq(opencodeSessions.serviceId, serviceId));
 
   if (rows.length === 0) return false;
 
@@ -294,9 +288,6 @@ export async function serviceHasWorkingSession(
         and(
           eq(opencodeSessions.serviceId, serviceId),
           eq(opencodeSessions.status, "working"),
-          excludeSessionId
-            ? ne(opencodeSessions.sessionId, excludeSessionId)
-            : undefined,
         ),
       )
       .limit(1);
