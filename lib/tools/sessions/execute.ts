@@ -95,7 +95,7 @@ export async function executeSessions(
 
       return {
         sessionId,
-        status: "failed",
+        status: "error",
         message: `Session ${sessionId} has been aborted.`,
       };
     }
