@@ -91,7 +91,7 @@ export async function executeSessions(
         throw new Error(`Failed to abort session ${sessionId}`);
       }
 
-      await updateDbSessionStatus(sessionId, "failed");
+      await updateDbSessionStatus(sessionId, "error");
 
       return {
         sessionId,
