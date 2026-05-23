@@ -12,6 +12,8 @@ import {
   containerNameForService,
   imageTagForService,
 } from "@/lib/workers/podman-runtime";
+import { isFeatureEnabled } from "@/lib/services/feature-flags.service";
+import { seedFeatureFlags } from "@/lib/services/feature-flags.service";
 import {
   SERVICE_SPAWN_QUEUE,
   SERVICE_STOP_QUEUE,
@@ -390,6 +392,14 @@ async function executeServiceSpawnJob(job: ServiceSpawnJob) {
     if (!isPodmanAvailable()) {
       throw new Error(
         `Service ${serviceId} requires podman runtime but podman is not available on this worker`,
+      );
+    }
+
+    // Check feature flag — admin can disable podman globally
+    const podmanEnabled = await isFeatureEnabled("podman");
+    if (!podmanEnabled) {
+      throw new Error(
+        `Service ${serviceId} requires podman runtime but the podman feature flag is disabled`,
       );
     }
 
@@ -992,6 +1002,9 @@ export async function killChildProcesses(): Promise<void> {
 export async function startServiceWorker() {
   const boss = await getPgBoss();
 
+  // ── Seed feature flags (safe no-op for existing flags) ───────────────────
+  await seedFeatureFlags();
+
   // ── Purge any stale spawn jobs left over from a previous worker ──────────
   // This prevents pre-existing queue entries from colliding with the fresh
   // enqueues that recoverAndStartAllServices() is about to issue.
@@ -1047,6 +1060,7 @@ export async function startServiceWorker() {
             errMessage.includes(`missing required "image"`) ||
             errMessage.includes(`missing required "entrypoint"`) ||
             errMessage.includes("podman is not available") ||
+            errMessage.includes("podman feature flag is disabled") ||
             errMessage.includes("Missing or empty required secrets");
 
           if (isSoftError) {
@@ -1095,6 +1109,7 @@ export async function startServiceWorker() {
               error.message.includes(`missing required "image"`) ||
               error.message.includes(`missing required "entrypoint"`) ||
               error.message.includes("podman is not available") ||
+              error.message.includes("podman feature flag is disabled") ||
               error.message.includes("Missing or empty required secrets"))
               ? "stopped"
               : "crashed";

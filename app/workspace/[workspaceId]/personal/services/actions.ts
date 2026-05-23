@@ -1,7 +1,10 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { createService, deleteService } from "../../../../../lib/services/service.service";
+import {
+  createService,
+  deleteService,
+} from "../../../../../lib/services/service.service";
 import { requireWorkspaceOwner } from "../../../../../lib/services/auth.service";
 import { ValidationError } from "../../../../../lib/errors/validation-error";
 
@@ -9,7 +12,7 @@ export type ActionResult = { error: string } | { success: true };
 
 export async function createServiceAction(
   workspaceId: string,
-  formData: FormData
+  formData: FormData,
 ): Promise<ActionResult> {
   await requireWorkspaceOwner(workspaceId);
 
@@ -18,10 +21,19 @@ export async function createServiceAction(
   const workflowIdStr = formData.get("workflowId") as string | null;
   const workflowId = workflowIdStr || null;
   const type = formData.get("type") as "trigger" | "action";
+  const runtime = (formData.get("runtime") as string) || "deno";
   const directory = (formData.get("directory") as string)?.trim() || null;
 
   try {
-    await createService({ workspaceId, workflowId, title, description, type, directory });
+    await createService({
+      workspaceId,
+      workflowId,
+      title,
+      description,
+      type,
+      runtime,
+      directory,
+    } as Parameters<typeof createService>[0]);
   } catch (err) {
     if (err instanceof ValidationError) return { error: err.message };
     console.error("Unexpected error creating service:", err);
@@ -32,7 +44,10 @@ export async function createServiceAction(
   return { success: true };
 }
 
-export async function deleteServiceAction(workspaceId: string, serviceId: string) {
+export async function deleteServiceAction(
+  workspaceId: string,
+  serviceId: string,
+) {
   await requireWorkspaceOwner(workspaceId);
 
   await deleteService(serviceId, workspaceId);

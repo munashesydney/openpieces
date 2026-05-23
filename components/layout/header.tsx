@@ -17,6 +17,7 @@ import {
   Brain,
   Activity,
   User,
+  Flag,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -173,6 +174,16 @@ export function Header() {
         ? `/workspace/${workspaceId}/settings/hub`
         : "/settings/hub",
     },
+    {
+      label: "Features",
+      href: workspaceId
+        ? `/workspace/${workspaceId}/settings/features`
+        : "/settings/features",
+      icon: Flag,
+      activePattern: workspaceId
+        ? `/workspace/${workspaceId}/settings/features`
+        : "/settings/features",
+    },
   ];
 
   const navItems = isSettingsPage
@@ -225,77 +236,77 @@ export function Header() {
 
   return (
     <>
-    <header className="relative z-50 flex h-14 shrink-0 items-center border-b border-[var(--border)] bg-[var(--sidebar-bg)]/80 backdrop-blur-sm">
-      <Link
-        href={brandHref}
-        className="flex min-w-0 shrink-0 items-center gap-2.5 pl-4 pr-2 lg:hidden"
-        aria-label="OpenPieces"
-      >
-        <img
-          src="/op-not-moving.png"
-          alt="OpenPieces"
-          className="h-7 w-7 rounded object-cover"
-        />
-        <span className="truncate text-sm font-semibold text-[var(--foreground)]">
-          openpieces
-        </span>
-      </Link>
-
-      <nav className="hidden flex-1 self-stretch items-stretch gap-1 pl-2 scrollbar-hide lg:flex">
-        {navItems.map((item) => {
-          const Icon = item.icon;
-          const active =
-            item.label === "Overview" || item.label === "Brain"
-              ? pathname === item.activePattern
-              : pathname.startsWith(item.activePattern);
-
-          return (
-            <Link
-              key={item.label}
-              href={item.href}
-              className={`relative flex items-center gap-2 self-stretch px-3 text-[13px] font-medium transition-all group ${
-                active
-                  ? "text-[var(--foreground)]"
-                  : "text-[var(--muted)] hover:text-[var(--foreground)]"
-              }`}
-            >
-              <Icon
-                className="h-3.5 w-3.5"
-                strokeWidth={active ? 2.5 : 1.5}
-                fill="none"
-              />
-              {item.label}
-              {/* Boxy bottom indicator */}
-              <span
-                className={`absolute bottom-0 left-2 right-2 h-[2px] transition-all duration-200 ${
-                  active
-                    ? "bg-[var(--accent)] shadow-[0_0_8px_var(--accent-glow)]"
-                    : "bg-transparent group-hover:bg-[var(--accent)]/20"
-                }`}
-              />
-            </Link>
-          );
-        })}
-      </nav>
-
-      <div className="ml-auto flex shrink-0 items-center gap-2 px-4">
-        <ThemeToggle />
-        <ProfileDropdown />
-        <button
-          type="button"
-          onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-          className="rounded p-2 text-[var(--muted)] transition-colors hover:bg-[var(--hover-bg)] hover:text-[var(--foreground)] lg:hidden"
-          aria-expanded={mobileMenuOpen}
-          aria-label="Menu"
+      <header className="relative z-50 flex h-14 shrink-0 items-center border-b border-[var(--border)] bg-[var(--sidebar-bg)]/80 backdrop-blur-sm">
+        <Link
+          href={brandHref}
+          className="flex min-w-0 shrink-0 items-center gap-2.5 pl-4 pr-2 lg:hidden"
+          aria-label="OpenPieces"
         >
-          {mobileMenuOpen ? (
-            <X className="h-5 w-5" />
-          ) : (
-            <Menu className="h-5 w-5" />
-          )}
-        </button>
-      </div>
-    </header>
+          <img
+            src="/op-not-moving.png"
+            alt="OpenPieces"
+            className="h-7 w-7 rounded object-cover"
+          />
+          <span className="truncate text-sm font-semibold text-[var(--foreground)]">
+            openpieces
+          </span>
+        </Link>
+
+        <nav className="hidden flex-1 self-stretch items-stretch gap-1 pl-2 scrollbar-hide lg:flex">
+          {navItems.map((item) => {
+            const Icon = item.icon;
+            const active =
+              item.label === "Overview" || item.label === "Brain"
+                ? pathname === item.activePattern
+                : pathname.startsWith(item.activePattern);
+
+            return (
+              <Link
+                key={item.label}
+                href={item.href}
+                className={`relative flex items-center gap-2 self-stretch px-3 text-[13px] font-medium transition-all group ${
+                  active
+                    ? "text-[var(--foreground)]"
+                    : "text-[var(--muted)] hover:text-[var(--foreground)]"
+                }`}
+              >
+                <Icon
+                  className="h-3.5 w-3.5"
+                  strokeWidth={active ? 2.5 : 1.5}
+                  fill="none"
+                />
+                {item.label}
+                {/* Boxy bottom indicator */}
+                <span
+                  className={`absolute bottom-0 left-2 right-2 h-[2px] transition-all duration-200 ${
+                    active
+                      ? "bg-[var(--accent)] shadow-[0_0_8px_var(--accent-glow)]"
+                      : "bg-transparent group-hover:bg-[var(--accent)]/20"
+                  }`}
+                />
+              </Link>
+            );
+          })}
+        </nav>
+
+        <div className="ml-auto flex shrink-0 items-center gap-2 px-4">
+          <ThemeToggle />
+          <ProfileDropdown />
+          <button
+            type="button"
+            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            className="rounded p-2 text-[var(--muted)] transition-colors hover:bg-[var(--hover-bg)] hover:text-[var(--foreground)] lg:hidden"
+            aria-expanded={mobileMenuOpen}
+            aria-label="Menu"
+          >
+            {mobileMenuOpen ? (
+              <X className="h-5 w-5" />
+            ) : (
+              <Menu className="h-5 w-5" />
+            )}
+          </button>
+        </div>
+      </header>
 
       {mobileMenuOpen && (
         <>

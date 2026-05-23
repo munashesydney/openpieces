@@ -481,6 +481,23 @@ export function ServiceDetail({
           <Card className="p-6">
             <div className="flex items-center gap-3">
               <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[var(--hover-bg)] text-[var(--muted)]">
+                <Code className="h-5 w-5" />
+              </div>
+              <div>
+                <p className="text-xs font-medium uppercase tracking-wider text-[var(--muted)]">
+                  Runtime
+                </p>
+                <span className="text-sm font-semibold text-[var(--foreground)] capitalize">
+                  {((service as Record<string, unknown>).runtime as string) ||
+                    "deno"}
+                </span>
+              </div>
+            </div>
+          </Card>
+
+          <Card className="p-6">
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[var(--hover-bg)] text-[var(--muted)]">
                 <Zap className="h-5 w-5" />
               </div>
               <div>

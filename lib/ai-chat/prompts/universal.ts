@@ -28,6 +28,8 @@ export interface WorkspaceContextData {
   agentName: string;
   userNickname: string;
   userName: string;
+  /** Feature flags currently enabled — the AI should respect these. */
+  featureFlags?: Record<string, boolean>;
 }
 
 /**
@@ -36,11 +38,26 @@ export interface WorkspaceContextData {
  * WORKSPACE_CONTEXT_PLACEHOLDER to ensure consistency across all agents.
  */
 export function buildWorkspaceContext(data: WorkspaceContextData): string {
-  return `## Workspace Context
-- **Workspace:** ${data.workspaceName}
-- **Timezone:** ${data.timezone}
-- **Current Time:** ${data.currentTime}
-- **Agent Name:** ${data.agentName}
-- **User:** ${data.userNickname} (${data.userName})
-- **Terminology:** 'Services' are frequently called 'Pieces' by the user. Treat both terms as identical.`;
+  const lines = [
+    `## Workspace Context`,
+    `- **Workspace:** ${data.workspaceName}`,
+    `- **Timezone:** ${data.timezone}`,
+    `- **Current Time:** ${data.currentTime}`,
+    `- **Agent Name:** ${data.agentName}`,
+    `- **User:** ${data.userNickname} (${data.userName})`,
+    `- **Terminology:** 'Services' are frequently called 'Pieces' by the user. Treat both terms as identical.`,
+  ];
+
+  if (data.featureFlags && Object.keys(data.featureFlags).length > 0) {
+    const enabled: string[] = [];
+    const disabled: string[] = [];
+    for (const [key, val] of Object.entries(data.featureFlags)) {
+      (val ? enabled : disabled).push(key);
+    }
+    lines.push(
+      `- **Feature Flags:** ${enabled.length > 0 ? `Enabled: ${enabled.join(", ")}` : "None enabled"}${disabled.length > 0 ? ` | Disabled: ${disabled.join(", ")}` : ""}`,
+    );
+  }
+
+  return lines.join("\n");
 }

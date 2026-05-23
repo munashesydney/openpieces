@@ -3,6 +3,7 @@ import { MainArea } from "../../../../../components/layout/main-area";
 import { ServicesList } from "../../../../../components/services/services-list";
 import { getServices } from "../../../../../lib/services/service.service";
 import { getWorkflows } from "../../../../../lib/services/workflow.service";
+import { isFeatureEnabled } from "@/lib/services/feature-flags.service";
 
 export default async function ServicesPage(props: {
   params: Promise<{ workspaceId: string }>;
@@ -21,6 +22,8 @@ export default async function ServicesPage(props: {
     getWorkflows(params.workspaceId, 1, 100),
   ]);
 
+  const podmanEnabled = await isFeatureEnabled("podman");
+
   return (
     <DashboardLayout>
       <MainArea>
@@ -31,6 +34,7 @@ export default async function ServicesPage(props: {
           currentPage={page}
           pageSize={pageSize}
           workflows={workflows}
+          podmanEnabled={podmanEnabled}
         />
       </MainArea>
     </DashboardLayout>

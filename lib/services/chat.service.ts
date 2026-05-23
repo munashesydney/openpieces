@@ -796,6 +796,9 @@ export async function executeAiChatJob(
 
       if (workspace && user) {
         const timezone = settings?.timezone ?? "UTC";
+        const { getAllFeatureFlags } =
+          await import("@/lib/services/feature-flags.service");
+        const featureFlags = await getAllFeatureFlags();
         const contextData: WorkspaceContextData = {
           workspaceName: workspace.name,
           timezone,
@@ -807,6 +810,7 @@ export async function executeAiChatJob(
           agentName: workspace.agentName ?? "Assistant",
           userNickname: workspace.userNickname ?? "User",
           userName: user.name,
+          featureFlags,
         };
         injectedPrompt = systemPrompt.replace(
           WORKSPACE_CONTEXT_PLACEHOLDER,
