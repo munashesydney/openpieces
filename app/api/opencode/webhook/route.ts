@@ -3,7 +3,10 @@ import { broadcastSessionEvent } from "@/lib/opencode/event-stream";
 import { db } from "@/lib/db";
 import { opencodeSessions } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
-import { getMessages } from "@/lib/services/opencode.service";
+import {
+  getMessages,
+  formatMessageForDisplay,
+} from "@/lib/services/opencode.service";
 
 export async function POST(request: NextRequest) {
   try {
@@ -53,12 +56,10 @@ export async function POST(request: NextRequest) {
       if (shouldFetchMessages) {
         const rawMessages = await getMessages(sessionId);
         const lastMsg = rawMessages[rawMessages.length - 1];
-        lastMessage = lastMsg
-          ? (lastMsg.parts || [])
-              .filter((p: any) => p.type === "text")
-              .map((p: any) => p.text)
-              .join("\n") || null
-          : null;
+        if (lastMsg) {
+          const formatted = formatMessageForDisplay(lastMsg);
+          lastMessage = formatted.content || null;
+        }
       }
 
       const updates: Record<string, unknown> = {

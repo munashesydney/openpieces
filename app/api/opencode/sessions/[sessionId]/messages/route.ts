@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import {
   getMessages,
   sendMessageWithContext,
+  formatMessages,
 } from "@/lib/services/opencode.service";
 import { requireUser } from "@/lib/services/auth.service";
 import {
@@ -19,17 +20,7 @@ export async function GET(
   try {
     const { sessionId } = await params;
     const rawMessages = await getMessages(sessionId);
-
-    // Normalize to { role, content } format expected by UI
-    const messages = (Array.isArray(rawMessages) ? rawMessages : []).map(
-      (msg) => ({
-        role: msg.info?.role || "user",
-        content: (msg.parts || [])
-          .filter((p: any) => p.type === "text")
-          .map((p: any) => p.text)
-          .join("\n"),
-      }),
-    );
+    const messages = formatMessages(rawMessages);
 
     return NextResponse.json(messages);
   } catch (error: any) {
