@@ -195,30 +195,41 @@ export function ChatMessageCard({
       {/* Render question cards after content (bottom of message) when there is body text */}
       {(hasBody || hasReasoning) &&
         !isFollowedByUserMessage &&
-        questionToolCalls.map((tc) => {
-          const result = toolResults.find(
-            (r) => r.toolCallId === tc.toolCallId,
-          );
-          const questions =
-            (
-              tc.input as {
-                questions?: Array<{
-                  question: string;
-                  suggestedAnswers?: string[];
-                }>;
-              }
-            ).questions ?? [];
-          return (
-            <div key={tc.toolCallId} className="w-full mt-3">
-              <QuestionInputCard
-                toolCallId={tc.toolCallId}
-                questions={questions}
-                isPending={!result}
-                onSubmit={onQuestionSubmit ?? (() => {})}
-              />
-            </div>
-          );
-        })}
+        questionToolCalls
+          .filter((tc) => {
+            // Skip duplicate ask_question calls (the 2nd+ call is blocked server-side)
+            const result = toolResults.find(
+              (r) => r.toolCallId === tc.toolCallId,
+            );
+            if (result?.output === "already_asked") {
+              return false;
+            }
+            return true;
+          })
+          .map((tc) => {
+            const result = toolResults.find(
+              (r) => r.toolCallId === tc.toolCallId,
+            );
+            const questions =
+              (
+                tc.input as {
+                  questions?: Array<{
+                    question: string;
+                    suggestedAnswers?: string[];
+                  }>;
+                }
+              ).questions ?? [];
+            return (
+              <div key={tc.toolCallId} className="w-full mt-3">
+                <QuestionInputCard
+                  toolCallId={tc.toolCallId}
+                  questions={questions}
+                  isPending={!result}
+                  onSubmit={onQuestionSubmit ?? (() => {})}
+                />
+              </div>
+            );
+          })}
     </div>
   );
 }
