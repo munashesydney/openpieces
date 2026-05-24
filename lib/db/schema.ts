@@ -55,6 +55,8 @@ export const workflows = pgTable("workflows", {
     .notNull()
     .$type<string[]>()
     .default(sql`'[]'::jsonb`),
+  hubWorkflowId: text("hub_workflow_id"),
+  hubUpdatedAt: timestamp("hub_updated_at"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });

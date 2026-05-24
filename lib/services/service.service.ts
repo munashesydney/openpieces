@@ -709,6 +709,7 @@ export async function updateServiceMetadata(
   data: {
     title?: string;
     description?: string;
+    workflowId?: string | null;
     hubPieceId?: string | null;
     hubUpdatedAt?: Date | null;
   },
@@ -720,6 +721,7 @@ export async function updateServiceMetadata(
       ...(data.description !== undefined
         ? { description: data.description }
         : {}),
+      ...(data.workflowId !== undefined ? { workflowId: data.workflowId } : {}),
       ...(data.hubPieceId !== undefined ? { hubPieceId: data.hubPieceId } : {}),
       ...(data.hubUpdatedAt !== undefined
         ? { hubUpdatedAt: data.hubUpdatedAt }
