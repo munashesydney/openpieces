@@ -461,6 +461,9 @@ export async function pullWorkflow(
           dayOfMonth: t.dayOfMonth,
           timeOfDay: t.timeOfDay,
           timezone: t.timezone ?? "UTC",
+          timeWindowStart: t.timeWindowStart ?? undefined,
+          timeWindowEnd: t.timeWindowEnd ?? undefined,
+          runOnDays: t.runOnDays ?? undefined,
         });
       }
     }
@@ -528,6 +531,9 @@ export async function pullWorkflow(
             dayOfMonth: t.dayOfMonth,
             timeOfDay: t.timeOfDay,
             timezone: t.timezone ?? "UTC",
+            timeWindowStart: t.timeWindowStart ?? undefined,
+            timeWindowEnd: t.timeWindowEnd ?? undefined,
+            runOnDays: t.runOnDays ?? undefined,
           });
         }
       }
