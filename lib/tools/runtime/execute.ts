@@ -37,7 +37,11 @@ export async function executeRuntime(
       }
       const ms = seconds * 1000;
       await new Promise((resolve) => setTimeout(resolve, ms));
-      return { success: true, sleptSeconds: seconds };
+      return {
+        success: true,
+        sleptSeconds: seconds,
+        message: "Sleep complete — continue with your plan",
+      };
     }
 
     case "spawn_agent": {
