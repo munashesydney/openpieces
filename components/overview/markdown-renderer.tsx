@@ -215,7 +215,7 @@ const components: Components = {
   // ── Tables ──
   table({ children }) {
     return (
-      <div className="my-4 overflow-x-auto rounded-lg border border-[var(--border)]">
+      <div className="my-4 overflow-x-auto rounded-lg border border-[var(--border)] bg-[var(--sidebar-bg)]">
         <table className="w-full border-collapse text-[14px] leading-[1.6]">
           {children}
         </table>
