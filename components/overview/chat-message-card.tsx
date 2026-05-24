@@ -197,20 +197,23 @@ export function ChatMessageCard({
         </div>
       ) : null}
 
-      {/* Render sleep card after content when there is a sleep tool call */}
-      {sleepToolCalls.map((tc) => {
-        const result = toolResults.find((r) => r.toolCallId === tc.toolCallId);
-        const input = tc.input as { seconds?: number; reason?: string };
-        return (
-          <div key={tc.toolCallId} className="w-full mt-3">
-            <SleepCard
-              seconds={input.seconds ?? 0}
-              reason={input.reason}
-              isPending={!result}
-            />
-          </div>
-        );
-      })}
+      {/* Render sleep card while streaming — hides once the response is complete */}
+      {isStreaming &&
+        sleepToolCalls.map((tc) => {
+          const result = toolResults.find(
+            (r) => r.toolCallId === tc.toolCallId,
+          );
+          const input = tc.input as { seconds?: number; reason?: string };
+          return (
+            <div key={tc.toolCallId} className="w-full mt-3">
+              <SleepCard
+                seconds={input.seconds ?? 0}
+                reason={input.reason}
+                isPending={!result}
+              />
+            </div>
+          );
+        })}
 
       {/* Render question cards after content (bottom of message) when there is body text */}
       {(hasBody || hasReasoning) &&
