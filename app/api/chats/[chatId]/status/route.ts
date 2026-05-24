@@ -6,7 +6,7 @@ export const runtime = "nodejs";
 
 export async function GET(
   _request: Request,
-  { params }: { params: Promise<{ chatId: string }> }
+  { params }: { params: Promise<{ chatId: string }> },
 ) {
   const session = await auth();
   const userId = session?.user?.id;
@@ -25,6 +25,7 @@ export async function GET(
   return NextResponse.json({
     chatId: chat.id,
     status: chat.status,
+    title: chat.title,
     error: chat.error,
     updatedAt: chat.updatedAt,
   });
