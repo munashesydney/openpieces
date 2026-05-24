@@ -27,6 +27,9 @@ import {
 import Link from "next/link";
 import { WorkflowDeleteModal } from "./workflow-delete-modal";
 import { WorkflowSteps } from "./workflow-steps";
+import { PushWorkflowToHubButton } from "./push-workflow-to-hub-button";
+import { PullWorkflowFromHubButton } from "./pull-workflow-from-hub-button";
+import { WorkflowHubBadge } from "./workflow-hub-badge";
 
 interface WorkflowDetailProps {
   workflow: Workflow;
@@ -106,6 +109,7 @@ export function WorkflowDetail({
                 <h1 className="text-2xl sm:text-3xl font-medium tracking-tight text-foreground">
                   {workflow.title}
                 </h1>
+                <WorkflowHubBadge hubWorkflowId={workflow.hubWorkflowId} />
                 <span
                   className={`rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider ${
                     workflow.status === "active"
@@ -125,6 +129,15 @@ export function WorkflowDetail({
               )}
             </div>
             <div className="flex items-center gap-2 shrink-0 self-end sm:self-auto">
+              {/* Hub push/pull */}
+              <PushWorkflowToHubButton
+                workspaceId={workspaceId}
+                workflowId={workflow.id}
+              />
+              <PullWorkflowFromHubButton
+                workspaceId={workspaceId}
+                existingWorkflowId={workflow.id}
+              />
               <Link
                 href={`/workspace/${workspaceId}/personal/workflows/${workflow.id}/executions`}
               >

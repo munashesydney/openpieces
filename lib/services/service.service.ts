@@ -370,6 +370,26 @@ export async function getServicesByWorkflowId(
   }));
 }
 
+export async function getServiceByHubPieceId(
+  hubPieceId: string,
+  workspaceId: string,
+): Promise<(Service & { url: string }) | null> {
+  if (!hubPieceId || !isValidUuid(workspaceId)) return null;
+  const baseUrl = getBaseUrl();
+  const [result] = await db
+    .select()
+    .from(services)
+    .where(
+      and(
+        eq(services.hubPieceId, hubPieceId),
+        eq(services.workspaceId, workspaceId),
+      ),
+    )
+    .limit(1);
+  if (!result) return null;
+  return { ...result, url: buildServiceUrl(baseUrl, result.id) };
+}
+
 export async function getServiceByIdOnly(
   serviceId: string,
 ): Promise<Service | null> {
@@ -709,6 +729,7 @@ export async function updateServiceMetadata(
   data: {
     title?: string;
     description?: string;
+    workflowId?: string | null;
     hubPieceId?: string | null;
     hubUpdatedAt?: Date | null;
   },
@@ -720,6 +741,7 @@ export async function updateServiceMetadata(
       ...(data.description !== undefined
         ? { description: data.description }
         : {}),
+      ...(data.workflowId !== undefined ? { workflowId: data.workflowId } : {}),
       ...(data.hubPieceId !== undefined ? { hubPieceId: data.hubPieceId } : {}),
       ...(data.hubUpdatedAt !== undefined
         ? { hubUpdatedAt: data.hubUpdatedAt }

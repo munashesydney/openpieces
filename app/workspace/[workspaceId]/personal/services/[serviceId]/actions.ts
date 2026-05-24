@@ -27,7 +27,6 @@ import {
   addRequiredSecret,
   removeRequiredSecret,
 } from "../../../../../../lib/services/service-required-secrets.service";
-import { createSecret } from "../../../../../../lib/services/secret.service";
 
 export type ActionResult = { error: string } | { success: true };
 
@@ -192,7 +191,6 @@ import {
   getAuthorizeUrl,
   pushPiece,
   fetchPieceById,
-  downloadPieceZip,
 } from "@/lib/services/hub.service";
 import {
   createService,
@@ -217,7 +215,7 @@ export async function pushToHubAction(
   const service = await getServiceById(serviceId, workspaceId);
   if (!service) return { error: "Service not found" };
 
-  let token = await getStoredToken();
+  const token = await getStoredToken();
   if (!token) {
     const currentUrl = `/workspace/${workspaceId}/personal/services/${serviceId}`;
     const authUrl = getAuthorizeUrl();
@@ -225,7 +223,6 @@ export async function pushToHubAction(
     return { redirectUrl };
   }
 
-  // Zip the actual service directory
   let zipBuffer: Buffer;
   try {
     zipBuffer = await downloadServiceCode(serviceId, workspaceId);
@@ -312,12 +309,16 @@ export async function pullFromHubAction(
   const service = await getServiceById(serviceId, workspaceId);
   if (!service) return { error: "Service not found" };
 
-  let token = await getStoredToken();
+  const token = await getStoredToken();
   if (!token) {
     const currentUrl = `/workspace/${workspaceId}/personal/services/${serviceId}`;
     const authUrl = getAuthorizeUrl();
     const redirectUrl = `${authUrl}&state=${encodeURIComponent(currentUrl)}`;
     return { redirectUrl };
+  }
+
+  if (!service.directory?.trim()) {
+    return { error: "Service has no directory set" };
   }
 
   // 1. Fetch the piece from the hub
@@ -333,86 +334,18 @@ export async function pullFromHubAction(
     };
   }
 
-  // 2. Download the ZIP
-  const zipBuffer = await downloadPieceZip(piece.codeUrl);
-  if (!zipBuffer) {
-    return { error: "Failed to download piece code" };
-  }
-
-  // 3. Extract ZIP into the service's directory
-  if (!service.directory?.trim()) {
-    return { error: "Service has no directory set" };
-  }
-
+  // 2. Sync piece data into the local service (code, endpoints, secrets, metadata)
   try {
-    await writeServiceCode(service.directory, zipBuffer, {
-      serviceId,
-      workspaceId,
-    });
+    const user = await requireUser();
+    const { syncPieceToLocalService } =
+      await import("@/lib/services/hub-workflow.service");
+    await syncPieceToLocalService(
+      piece,
+      { serviceId, directory: service.directory, workspaceId },
+      user.id,
+    );
   } catch (err) {
-    return { error: `Failed to write service code: ${(err as Error).message}` };
-  }
-
-  // 4. Update service title, description, and hub link
-  try {
-    await updateServiceMetadata(serviceId, workspaceId, {
-      title: piece.title,
-      description: piece.description,
-      hubPieceId: piece.id,
-      hubUpdatedAt: piece.updatedAt ? new Date(piece.updatedAt) : undefined,
-    });
-  } catch (err) {
-    return { error: `Failed to update service: ${(err as Error).message}` };
-  }
-
-  // 5. Insert endpoints from the hub piece
-  if (piece.endpoints && piece.endpoints.length > 0) {
-    try {
-      await Promise.all(
-        piece.endpoints.map((ep) =>
-          createEndpoint({
-            serviceId,
-            method: ep.method as "GET" | "POST" | "PUT" | "DELETE" | "PATCH",
-            path: ep.path,
-            description: ep.description ?? "",
-            inputSchema: (ep.inputSchema ?? {}) as Record<string, unknown>,
-          }),
-        ),
-      );
-    } catch (err) {
-      return { error: `Failed to add endpoints: ${(err as Error).message}` };
-    }
-  }
-
-  // 6. Insert required secrets from the hub piece
-  if (piece.requiredSecrets && piece.requiredSecrets.length > 0) {
-    try {
-      const user = await requireUser();
-
-      await Promise.all(
-        piece.requiredSecrets.map(async (s) => {
-          // Ensure the secret exists in the workspace (create with empty value if needed)
-          try {
-            await createSecret({
-              workspaceId,
-              userId: user.id,
-              key: s.secretKey,
-              value: "",
-              allowEmptyValue: true,
-            });
-          } catch {
-            // Secret already exists — that's fine, continue
-          }
-
-          // Now add it as a required secret for this service
-          await addRequiredSecret(serviceId, s.secretKey);
-        }),
-      );
-    } catch (err) {
-      return {
-        error: `Failed to add required secrets: ${(err as Error).message}`,
-      };
-    }
+    return { error: (err as Error).message };
   }
 
   revalidatePath(`/workspace/${workspaceId}/personal/services/${serviceId}`);

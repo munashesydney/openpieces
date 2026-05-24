@@ -6,6 +6,7 @@ import {
   createWorkflow,
   deleteWorkflow,
   updateWorkflow,
+  getWorkflowById,
 } from "../../../../../lib/services/workflow.service";
 import {
   linkActionServiceToWorkflow,
@@ -178,6 +179,154 @@ export async function updateDetailedStepAction(
   }
 
   revalidatePath(`/workspace/${workspaceId}/personal/workflows/${workflowId}`);
+  return { success: true };
+}
+
+// ── Hub Push / Pull ──────────────────────────────
+
+import { getStoredToken, getAuthorizeUrl } from "@/lib/services/hub.service";
+import {
+  pushWorkflow,
+  pullWorkflow,
+} from "@/lib/services/hub-workflow.service";
+import { getServicesByWorkflowId } from "@/lib/services/service.service";
+import { getTasksByWorkflowId } from "@/lib/services/task.service";
+import { getActionServicesForWorkflow } from "@/lib/services/workflow-action.service";
+import { requireUser } from "@/lib/services/auth.service";
+
+export type HubWorkflowActionResult =
+  | { error: string }
+  | { redirectUrl: string }
+  | { success: true; hubWorkflowId?: string }
+  | { notOwner: true };
+
+export async function pushWorkflowToHubAction(
+  workspaceId: string,
+  workflowId: string,
+): Promise<HubWorkflowActionResult> {
+  await requireWorkspaceOwner(workspaceId);
+
+  const workflow = await getWorkflowById(workflowId, workspaceId);
+  if (!workflow) return { error: "Workflow not found" };
+
+  const token = await getStoredToken();
+  if (!token) {
+    const currentUrl = `/workspace/${workspaceId}/personal/workflows/${workflowId}`;
+    const authUrl = getAuthorizeUrl();
+    const redirectUrl = `${authUrl}&state=${encodeURIComponent(currentUrl)}`;
+    return { redirectUrl };
+  }
+
+  // Gather all linked services (trigger + action) and tasks
+  const [triggerServices, linkedActionServices, tasks] = await Promise.all([
+    getServicesByWorkflowId(workflowId, workspaceId),
+    getActionServicesForWorkflow(workflowId, workspaceId),
+    getTasksByWorkflowId(workflowId, workspaceId),
+  ]);
+
+  const allServices = [...triggerServices, ...linkedActionServices];
+
+  const result = await pushWorkflow(token, {
+    workspaceId,
+    workflow: {
+      id: workflow.id,
+      title: workflow.title,
+      description: workflow.description,
+      status: workflow.status,
+      detailedSteps: workflow.detailedSteps ?? [],
+    },
+    services: allServices.map((s) => ({
+      id: s.id,
+      title: s.title,
+      description: s.description,
+      type: s.type,
+      hubPieceId: s.hubPieceId,
+    })),
+    tasks: tasks.map((t) => ({
+      title: t.title,
+      description: t.description,
+      type: t.type,
+      scheduledAt: t.scheduledAt ? t.scheduledAt.toISOString() : null,
+      intervalType: t.intervalType,
+      intervalValue: t.intervalValue,
+      dayOfWeek: t.dayOfWeek,
+      dayOfMonth: t.dayOfMonth,
+      timeOfDay: t.timeOfDay,
+      timezone: t.timezone,
+      timeWindowStart: t.timeWindowStart,
+      timeWindowEnd: t.timeWindowEnd,
+      runOnDays: t.runOnDays ?? [],
+    })),
+  });
+
+  if ("redirectUrl" in result) {
+    return { redirectUrl: result.redirectUrl };
+  }
+
+  if ("notOwner" in result && result.notOwner) {
+    return { notOwner: true };
+  }
+
+  if (!result.ok) {
+    return { error: result.error ?? "Failed to push workflow" };
+  }
+
+  // Store hub workflow id on the local workflow
+  await updateWorkflow(workflowId, workspaceId, {
+    hubWorkflowId: result.hubWorkflowId,
+    hubUpdatedAt: new Date(),
+  });
+
+  revalidatePath(`/workspace/${workspaceId}/personal/workflows/${workflowId}`);
+  return { success: true, hubWorkflowId: result.hubWorkflowId };
+}
+
+export type PullWorkflowResult =
+  | { error: string }
+  | { redirectUrl: string }
+  | { success: true };
+
+export async function pullWorkflowFromHubAction(
+  workspaceId: string,
+  existingWorkflowId: string | null,
+  hubWorkflowId: string,
+): Promise<PullWorkflowResult> {
+  await requireWorkspaceOwner(workspaceId);
+
+  const token = await getStoredToken();
+  if (!token) {
+    const currentUrl = existingWorkflowId
+      ? `/workspace/${workspaceId}/personal/workflows/${existingWorkflowId}`
+      : `/workspace/${workspaceId}/personal/workflows`;
+    const authUrl = getAuthorizeUrl();
+    const redirectUrl = `${authUrl}&state=${encodeURIComponent(currentUrl)}`;
+    return { redirectUrl };
+  }
+
+  const user = await requireUser();
+
+  const result = await pullWorkflow(token, {
+    workspaceId,
+    userId: user.id,
+    hubWorkflowId,
+    existingWorkflowId: existingWorkflowId ?? undefined,
+  });
+
+  if ("redirectUrl" in result) {
+    return { redirectUrl: result.redirectUrl };
+  }
+
+  if (!result.ok) {
+    return { error: result.error ?? "Failed to pull workflow" };
+  }
+
+  revalidatePath(`/workspace/${workspaceId}/personal/workflows`);
+  if (existingWorkflowId) {
+    revalidatePath(
+      `/workspace/${workspaceId}/personal/workflows/${existingWorkflowId}`,
+    );
+  }
+
   return { success: true };
 }
 

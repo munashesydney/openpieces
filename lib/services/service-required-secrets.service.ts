@@ -164,3 +164,10 @@ export async function respawnServicesUsingSecret(
     }),
   );
 }
+
+export async function deleteRequiredSecretsByServiceId(serviceId: string) {
+  if (!isValidUuid(serviceId)) return;
+  await db
+    .delete(serviceRequiredSecrets)
+    .where(eq(serviceRequiredSecrets.serviceId, serviceId));
+}
