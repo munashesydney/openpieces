@@ -15,6 +15,10 @@ const sharedFields = z.object({
     .positive()
     .optional()
     .describe("Number of seconds to sleep"),
+  reason: z
+    .string()
+    .optional()
+    .describe("Why the sleep is needed (shown to the user)"),
   prompt: z.string().optional().describe("Prompt to send to the agent"),
   questions: z
     .array(questionSchema)

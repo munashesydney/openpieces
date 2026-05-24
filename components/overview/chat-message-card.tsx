@@ -5,6 +5,7 @@ import { ChevronDown, ChevronRight } from "lucide-react";
 import type { AiToolCall, AiToolResult } from "@/lib/ai-chat/types";
 import { ChatToolCalls } from "./chat-tool-calls";
 import { QuestionInputCard } from "./question-input-card";
+import { SleepCard } from "./sleep-card";
 import { MarkdownRenderer } from "./markdown-renderer";
 
 type ChatMessageCardProps = {
@@ -49,13 +50,17 @@ export function ChatMessageCard({
   const hasReasoning = !!reasoning && reasoning.trim().length > 0;
   const isStreamingReasoning = isStreaming && !hasBody;
 
-  // Separate question tool calls (rendered after content) from other tool calls
+  // Separate tool calls by action for dedicated rendering
   const questionToolCalls = toolCalls.filter(
     (tc) => (tc.input as { action?: string })?.action === "ask_question",
   );
-  const nonQuestionToolCalls = toolCalls.filter(
-    (tc) => (tc.input as { action?: string })?.action !== "ask_question",
+  const sleepToolCalls = toolCalls.filter(
+    (tc) => (tc.input as { action?: string })?.action === "sleep",
   );
+  const otherToolCalls = toolCalls.filter((tc) => {
+    const action = (tc.input as { action?: string })?.action;
+    return action !== "ask_question" && action !== "sleep";
+  });
 
   // ── Thinking section visibility ──
   // Debounce the hide to prevent flicker when streaming ends before
@@ -66,7 +71,7 @@ export function ChatMessageCard({
   );
 
   useEffect(() => {
-    if (isStreaming || hasReasoning || nonQuestionToolCalls.length > 0) {
+    if (isStreaming || hasReasoning || otherToolCalls.length > 0) {
       if (hideTimerRef.current) clearTimeout(hideTimerRef.current);
       setShowThinking(true);
     } else if (!isStreaming) {
@@ -76,7 +81,7 @@ export function ChatMessageCard({
         if (hideTimerRef.current) clearTimeout(hideTimerRef.current);
       };
     }
-  }, [isStreaming, hasReasoning, nonQuestionToolCalls.length]);
+  }, [isStreaming, hasReasoning, otherToolCalls.length]);
 
   const showThinkingSection = showThinking;
 
@@ -87,13 +92,13 @@ export function ChatMessageCard({
   useEffect(() => {
     if (
       !isStreaming &&
-      (hasReasoning || nonQuestionToolCalls.length > 0) &&
+      (hasReasoning || otherToolCalls.length > 0) &&
       !autoCollapsed
     ) {
       setAutoCollapsed(true);
       setExpanded(false);
     }
-  }, [isStreaming, hasReasoning, nonQuestionToolCalls.length, autoCollapsed]);
+  }, [isStreaming, hasReasoning, otherToolCalls.length, autoCollapsed]);
 
   // Determine section label
   let sectionLabel: string;
@@ -172,9 +177,9 @@ export function ChatMessageCard({
               ) : null}
 
               {/* Tool calls rendered compactly inside the thought process */}
-              {nonQuestionToolCalls.length > 0 ? (
+              {otherToolCalls.length > 0 ? (
                 <ChatToolCalls
-                  toolCalls={nonQuestionToolCalls}
+                  toolCalls={otherToolCalls}
                   toolResults={toolResults}
                   variant="compact"
                 />
@@ -191,6 +196,21 @@ export function ChatMessageCard({
           <MarkdownRenderer content={content} />
         </div>
       ) : null}
+
+      {/* Render sleep card after content when there is a sleep tool call */}
+      {sleepToolCalls.map((tc) => {
+        const result = toolResults.find((r) => r.toolCallId === tc.toolCallId);
+        const input = tc.input as { seconds?: number; reason?: string };
+        return (
+          <div key={tc.toolCallId} className="w-full mt-3">
+            <SleepCard
+              seconds={input.seconds ?? 0}
+              reason={input.reason}
+              isPending={!result}
+            />
+          </div>
+        );
+      })}
 
       {/* Render question cards after content (bottom of message) when there is body text */}
       {(hasBody || hasReasoning) &&
