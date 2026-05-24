@@ -1,4 +1,4 @@
-import { createGateway, GatewayInternalServerError } from "@ai-sdk/gateway";
+import { createGateway } from "@ai-sdk/gateway";
 import type { ModelMessage } from "ai";
 import { stepCountIs, streamText, generateText, Output } from "ai";
 import { and, asc, count, desc, eq } from "drizzle-orm";
