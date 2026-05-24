@@ -117,6 +117,135 @@ function extractContentFromParts(parts: MessagePart[]): string {
     .join("\n");
 }
 
+// ── Rich message display types ────────────────────────────────────────────
+// These surface ALL part types from OpenCode (text, reasoning, tool, etc.)
+
+export type FormattedPart = {
+  type: string;
+  display: string; // Human-readable summary
+  detail?: string; // Full content if available (e.g., text body, tool output)
+};
+
+export type FormattedMessage = {
+  role: "user" | "assistant";
+  parts: FormattedPart[];
+  content: string; // All parts joined as display text
+  modelID?: string;
+  agent?: string;
+  time?: { created?: number; completed?: number };
+};
+
+function formatPartForDisplay(part: any): FormattedPart | null {
+  switch (part.type) {
+    case "text":
+      if (!part.text) return null;
+      return { type: "text", display: part.text, detail: part.text };
+
+    case "reasoning":
+      return {
+        type: "reasoning",
+        display: `[Thinking] ${part.text || ""}`,
+        detail: part.text,
+      };
+
+    case "tool": {
+      const state = part.state || {};
+      const status = state.status || "unknown";
+      let display = `[Tool: ${part.tool}] ${status}`;
+      if (state.title) display += ` — ${state.title}`;
+      return {
+        type: "tool",
+        display,
+        detail: state.output || state.error || JSON.stringify(state.input),
+      };
+    }
+
+    case "subtask":
+      return {
+        type: "subtask",
+        display: `[Subtask: ${part.agent || "?"}] ${part.prompt || ""}`,
+        detail: part.description,
+      };
+
+    case "step-start":
+      return { type: "step-start", display: "[Step Start]" };
+
+    case "step-finish": {
+      let display = `[Step Finish] reason: ${part.reason || "?"}`;
+      if (part.cost != null) display += `, cost: ${part.cost}`;
+      return { type: "step-finish", display };
+    }
+
+    case "patch": {
+      const files = part.files || [];
+      return {
+        type: "patch",
+        display: `[Patch] ${files.length} file${files.length === 1 ? "" : "s"}`,
+        detail: files.join("\n"),
+      };
+    }
+
+    case "agent":
+      return {
+        type: "agent",
+        display: `[Agent: ${part.name || "?"}]`,
+      };
+
+    case "retry": {
+      const errMsg = part.error?.message || part.error?.data?.message || "";
+      return {
+        type: "retry",
+        display: `[Retry #${part.attempt ?? "?"}] ${errMsg}`,
+        detail: errMsg,
+      };
+    }
+
+    case "compaction":
+      return {
+        type: "compaction",
+        display: `[Compaction] auto: ${part.auto}, overflow: ${part.overflow}`,
+      };
+
+    case "snapshot":
+      return { type: "snapshot", display: "[Snapshot]" };
+
+    case "file":
+      return {
+        type: "file",
+        display: `[File: ${part.filename || "?"}] (${part.mime || "?"})`,
+      };
+
+    default:
+      return {
+        type: part.type || "unknown",
+        display: `[${part.type || "unknown"}]`,
+      };
+  }
+}
+
+export function formatMessageForDisplay(msg: any): FormattedMessage {
+  const parts = ((msg.parts || []) as any[])
+    .map(formatPartForDisplay)
+    .filter((p): p is FormattedPart => p !== null);
+  return {
+    role: msg.info?.role === "user" ? "user" : "assistant",
+    parts,
+    content: parts.map((p) => p.display).join("\n\n"),
+    modelID: msg.modelID || msg.info?.modelID,
+    agent: msg.agent || msg.info?.agent,
+    time: msg.info?.time || msg.time,
+  };
+}
+
+/**
+ * Convert raw messages from OpenCode API into a rich format with all part types.
+ */
+export function formatMessages(rawMessages: any[]): FormattedMessage[] {
+  return (Array.isArray(rawMessages) ? rawMessages : []).map(
+    formatMessageForDisplay,
+  );
+}
+
 /**
  * Formats messages for AI consumption: user, assistant, user, assistant...
  * - Keeps all user messages
@@ -248,7 +377,7 @@ export async function sendMessageWithContext(
         .where(
           and(
             eq(opencodeSessions.serviceId, serviceId),
-            eq(opencodeSessions.status, "working"),
+            eq(opencodeSessions.status, "busy"),
             ne(opencodeSessions.sessionId, sessionId),
           ),
         )

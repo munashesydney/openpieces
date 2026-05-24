@@ -590,9 +590,9 @@ async function executeServiceSpawnJob(job: ServiceSpawnJob) {
     // Spawn the QA AI agent to check health asynchronously after 30 seconds
     setTimeout(async () => {
       try {
-        const { serviceHasWorkingSession } =
+        const { serviceHasBusySession } =
           await import("@/lib/services/opencode-session.service");
-        const hasWorking = await serviceHasWorkingSession(serviceId);
+        const hasWorking = await serviceHasBusySession(serviceId);
         if (hasWorking) {
           console.log(
             `[service-worker] Skipping QA agent for service ${serviceId} — an opencode session is already working on it`,
@@ -688,9 +688,9 @@ async function sendSpawnFailureMessage(
 
     // Prefer replying in the originating session; fall back to a new session if none was provided
     if (sessionId) {
-      const { serviceHasWorkingSession } =
+      const { serviceHasBusySession } =
         await import("@/lib/services/opencode-session.service");
-      const hasWorking = await serviceHasWorkingSession(service.id);
+      const hasWorking = await serviceHasBusySession(service.id);
       if (hasWorking) {
         const errMsg = `Cannot send spawn failure message: Another opencode session linked to this service is running - opencode session id: ${sessionId}`;
         console.error(`[service-worker] ${errMsg}`);

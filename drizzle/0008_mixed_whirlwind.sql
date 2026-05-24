@@ -1,0 +1,1 @@
+ALTER TABLE "opencode_sessions" ALTER COLUMN "status" SET DEFAULT 'idle';

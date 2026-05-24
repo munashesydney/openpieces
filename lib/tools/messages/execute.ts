@@ -5,7 +5,7 @@ import {
 } from "@/lib/services/opencode.service";
 import {
   getSessionInfo,
-  serviceHasWorkingSession,
+  serviceHasBusySession,
 } from "@/lib/services/opencode-session.service";
 import { db } from "@/lib/db";
 import { opencodeSessions } from "@/lib/db/schema";
@@ -58,7 +58,7 @@ export async function executeMessages(
   }
 
   // Check if service already has a working session before sending
-  const hasWorking = await serviceHasWorkingSession(session.serviceId);
+  const hasWorking = await serviceHasBusySession(session.serviceId);
   if (hasWorking) {
     throw new Error(
       "Cannot send message: service is already processing another request",
@@ -73,7 +73,7 @@ export async function executeMessages(
   // Update DB status so UI polling fallback picks it up (DB is single source of truth)
   await db
     .update(opencodeSessions)
-    .set({ status: "working", updatedAt: new Date() })
+    .set({ status: "busy", updatedAt: new Date() })
     .where(eq(opencodeSessions.sessionId, sessionId));
 
   return {

@@ -2,11 +2,12 @@ import { NextRequest, NextResponse } from "next/server";
 import {
   getMessages,
   sendMessageWithContext,
+  formatMessages,
 } from "@/lib/services/opencode.service";
 import { requireUser } from "@/lib/services/auth.service";
 import {
   getServiceId,
-  serviceHasWorkingSession,
+  serviceHasBusySession,
 } from "@/lib/services/opencode-session.service";
 import { db } from "@/lib/db";
 import { opencodeSessions } from "@/lib/db/schema";
@@ -19,17 +20,7 @@ export async function GET(
   try {
     const { sessionId } = await params;
     const rawMessages = await getMessages(sessionId);
-
-    // Normalize to { role, content } format expected by UI
-    const messages = (Array.isArray(rawMessages) ? rawMessages : []).map(
-      (msg) => ({
-        role: msg.info?.role || "user",
-        content: (msg.parts || [])
-          .filter((p: any) => p.type === "text")
-          .map((p: any) => p.text)
-          .join("\n"),
-      }),
-    );
+    const messages = formatMessages(rawMessages);
 
     return NextResponse.json(messages);
   } catch (error: any) {
@@ -62,7 +53,7 @@ export async function POST(
     // Guard: check if another session for this service is already working
     const serviceId = await getServiceId(sessionId);
     if (serviceId) {
-      const hasWorking = await serviceHasWorkingSession(serviceId);
+      const hasWorking = await serviceHasBusySession(serviceId);
       if (hasWorking) {
         return NextResponse.json(
           {
@@ -79,7 +70,7 @@ export async function POST(
     await sendMessageWithContext(sessionId, content, user.id);
     await db
       .update(opencodeSessions)
-      .set({ status: "working", updatedAt: new Date() })
+      .set({ status: "busy", updatedAt: new Date() })
       .where(eq(opencodeSessions.sessionId, sessionId))
       .catch(() => {});
 

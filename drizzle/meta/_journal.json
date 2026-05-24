@@ -57,6 +57,13 @@
       "when": 1779514763782,
       "tag": "0007_aromatic_taskmaster",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1779554311611,
+      "tag": "0008_mixed_whirlwind",
+      "breakpoints": true
     }
   ]
 }
