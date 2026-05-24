@@ -299,7 +299,7 @@ export async function pullWorkflow(
     return { ok: false, error: "Workflow not found on hub" };
   }
 
-  // 2. Download all linked pieces and create local services
+  // 2. Download all linked pieces and refresh or create local services
   const localServiceIds: Array<{ serviceId: string; role: string }> = [];
 
   for (const link of hubWf.services) {
@@ -320,81 +320,152 @@ export async function pullWorkflow(
       };
     }
 
-    // Create a local service
-    const serviceSlug = `${piece.title
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, "-")}-${Date.now().toString(36)}`;
+    // Check if a local service already exists for this hub piece
+    const { getServiceByHubPieceId } = await import("./service.service");
+    const existing = await getServiceByHubPieceId(piece.id, data.workspaceId);
 
-    // We create the service first to get an ID + directory
-    // Triggers get workflowId set directly; actions are linked separately later
-    const { createService } = await import("./service.service");
-    const localService = await createService({
-      workspaceId: data.workspaceId,
-      workflowId:
-        link.role === "trigger" ? (data.existingWorkflowId ?? null) : null,
-      title: piece.title,
-      description: piece.description,
-      type: link.role,
-      directory: serviceSlug,
-    });
+    let localServiceId: string;
 
-    // Extract ZIP into the service directory
-    try {
-      await writeServiceCode(localService.directory!, zipBuffer, {
-        serviceId: localService.id,
-        workspaceId: data.workspaceId,
-      });
-    } catch (err) {
-      return {
-        ok: false,
-        error: `Failed to write code for "${piece.title}": ${(err as Error).message}`,
-      };
-    }
+    if (existing) {
+      // Refresh existing service in-place
+      localServiceId = existing.id;
 
-    // Set endpoints
-    if (piece.endpoints && piece.endpoints.length > 0) {
-      await Promise.all(
-        piece.endpoints.map((ep) =>
-          createEndpoint({
-            serviceId: localService.id,
-            method: ep.method as "GET" | "POST" | "PUT" | "DELETE" | "PATCH",
-            path: ep.path,
-            description: ep.description ?? "",
-            inputSchema: (ep.inputSchema ?? {}) as Record<string, unknown>,
+      // Overwrite service code
+      try {
+        await writeServiceCode(existing.directory!, zipBuffer, {
+          serviceId: existing.id,
+          workspaceId: data.workspaceId,
+        });
+      } catch (err) {
+        return {
+          ok: false,
+          error: `Failed to write code for "${piece.title}": ${(err as Error).message}`,
+        };
+      }
+
+      // Replace endpoints
+      const { deleteEndpointsByServiceId } =
+        await import("./service-endpoint.service");
+      await deleteEndpointsByServiceId(existing.id);
+      if (piece.endpoints && piece.endpoints.length > 0) {
+        await Promise.all(
+          piece.endpoints.map((ep) =>
+            createEndpoint({
+              serviceId: existing.id,
+              method: ep.method as "GET" | "POST" | "PUT" | "DELETE" | "PATCH",
+              path: ep.path,
+              description: ep.description ?? "",
+              inputSchema: (ep.inputSchema ?? {}) as Record<string, unknown>,
+            }),
+          ),
+        );
+      }
+
+      // Replace required secrets
+      const { deleteRequiredSecretsByServiceId } =
+        await import("./service-required-secrets.service");
+      await deleteRequiredSecretsByServiceId(existing.id);
+      if (piece.requiredSecrets && piece.requiredSecrets.length > 0) {
+        const user = await requireUser();
+        await Promise.all(
+          piece.requiredSecrets.map(async (s) => {
+            try {
+              await createSecret({
+                workspaceId: data.workspaceId,
+                userId: user.id,
+                key: s.secretKey,
+                value: "",
+                allowEmptyValue: true,
+              });
+            } catch {
+              // Secret already exists
+            }
+            await addRequiredSecret(existing.id, s.secretKey);
           }),
-        ),
-      );
-    }
+        );
+      }
 
-    // Set required secrets
-    if (piece.requiredSecrets && piece.requiredSecrets.length > 0) {
-      const user = await requireUser();
-      await Promise.all(
-        piece.requiredSecrets.map(async (s) => {
-          try {
-            await createSecret({
-              workspaceId: data.workspaceId,
-              userId: user.id,
-              key: s.secretKey,
-              value: "",
-              allowEmptyValue: true,
-            });
-          } catch {
-            // Secret already exists
-          }
-          await addRequiredSecret(localService.id, s.secretKey);
-        }),
-      );
-    }
+      // Update hub link timestamp
+      await updateServiceMetadata(existing.id, data.workspaceId, {
+        hubUpdatedAt: piece.updatedAt ? new Date(piece.updatedAt) : undefined,
+      });
+    } else {
+      // Create a brand new local service
+      const serviceSlug = `${piece.title
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "-")}-${Date.now().toString(36)}`;
 
-    // Update hub link
-    await updateServiceMetadata(localService.id, data.workspaceId, {
-      hubPieceId: piece.id,
-      hubUpdatedAt: piece.updatedAt ? new Date(piece.updatedAt) : undefined,
-    });
+      const { createService } = await import("./service.service");
+      const localService = await createService({
+        workspaceId: data.workspaceId,
+        workflowId:
+          link.role === "trigger" ? (data.existingWorkflowId ?? null) : null,
+        title: piece.title,
+        description: piece.description,
+        type: link.role,
+        directory: serviceSlug,
+      });
+
+      localServiceId = localService.id;
+
+      // Extract ZIP into the service directory
+      try {
+        await writeServiceCode(localService.directory!, zipBuffer, {
+          serviceId: localService.id,
+          workspaceId: data.workspaceId,
+        });
+      } catch (err) {
+        return {
+          ok: false,
+          error: `Failed to write code for "${piece.title}": ${(err as Error).message}`,
+        };
+      }
+
+      // Set endpoints
+      if (piece.endpoints && piece.endpoints.length > 0) {
+        await Promise.all(
+          piece.endpoints.map((ep) =>
+            createEndpoint({
+              serviceId: localService.id,
+              method: ep.method as "GET" | "POST" | "PUT" | "DELETE" | "PATCH",
+              path: ep.path,
+              description: ep.description ?? "",
+              inputSchema: (ep.inputSchema ?? {}) as Record<string, unknown>,
+            }),
+          ),
+        );
+      }
+
+      // Set required secrets
+      if (piece.requiredSecrets && piece.requiredSecrets.length > 0) {
+        const user = await requireUser();
+        await Promise.all(
+          piece.requiredSecrets.map(async (s) => {
+            try {
+              await createSecret({
+                workspaceId: data.workspaceId,
+                userId: user.id,
+                key: s.secretKey,
+                value: "",
+                allowEmptyValue: true,
+              });
+            } catch {
+              // Secret already exists
+            }
+            await addRequiredSecret(localService.id, s.secretKey);
+          }),
+        );
+      }
+
+      // Set hub link
+      await updateServiceMetadata(localService.id, data.workspaceId, {
+        hubPieceId: piece.id,
+        hubUpdatedAt: piece.updatedAt ? new Date(piece.updatedAt) : undefined,
+      });
+    }
 
     localServiceIds.push({
-      serviceId: localService.id,
+      serviceId: localServiceId,
       role: link.role,
     });
   }
