@@ -655,6 +655,7 @@ export async function decrementQaSpawnCount(serviceId: string): Promise<void> {
 export async function writeServiceCode(
   directory: string,
   zipBuffer: Buffer,
+  opts?: { serviceId?: string; workspaceId?: string },
 ): Promise<void> {
   const piecesDir = path.join(process.cwd(), "pieces", directory.trim());
 
@@ -674,6 +675,30 @@ export async function writeServiceCode(
   await ensurePieceIgnore(directory).catch(() => {
     // Non-critical
   });
+
+  // ── Auto-detect podman runtime from piece.json ──────────────────────
+  if (opts?.serviceId && opts?.workspaceId) {
+    const pieceJsonPath = path.join(piecesDir, "piece.json");
+    if (existsSync(pieceJsonPath)) {
+      try {
+        const raw = await readFile(pieceJsonPath, "utf8");
+        const manifest = JSON.parse(raw);
+        if (manifest.runtime === "podman") {
+          await db
+            .update(services)
+            .set({ runtime: "podman" })
+            .where(
+              and(
+                eq(services.id, opts.serviceId),
+                eq(services.workspaceId, opts.workspaceId),
+              ),
+            );
+        }
+      } catch {
+        // Non-critical — piece.json parse failure shouldn't block the pull
+      }
+    }
+  }
 }
 
 // ── Update service metadata ───────────────────

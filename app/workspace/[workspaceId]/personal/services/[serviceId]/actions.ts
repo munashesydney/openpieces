@@ -345,7 +345,10 @@ export async function pullFromHubAction(
   }
 
   try {
-    await writeServiceCode(service.directory, zipBuffer);
+    await writeServiceCode(service.directory, zipBuffer, {
+      serviceId,
+      workspaceId,
+    });
   } catch (err) {
     return { error: `Failed to write service code: ${(err as Error).message}` };
   }
@@ -442,7 +445,10 @@ export async function forkServiceLocallyAction(
   // Copy files from the original service directory to the new one
   try {
     const zipBuffer = await downloadServiceCode(serviceId, workspaceId);
-    await writeServiceCode(newService.directory!, zipBuffer);
+    await writeServiceCode(newService.directory!, zipBuffer, {
+      serviceId: newService.id,
+      workspaceId,
+    });
   } catch (err) {
     // Clean up the new service record on failure
     const { deleteService } = await import("@/lib/services/service.service");
