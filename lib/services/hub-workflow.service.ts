@@ -76,6 +76,85 @@ export type SearchWorkflowsResult = {
   totalPages: number;
 };
 
+// ── Shared: sync a hub piece into a local service ──
+
+/**
+ * Download a piece from the hub, write its code, replace endpoints
+ * and required secrets, and update hub-link metadata on a local service.
+ *
+ * Used by both single-service pull and workflow pull to avoid duplication.
+ */
+export async function syncPieceToLocalService(
+  piece: HubPiece,
+  target: {
+    serviceId: string;
+    directory: string;
+    workspaceId: string;
+  },
+  userId: string,
+): Promise<void> {
+  // 1. Download ZIP
+  const zipBuffer = await downloadPieceZip(piece.codeUrl);
+  if (!zipBuffer) {
+    throw new Error(`Failed to download code for "${piece.title}"`);
+  }
+
+  // 2. Write code to directory
+  await writeServiceCode(target.directory, zipBuffer, {
+    serviceId: target.serviceId,
+    workspaceId: target.workspaceId,
+  });
+
+  // 3. Replace endpoints (delete all, create fresh)
+  const { deleteEndpointsByServiceId } =
+    await import("./service-endpoint.service");
+  await deleteEndpointsByServiceId(target.serviceId);
+  if (piece.endpoints && piece.endpoints.length > 0) {
+    await Promise.all(
+      piece.endpoints.map((ep) =>
+        createEndpoint({
+          serviceId: target.serviceId,
+          method: ep.method as "GET" | "POST" | "PUT" | "DELETE" | "PATCH",
+          path: ep.path,
+          description: ep.description ?? "",
+          inputSchema: (ep.inputSchema ?? {}) as Record<string, unknown>,
+        }),
+      ),
+    );
+  }
+
+  // 4. Replace required secrets (delete all, create fresh)
+  const { deleteRequiredSecretsByServiceId } =
+    await import("./service-required-secrets.service");
+  await deleteRequiredSecretsByServiceId(target.serviceId);
+  if (piece.requiredSecrets && piece.requiredSecrets.length > 0) {
+    await Promise.all(
+      piece.requiredSecrets.map(async (s) => {
+        try {
+          await createSecret({
+            workspaceId: target.workspaceId,
+            userId,
+            key: s.secretKey,
+            value: "",
+            allowEmptyValue: true,
+          });
+        } catch {
+          // Secret already exists
+        }
+        await addRequiredSecret(target.serviceId, s.secretKey);
+      }),
+    );
+  }
+
+  // 5. Update hub-link metadata
+  await updateServiceMetadata(target.serviceId, target.workspaceId, {
+    title: piece.title,
+    description: piece.description,
+    hubPieceId: piece.id,
+    hubUpdatedAt: piece.updatedAt ? new Date(piece.updatedAt) : undefined,
+  });
+}
+
 // ── Push a workflow to the hub ─────────────────
 
 export type PushWorkflowResult =
@@ -299,7 +378,8 @@ export async function pullWorkflow(
     return { ok: false, error: "Workflow not found on hub" };
   }
 
-  // 2. Download all linked pieces and refresh or create local services
+  // 2. Sync all linked hub pieces to local services (create or refresh)
+  const user = await requireUser();
   const localServiceIds: Array<{ serviceId: string; role: string }> = [];
 
   for (const link of hubWf.services) {
@@ -311,84 +391,17 @@ export async function pullWorkflow(
       };
     }
 
-    // Download the piece ZIP
-    const zipBuffer = await downloadPieceZip(piece.codeUrl);
-    if (!zipBuffer) {
-      return {
-        ok: false,
-        error: `Failed to download code for "${piece.title}"`,
-      };
-    }
-
     // Check if a local service already exists for this hub piece
     const { getServiceByHubPieceId } = await import("./service.service");
     const existing = await getServiceByHubPieceId(piece.id, data.workspaceId);
 
     let localServiceId: string;
+    let directory: string;
 
     if (existing) {
       // Refresh existing service in-place
       localServiceId = existing.id;
-
-      // Overwrite service code
-      try {
-        await writeServiceCode(existing.directory!, zipBuffer, {
-          serviceId: existing.id,
-          workspaceId: data.workspaceId,
-        });
-      } catch (err) {
-        return {
-          ok: false,
-          error: `Failed to write code for "${piece.title}": ${(err as Error).message}`,
-        };
-      }
-
-      // Replace endpoints
-      const { deleteEndpointsByServiceId } =
-        await import("./service-endpoint.service");
-      await deleteEndpointsByServiceId(existing.id);
-      if (piece.endpoints && piece.endpoints.length > 0) {
-        await Promise.all(
-          piece.endpoints.map((ep) =>
-            createEndpoint({
-              serviceId: existing.id,
-              method: ep.method as "GET" | "POST" | "PUT" | "DELETE" | "PATCH",
-              path: ep.path,
-              description: ep.description ?? "",
-              inputSchema: (ep.inputSchema ?? {}) as Record<string, unknown>,
-            }),
-          ),
-        );
-      }
-
-      // Replace required secrets
-      const { deleteRequiredSecretsByServiceId } =
-        await import("./service-required-secrets.service");
-      await deleteRequiredSecretsByServiceId(existing.id);
-      if (piece.requiredSecrets && piece.requiredSecrets.length > 0) {
-        const user = await requireUser();
-        await Promise.all(
-          piece.requiredSecrets.map(async (s) => {
-            try {
-              await createSecret({
-                workspaceId: data.workspaceId,
-                userId: user.id,
-                key: s.secretKey,
-                value: "",
-                allowEmptyValue: true,
-              });
-            } catch {
-              // Secret already exists
-            }
-            await addRequiredSecret(existing.id, s.secretKey);
-          }),
-        );
-      }
-
-      // Update hub link timestamp
-      await updateServiceMetadata(existing.id, data.workspaceId, {
-        hubUpdatedAt: piece.updatedAt ? new Date(piece.updatedAt) : undefined,
-      });
+      directory = existing.directory!;
     } else {
       // Create a brand new local service
       const serviceSlug = `${piece.title
@@ -407,61 +420,21 @@ export async function pullWorkflow(
       });
 
       localServiceId = localService.id;
+      directory = localService.directory!;
+    }
 
-      // Extract ZIP into the service directory
-      try {
-        await writeServiceCode(localService.directory!, zipBuffer, {
-          serviceId: localService.id,
-          workspaceId: data.workspaceId,
-        });
-      } catch (err) {
-        return {
-          ok: false,
-          error: `Failed to write code for "${piece.title}": ${(err as Error).message}`,
-        };
-      }
-
-      // Set endpoints
-      if (piece.endpoints && piece.endpoints.length > 0) {
-        await Promise.all(
-          piece.endpoints.map((ep) =>
-            createEndpoint({
-              serviceId: localService.id,
-              method: ep.method as "GET" | "POST" | "PUT" | "DELETE" | "PATCH",
-              path: ep.path,
-              description: ep.description ?? "",
-              inputSchema: (ep.inputSchema ?? {}) as Record<string, unknown>,
-            }),
-          ),
-        );
-      }
-
-      // Set required secrets
-      if (piece.requiredSecrets && piece.requiredSecrets.length > 0) {
-        const user = await requireUser();
-        await Promise.all(
-          piece.requiredSecrets.map(async (s) => {
-            try {
-              await createSecret({
-                workspaceId: data.workspaceId,
-                userId: user.id,
-                key: s.secretKey,
-                value: "",
-                allowEmptyValue: true,
-              });
-            } catch {
-              // Secret already exists
-            }
-            await addRequiredSecret(localService.id, s.secretKey);
-          }),
-        );
-      }
-
-      // Set hub link
-      await updateServiceMetadata(localService.id, data.workspaceId, {
-        hubPieceId: piece.id,
-        hubUpdatedAt: piece.updatedAt ? new Date(piece.updatedAt) : undefined,
-      });
+    // Sync the hub piece into the local service
+    try {
+      await syncPieceToLocalService(
+        piece,
+        { serviceId: localServiceId, directory, workspaceId: data.workspaceId },
+        user.id,
+      );
+    } catch (err) {
+      return {
+        ok: false,
+        error: `Failed to sync "${piece.title}": ${(err as Error).message}`,
+      };
     }
 
     localServiceIds.push({
