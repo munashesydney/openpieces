@@ -5,6 +5,7 @@ import { ChevronDown, ChevronRight } from "lucide-react";
 import type { AiToolCall, AiToolResult } from "@/lib/ai-chat/types";
 import { ChatToolCalls } from "./chat-tool-calls";
 import { QuestionInputCard } from "./question-input-card";
+import { SleepCard } from "./sleep-card";
 import { MarkdownRenderer } from "./markdown-renderer";
 
 type ChatMessageCardProps = {
@@ -20,7 +21,7 @@ type ChatMessageCardProps = {
 };
 
 const assistantMarkdownClass =
-  "text-[15px] leading-[1.65] text-[var(--foreground)] break-words [&_p]:mb-3 [&_p:last-child]:mb-0 [&_p]:whitespace-pre-wrap [&_ul]:my-2 [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:my-2 [&_ol]:list-decimal [&_ol]:pl-5 [&_li]:my-0.5 [&_strong]:font-semibold [&_a]:text-[var(--accent)] [&_a]:underline [&_code]:rounded [&_code]:bg-[var(--hover-bg)] [&_code]:px-1 [&_code]:py-0.5 [&_code]:font-mono [&_code]:text-[13px] [&_pre]:my-3 [&_pre]:overflow-x-auto [&_pre]:rounded-lg [&_pre]:border [&_pre]:border-[var(--border)] [&_pre]:bg-[var(--sidebar-bg)] [&_pre]:p-3";
+  "text-[15px] leading-[1.65] text-[var(--foreground)] break-words [&_p]:mb-3 [&_p:last-child]:mb-0 [&_p]:whitespace-pre-wrap [&_ul]:my-2 [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:my-2 [&_ol]:list-decimal [&_ol]:pl-5 [&_li]:my-0.5 [&_strong]:font-semibold [&_a]:text-[var(--accent)] [&_a]:underline [&_code]:rounded [&_code]:bg-[var(--hover-bg)] [&_code]:px-1 [&_code]:py-0.5 [&_code]:font-mono [&_code]:text-[13px]";
 
 export function ChatMessageCard({
   content,
@@ -49,13 +50,17 @@ export function ChatMessageCard({
   const hasReasoning = !!reasoning && reasoning.trim().length > 0;
   const isStreamingReasoning = isStreaming && !hasBody;
 
-  // Separate question tool calls (rendered after content) from other tool calls
+  // Separate tool calls by action for dedicated rendering
   const questionToolCalls = toolCalls.filter(
     (tc) => (tc.input as { action?: string })?.action === "ask_question",
   );
-  const nonQuestionToolCalls = toolCalls.filter(
-    (tc) => (tc.input as { action?: string })?.action !== "ask_question",
+  const sleepToolCalls = toolCalls.filter(
+    (tc) => (tc.input as { action?: string })?.action === "sleep",
   );
+  const otherToolCalls = toolCalls.filter((tc) => {
+    const action = (tc.input as { action?: string })?.action;
+    return action !== "ask_question" && action !== "sleep";
+  });
 
   // ── Thinking section visibility ──
   // Debounce the hide to prevent flicker when streaming ends before
@@ -66,7 +71,7 @@ export function ChatMessageCard({
   );
 
   useEffect(() => {
-    if (isStreaming || hasReasoning || nonQuestionToolCalls.length > 0) {
+    if (isStreaming || hasReasoning || otherToolCalls.length > 0) {
       if (hideTimerRef.current) clearTimeout(hideTimerRef.current);
       setShowThinking(true);
     } else if (!isStreaming) {
@@ -76,7 +81,7 @@ export function ChatMessageCard({
         if (hideTimerRef.current) clearTimeout(hideTimerRef.current);
       };
     }
-  }, [isStreaming, hasReasoning, nonQuestionToolCalls.length]);
+  }, [isStreaming, hasReasoning, otherToolCalls.length]);
 
   const showThinkingSection = showThinking;
 
@@ -87,13 +92,13 @@ export function ChatMessageCard({
   useEffect(() => {
     if (
       !isStreaming &&
-      (hasReasoning || nonQuestionToolCalls.length > 0) &&
+      (hasReasoning || otherToolCalls.length > 0) &&
       !autoCollapsed
     ) {
       setAutoCollapsed(true);
       setExpanded(false);
     }
-  }, [isStreaming, hasReasoning, nonQuestionToolCalls.length, autoCollapsed]);
+  }, [isStreaming, hasReasoning, otherToolCalls.length, autoCollapsed]);
 
   // Determine section label
   let sectionLabel: string;
@@ -172,9 +177,9 @@ export function ChatMessageCard({
               ) : null}
 
               {/* Tool calls rendered compactly inside the thought process */}
-              {nonQuestionToolCalls.length > 0 ? (
+              {otherToolCalls.length > 0 ? (
                 <ChatToolCalls
-                  toolCalls={nonQuestionToolCalls}
+                  toolCalls={otherToolCalls}
                   toolResults={toolResults}
                   variant="compact"
                 />
@@ -192,33 +197,62 @@ export function ChatMessageCard({
         </div>
       ) : null}
 
-      {/* Render question cards after content (bottom of message) when there is body text */}
-      {(hasBody || hasReasoning) &&
-        !isFollowedByUserMessage &&
-        questionToolCalls.map((tc) => {
+      {/* Render sleep card while streaming — hides once the response is complete */}
+      {isStreaming &&
+        sleepToolCalls.map((tc) => {
           const result = toolResults.find(
             (r) => r.toolCallId === tc.toolCallId,
           );
-          const questions =
-            (
-              tc.input as {
-                questions?: Array<{
-                  question: string;
-                  suggestedAnswers?: string[];
-                }>;
-              }
-            ).questions ?? [];
+          const input = tc.input as { seconds?: number; reason?: string };
           return (
             <div key={tc.toolCallId} className="w-full mt-3">
-              <QuestionInputCard
-                toolCallId={tc.toolCallId}
-                questions={questions}
+              <SleepCard
+                seconds={input.seconds ?? 0}
+                reason={input.reason}
                 isPending={!result}
-                onSubmit={onQuestionSubmit ?? (() => {})}
               />
             </div>
           );
         })}
+
+      {/* Render question cards after content (bottom of message) when there is body text */}
+      {(hasBody || hasReasoning) &&
+        !isFollowedByUserMessage &&
+        questionToolCalls
+          .filter((tc) => {
+            // Skip duplicate ask_question calls (the 2nd+ call is blocked server-side)
+            const result = toolResults.find(
+              (r) => r.toolCallId === tc.toolCallId,
+            );
+            if (result?.output === "already_asked") {
+              return false;
+            }
+            return true;
+          })
+          .map((tc) => {
+            const result = toolResults.find(
+              (r) => r.toolCallId === tc.toolCallId,
+            );
+            const questions =
+              (
+                tc.input as {
+                  questions?: Array<{
+                    question: string;
+                    suggestedAnswers?: string[];
+                  }>;
+                }
+              ).questions ?? [];
+            return (
+              <div key={tc.toolCallId} className="w-full mt-3">
+                <QuestionInputCard
+                  toolCallId={tc.toolCallId}
+                  questions={questions}
+                  isPending={!result}
+                  onSubmit={onQuestionSubmit ?? (() => {})}
+                />
+              </div>
+            );
+          })}
     </div>
   );
 }

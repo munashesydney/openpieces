@@ -3,7 +3,10 @@
 import { MessageSquare, PanelLeftClose, Plus } from "lucide-react";
 import { useCallback, useRef } from "react";
 import { Button } from "@/components/basic/buttons/button";
-import { Dropdown, type DropdownOption } from "@/components/basic/input/dropdown";
+import {
+  Dropdown,
+  type DropdownOption,
+} from "@/components/basic/input/dropdown";
 import type { AiChatStatus } from "@/lib/ai-chat/types";
 
 export type SidebarChat = {
@@ -12,7 +15,13 @@ export type SidebarChat = {
   status: AiChatStatus;
 };
 
-export const AGENT_TYPES = ["orchestrator", "architecture", "events", "brain", "qa"] as const;
+export const AGENT_TYPES = [
+  "orchestrator",
+  "architecture",
+  "events",
+  "brain",
+  "qa",
+] as const;
 export type AgentType = (typeof AGENT_TYPES)[number];
 
 const AGENT_TYPE_LABELS: Record<AgentType, string> = {
@@ -70,7 +79,7 @@ export function OverviewAiChatsSidebar({
       }
       onFilterChange(value as AgentType);
     },
-    [onFilterChange]
+    [onFilterChange],
   );
 
   const handleScroll = useCallback(() => {
@@ -117,7 +126,7 @@ export function OverviewAiChatsSidebar({
         value={filterDropdownValue}
         onChange={handleAgentFilterChange}
         placeholder="Agent"
-        className="px-3 pb-2"
+        className="px-3 pb-2 mt-2"
         triggerClassName="h-9 min-h-0 py-2 px-3 text-xs bg-[var(--sidebar-bg)]"
       />
       <nav
@@ -140,7 +149,9 @@ export function OverviewAiChatsSidebar({
             <div className="mb-3 flex h-10 w-10 items-center justify-center rounded border border-[var(--border)] bg-[var(--surface)] text-[var(--muted)]">
               <MessageSquare className="h-5 w-5" strokeWidth={1.5} />
             </div>
-            <p className="text-sm font-medium text-[var(--foreground)]">No chats yet</p>
+            <p className="text-sm font-medium text-[var(--foreground)]">
+              No chats yet
+            </p>
             <p className="mt-1.5 max-w-[13rem] text-xs leading-relaxed text-[var(--muted)]">
               Conversations will show here.
             </p>
@@ -161,8 +172,9 @@ export function OverviewAiChatsSidebar({
                   }`}
                 >
                   <div className="flex items-start justify-between gap-2">
-                    <span className="line-clamp-2">{chat.title}</span>
-                    {chat.status === "pending" || chat.status === "processing" ? (
+                    <span className="truncate">{chat.title}</span>
+                    {chat.status === "pending" ||
+                    chat.status === "processing" ? (
                       <span className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--secondary)] shadow-[0_0_6px_var(--secondary-glow)]" />
                     ) : null}
                   </div>
@@ -173,7 +185,9 @@ export function OverviewAiChatsSidebar({
         ) : null}
 
         {chats.length > 0 && isLoadingMore ? (
-          <div className="py-2 text-center text-xs text-[var(--muted)]">Loading…</div>
+          <div className="py-2 text-center text-xs text-[var(--muted)]">
+            Loading…
+          </div>
         ) : null}
       </nav>
     </aside>

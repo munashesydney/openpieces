@@ -37,7 +37,11 @@ export async function executeRuntime(
       }
       const ms = seconds * 1000;
       await new Promise((resolve) => setTimeout(resolve, ms));
-      return { success: true, sleptSeconds: seconds };
+      return {
+        success: true,
+        sleptSeconds: seconds,
+        message: "Sleep complete — continue with your plan",
+      };
     }
 
     case "spawn_agent": {
@@ -83,6 +87,16 @@ export async function executeRuntime(
     }
 
     case "ask_question": {
+      // Enforce single ask_question call per execution loop
+      const ASK_QUESTION_KEY = "runtime:ask_question";
+      const prevCalls =
+        context.loopState?.callCounts.get(ASK_QUESTION_KEY) ?? 0;
+      context.loopState?.callCounts.set(ASK_QUESTION_KEY, prevCalls + 1);
+
+      if (prevCalls > 0) {
+        return "already_asked";
+      }
+
       // Return true immediately - UI will render the questions
       return true;
     }

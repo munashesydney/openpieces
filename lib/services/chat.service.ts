@@ -1,6 +1,6 @@
-import { createGateway, GatewayInternalServerError } from "@ai-sdk/gateway";
+import { createGateway } from "@ai-sdk/gateway";
 import type { ModelMessage } from "ai";
-import { stepCountIs, streamText } from "ai";
+import { stepCountIs, streamText, generateText, Output } from "ai";
 import { and, asc, count, desc, eq } from "drizzle-orm";
 import { OPENPIECES_CHAT_SYSTEM_PROMPT } from "@/lib/ai-chat/prompts/orchestratorV3";
 import { EVENTS_CHAT_SYSTEM_PROMPT } from "@/lib/ai-chat/prompts/events";
@@ -8,6 +8,7 @@ import { ARCHITECTURE_CHAT_SYSTEM_PROMPT } from "@/lib/ai-chat/prompts/architect
 import { BRAIN_CHAT_SYSTEM_PROMPT } from "@/lib/ai-chat/prompts/brain";
 import { QA_CHAT_SYSTEM_PROMPT } from "@/lib/ai-chat/prompts/qa";
 import { COMPACTOR_PROMPT } from "@/lib/ai-chat/prompts/compactor";
+import { TITLE_GENERATOR_PROMPT } from "@/lib/ai-chat/prompts/title-generator";
 import {
   WORKSPACE_CONTEXT_PLACEHOLDER,
   buildWorkspaceContext,
@@ -38,6 +39,7 @@ import {
 } from "@/lib/db/schema";
 import { createTools } from "@/lib/tools/registry";
 import { isValidUuid } from "@/lib/utils/uuid";
+import { z } from "zod";
 import {
   getWorkspaceChatLimitInfo,
   getWorkspaceSettings,
@@ -232,6 +234,29 @@ function createChatTitleFromMessage(content: string): string {
   }
 
   return normalized.length <= 48 ? normalized : `${normalized.slice(0, 45)}...`;
+}
+
+/**
+ * Generate an AI-powered title for a conversation based on the first user message.
+ * Falls back to returning null — caller should keep the existing title.
+ */
+async function generateChatTitle(firstMessage: string): Promise<string | null> {
+  try {
+    const { output } = await generateText({
+      model: getModel("deepseek/deepseek-v4-flash"),
+      system: TITLE_GENERATOR_PROMPT,
+      prompt: firstMessage.slice(0, 500),
+      output: Output.object({
+        schema: z.object({
+          title: z.string(),
+        }),
+      }),
+    });
+    const title = output.title.trim();
+    return title || null;
+  } catch {
+    return null;
+  }
 }
 
 function getToolResultError(value: unknown): string {
@@ -475,6 +500,17 @@ export async function appendUserMessageAndMarkPending(input: {
   await updateAiChatStatus(input.chatId, "pending", {
     title,
   });
+
+  // Fire off AI title generation for first message (don't await — it's non-critical)
+  if (existingMessages.length === 0) {
+    generateChatTitle(input.content).then((aiTitle) => {
+      if (aiTitle) {
+        updateAiChatStatus(input.chatId, "pending", { title: aiTitle }).catch(
+          () => {},
+        );
+      }
+    });
+  }
 
   return message;
 }
@@ -1130,6 +1166,7 @@ export async function executeAiChatJob(
         "completed",
         content || null,
       );
+
       break; // Exit retry loop on success
     } catch (error) {
       if (signal?.aborted) {

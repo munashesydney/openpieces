@@ -219,6 +219,7 @@ export function OverviewPersonalView({
         const response = await fetch(`/api/chats/${chatId}/status`);
         const data = (await response.json()) as {
           status?: Chat["status"];
+          title?: string;
           error?: string | null;
         };
 
@@ -233,6 +234,7 @@ export function OverviewPersonalView({
               ? {
                   ...chat,
                   status: data.status ?? chat.status,
+                  title: data.title ?? chat.title,
                   error: data.error ?? null,
                 }
               : chat,

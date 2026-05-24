@@ -23,14 +23,10 @@ function CopyButton({ text }: { text: string }) {
     <button
       type="button"
       onClick={handleCopy}
-      className="flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-medium text-white/40 transition-colors hover:text-white/70"
+      className="flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-medium text-[var(--muted)] transition-colors hover:text-[var(--foreground)]"
       aria-label="Copy code"
     >
-      {copied ? (
-        <Check className="h-3 w-3" />
-      ) : (
-        <Copy className="h-3 w-3" />
-      )}
+      {copied ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
       <span>{copied ? "Copied" : "Copy"}</span>
     </button>
   );
@@ -47,19 +43,21 @@ const components: Components = {
 
     if (isBlock) {
       return (
-        <div className="group relative my-4 overflow-hidden rounded-lg border border-[var(--border)] bg-[#0d1117]">
+        <div className="group relative my-4 overflow-hidden rounded-lg border border-[var(--border)] bg-[var(--sidebar-bg)]">
           {/* Header bar */}
-          <div className="flex items-center justify-between border-b border-white/[0.06] bg-white/[0.03] px-3 py-1.5">
+          <div className="flex items-center justify-between border-b border-[var(--border)] bg-[var(--hover-bg)] px-3 py-1.5">
             <div className="flex items-center gap-1.5">
-              <FileText className="h-3 w-3 text-white/30" />
-              <span className="font-mono text-[10px] font-medium uppercase tracking-wider text-white/30">
+              <FileText className="h-3 w-3 text-[var(--muted)]" />
+              <span className="font-mono text-[10px] font-medium uppercase tracking-wider text-[var(--muted)]">
                 {lang || "code"}
               </span>
             </div>
             <CopyButton text={codeString} />
           </div>
           <pre className="overflow-x-auto p-4 text-[13px] leading-[1.6]">
-            <code className="font-mono text-white/80">{codeString}</code>
+            <code className="font-mono text-[var(--foreground)]">
+              {codeString}
+            </code>
           </pre>
         </div>
       );
@@ -130,7 +128,9 @@ const components: Components = {
 
   // ── Lists ──
   ul({ children, ...props }) {
-    const isTaskList = (props as { className?: string })?.className?.includes("contains-task-list");
+    const isTaskList = (props as { className?: string })?.className?.includes(
+      "contains-task-list",
+    );
     return (
       <ul
         className={`my-2 pl-5 ${isTaskList ? "list-none pl-0" : "list-disc"}`}
@@ -140,12 +140,12 @@ const components: Components = {
     );
   },
   ol({ children }) {
-    return (
-      <ol className="my-2 list-decimal pl-5">{children}</ol>
-    );
+    return <ol className="my-2 list-decimal pl-5">{children}</ol>;
   },
   li({ children, ...props }) {
-    const isTaskItem = (props as { className?: string })?.className?.includes("task-list-item");
+    const isTaskItem = (props as { className?: string })?.className?.includes(
+      "task-list-item",
+    );
     if (isTaskItem) {
       return (
         <li className="flex items-start gap-2 my-1 text-[15px] leading-[1.6]">
@@ -215,7 +215,7 @@ const components: Components = {
   // ── Tables ──
   table({ children }) {
     return (
-      <div className="my-4 overflow-x-auto rounded-lg border border-[var(--border)]">
+      <div className="my-4 overflow-x-auto rounded-lg border border-[var(--border)] bg-[var(--sidebar-bg)]">
         <table className="w-full border-collapse text-[14px] leading-[1.6]">
           {children}
         </table>
@@ -256,7 +256,11 @@ const components: Components = {
 
   // ── Inline formatting ──
   strong({ children }) {
-    return <strong className="font-semibold text-[var(--foreground)]">{children}</strong>;
+    return (
+      <strong className="font-semibold text-[var(--foreground)]">
+        {children}
+      </strong>
+    );
   },
   em({ children }) {
     return <em className="italic">{children}</em>;
@@ -270,7 +274,9 @@ const components: Components = {
     return <dl className="my-2 space-y-1">{children}</dl>;
   },
   dt({ children }) {
-    return <dt className="font-semibold text-[var(--foreground)]">{children}</dt>;
+    return (
+      <dt className="font-semibold text-[var(--foreground)]">{children}</dt>
+    );
   },
   dd({ children }) {
     return <dd className="ml-4 text-[var(--muted)]">{children}</dd>;
