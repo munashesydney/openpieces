@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useMediaQuery } from "@/lib/hooks/use-media-query";
 import { PanelLeftOpen } from "lucide-react";
 import { Button } from "@/components/basic/buttons/button";
@@ -15,6 +15,7 @@ import {
   type ChatMessage,
   type ContextInfo,
 } from "./overview-chat-area";
+import { useChatStream } from "@/lib/hooks/use-chat-stream";
 import { OverviewComposer } from "./overview-composer";
 import { OverviewTitle } from "./overview-title";
 
@@ -104,12 +105,10 @@ export function OverviewPersonalView({
       ]),
     ),
   );
-  const [loadingMessages, setLoadingMessages] = useState(false);
   const [isSending, setIsSending] = useState(false);
   const [contextInfo, setContextInfo] = useState<ContextInfo | null>(null);
   const [isCompacting, setIsCompacting] = useState(false);
   const [workspaceModel, setWorkspaceModel] = useState(initialWorkspaceModel);
-  const pollingRef = useRef<number | null>(null);
 
   const selectedChat = useMemo(
     () => chats.find((chat) => chat.id === selectedChatId) ?? null,
@@ -123,64 +122,70 @@ export function OverviewPersonalView({
     ? (messages[selectedChatId] ?? [])
     : [];
 
-  const clearPolling = () => {
-    if (pollingRef.current != null) {
-      window.clearInterval(pollingRef.current);
-      pollingRef.current = null;
-    }
-  };
+  // ── Chat stream hook ──
+  const {
+    messages: streamMessages,
+    status: streamStatus,
+    title: streamTitle,
+    error: streamError,
+    isLoading: streamLoading,
+    refetch,
+    stopPolling,
+  } = useChatStream(selectedChatId);
 
-  const fetchMessages = useCallback(async (chatId: string) => {
-    setLoadingMessages(true);
+  // Merge stream messages into the record (with optimistic assistant handling)
+  useEffect(() => {
+    if (!selectedChatId) return;
 
-    try {
-      const response = await fetch(`/api/chats/${chatId}/messages`);
-      const data = (await response.json()) as {
-        messages?: AiChatMessage[];
-        error?: string;
-      };
+    setMessages((prev) => {
+      const current = prev[selectedChatId] ?? [];
+      const fetched = streamMessages;
 
-      if (!response.ok) {
-        throw new Error(data.error ?? "Failed to load messages.");
+      // If the fetched list already ends with an assistant message (any status),
+      // the backend has created the real response — no need to keep the optimistic one.
+      const lastFetched = fetched[fetched.length - 1];
+      const hasAssistantInFetched = lastFetched?.role === "assistant";
+
+      // Check if the current (optimistic) list has a pending assistant at the end
+      const lastCurrent = current[current.length - 1];
+      const hasOptimisticAssistant =
+        lastCurrent &&
+        lastCurrent.role === "assistant" &&
+        lastCurrent.status === "pending" &&
+        lastCurrent.content === "" &&
+        !fetched.find((m) => m.id === lastCurrent.id);
+
+      // Keep the optimistic message until a real assistant lands in the fetched list.
+      if (!hasAssistantInFetched && hasOptimisticAssistant) {
+        return {
+          ...prev,
+          [selectedChatId]: [...fetched, lastCurrent],
+        };
       }
 
-      const fetched = (data.messages ?? []).map(mapMessage);
+      return {
+        ...prev,
+        [selectedChatId]: fetched,
+      };
+    });
+  }, [selectedChatId, streamMessages]);
 
-      setMessages((currentMessages) => {
-        const current = currentMessages[chatId] ?? [];
-
-        // If the fetched list already ends with an assistant message (any status),
-        // the backend has created the real response — no need to keep the optimistic one.
-        const lastFetched = fetched[fetched.length - 1];
-        const hasAssistantInFetched = lastFetched?.role === "assistant";
-
-        // Check if the current (optimistic) list has a pending assistant at the end
-        const lastCurrent = current[current.length - 1];
-        const hasOptimisticAssistant =
-          lastCurrent &&
-          lastCurrent.role === "assistant" &&
-          lastCurrent.status === "pending" &&
-          lastCurrent.content === "" &&
-          !fetched.find((m) => m.id === lastCurrent.id);
-
-        // Keep the optimistic message until a real assistant lands in the fetched list.
-        // This gives instant "Thinking" UX while the backend processes.
-        if (!hasAssistantInFetched && hasOptimisticAssistant) {
-          return {
-            ...currentMessages,
-            [chatId]: [...fetched, lastCurrent],
-          };
-        }
-
-        return {
-          ...currentMessages,
-          [chatId]: fetched,
-        };
-      });
-    } finally {
-      setLoadingMessages(false);
-    }
-  }, []);
+  // Sync stream status into the chat list
+  useEffect(() => {
+    if (!selectedChatId || !streamStatus) return;
+    setChats((prev) =>
+      prev.map((chat) =>
+        chat.id === selectedChatId
+          ? {
+              ...chat,
+              status: (streamStatus as Chat["status"]) ?? chat.status,
+              title: streamTitle ?? chat.title,
+              error: streamError ?? null,
+            }
+          : chat,
+      ),
+    );
+  }, [selectedChatId, streamStatus, streamTitle, streamError]);
 
   const fetchContextInfo = useCallback(async (chatId: string) => {
     try {
@@ -201,7 +206,7 @@ export function OverviewPersonalView({
         method: "POST",
       });
       if (response.ok) {
-        await fetchMessages(selectedChatId);
+        await refetch();
         await fetchContextInfo(selectedChatId);
       }
     } catch {
@@ -209,49 +214,7 @@ export function OverviewPersonalView({
     } finally {
       setIsCompacting(false);
     }
-  }, [selectedChatId, isCompacting, fetchMessages, fetchContextInfo]);
-
-  const startPolling = useCallback(
-    (chatId: string) => {
-      clearPolling();
-
-      pollingRef.current = window.setInterval(async () => {
-        const response = await fetch(`/api/chats/${chatId}/status`);
-        const data = (await response.json()) as {
-          status?: Chat["status"];
-          title?: string;
-          error?: string | null;
-        };
-
-        if (!response.ok) {
-          clearPolling();
-          return;
-        }
-
-        setChats((currentChats) =>
-          currentChats.map((chat) =>
-            chat.id === chatId
-              ? {
-                  ...chat,
-                  status: data.status ?? chat.status,
-                  title: data.title ?? chat.title,
-                  error: data.error ?? null,
-                }
-              : chat,
-          ),
-        );
-
-        await fetchMessages(chatId);
-
-        if (data.status === "pending" || data.status === "processing") {
-          return;
-        }
-
-        clearPolling();
-      }, 1500);
-    },
-    [fetchMessages],
-  );
+  }, [selectedChatId, isCompacting, refetch, fetchContextInfo]);
 
   const handleSend = async (text: string) => {
     const currentChatId = selectedChatId;
@@ -357,12 +320,11 @@ export function OverviewPersonalView({
         }));
       }
 
-      await fetchMessages(chat.id);
-      startPolling(chat.id);
+      await refetch();
     } catch (error) {
       console.error("Failed to send AI chat message:", error);
       if (currentChatId) {
-        await fetchMessages(currentChatId);
+        await refetch();
       }
     } finally {
       setIsSending(false);
@@ -371,7 +333,7 @@ export function OverviewPersonalView({
 
   const handleStop = useCallback(async () => {
     if (!selectedChatId) return;
-    clearPolling();
+    stopPolling();
     setIsSending(false);
     setChats((currentChats) =>
       currentChats.map((chat) =>
@@ -381,7 +343,8 @@ export function OverviewPersonalView({
       ),
     );
     await fetch(`/api/chats/${selectedChatId}/stop`, { method: "POST" });
-  }, [selectedChatId, clearPolling]);
+    await refetch();
+  }, [selectedChatId, stopPolling, refetch]);
 
   const handleModelChange = useCallback(
     async (model: string) => {
@@ -487,35 +450,11 @@ export function OverviewPersonalView({
     [workspaceId],
   );
 
+  // Fetch context info when switching chats
   useEffect(() => {
-    return () => {
-      clearPolling();
-    };
-  }, []);
-
-  useEffect(() => {
-    if (!selectedChatId) {
-      setLoadingMessages(false);
-      return;
-    }
-
-    void fetchMessages(selectedChatId);
+    if (!selectedChatId) return;
     void fetchContextInfo(selectedChatId);
-  }, [selectedChatId, fetchMessages, fetchContextInfo]);
-
-  useEffect(() => {
-    if (!selectedChatId) {
-      clearPolling();
-      return;
-    }
-
-    if (selectedChatIsRunning) {
-      startPolling(selectedChatId);
-      return;
-    }
-
-    clearPolling();
-  }, [selectedChatId, selectedChatIsRunning, startPolling]);
+  }, [selectedChatId, fetchContextInfo]);
 
   useEffect(() => {
     if (!sidebarOpen || isLg) return;
@@ -549,7 +488,7 @@ export function OverviewPersonalView({
     onSelectChat: handleSelectChat,
     onNewChat: () => {
       setSelectedChatId(null);
-      clearPolling();
+      stopPolling();
     },
     onCollapse: () => setSidebarOpen(false),
     onLoadMore: handleLoadMore,
@@ -607,7 +546,7 @@ export function OverviewPersonalView({
               status={selectedChat.status}
               error={selectedChat.error}
               isChatRunning={selectedChatIsRunning}
-              isLoadingMessages={loadingMessages}
+              isLoadingMessages={streamLoading}
               onQuestionSubmit={handleQuestionSubmit}
             />
             <div className="shrink-0 animate-[slideDown_0.4s_ease-out_both]">
@@ -619,7 +558,7 @@ export function OverviewPersonalView({
                   selectedChat.status === "pending" ||
                   selectedChat.status === "processing"
                 }
-                isSending={isSending || loadingMessages}
+                isSending={isSending || streamLoading}
                 isRunning={selectedChatIsRunning}
                 isCompacting={isCompacting}
                 contextInfo={contextInfo}

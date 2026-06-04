@@ -1,15 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import {
-  Loader2,
-  Send,
-  Plus,
-  Terminal,
-  FolderOpen,
-  X,
-  Activity,
-} from "lucide-react";
+import { Loader2, Send, Plus, Terminal, FolderOpen, X } from "lucide-react";
 import { Dropdown } from "@/components/basic/input/dropdown";
 import { OpenCodePageSkeleton } from "@/components/opencode/opencode-page-skeleton";
 import type { Service } from "@/lib/db/schema";
@@ -58,6 +50,9 @@ export function OpenCodePage({
   const [sendError, setSendError] = useState<string | null>(null);
   const [isAborting, setIsAborting] = useState(false);
   const [showSessions, setShowSessions] = useState(true);
+  const streamingMsgIdsRef = useRef<Set<string>>(new Set());
+  const lastStreamingMsgRef = useRef<string | null>(null);
+  const skipMsgIdsRef = useRef<Set<string>>(new Set());
 
   const showSessionsPanel = showSessions || !selectedSessionId;
 
@@ -68,7 +63,6 @@ export function OpenCodePage({
       s.directory.trim() !== "",
   );
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const eventSourceRef = useRef<EventSource | null>(null);
   const sessionSseRef = useRef<EventSource | null>(null);
 
   useEffect(() => {
@@ -96,8 +90,6 @@ export function OpenCodePage({
       setSelectedSessionLastMessage(null);
       setEvents([]);
     }
-    eventSourceRef.current?.close();
-    eventSourceRef.current = null;
     // Note: intentionally NOT depending on `sessions` — we don't want to
     // close/recreate SSE whenever sessions list refreshes after a send.
   }, [selectedSessionId]);
@@ -106,70 +98,14 @@ export function OpenCodePage({
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, events]);
 
-  // Backup polling: if selectedSessionStatus is "busy" for more than 10 seconds with no SSE activity,
-  // start polling for updates. This handles both UI-sent and AI-sent messages when SSE is broken.
-  // Triggered by selectedSessionStatus rather than isSending so AI-initiated messages also get covered.
-  useEffect(() => {
-    if (selectedSessionStatus !== "busy" || !selectedSessionId) return;
-
-    const pollTimeout = setTimeout(() => {
-      console.log(
-        "[Polling] No activity, starting backup poll for",
-        selectedSessionId,
-      );
-      const interval = setInterval(async () => {
-        if (!selectedSessionId) {
-          clearInterval(interval);
-          return;
-        }
-        // Fetch fresh session list to get current DB status
-        try {
-          const res = await fetch(
-            `/api/opencode/sessions?workspaceId=${workspaceId}&page=1&pageSize=20`,
-          );
-          if (!res.ok) return;
-          const data = await res.json();
-          const sessionsList = Array.isArray(data) ? data : data.sessions || [];
-          const session = sessionsList.find(
-            (s: any) =>
-              (s.sessionId || s.session_id || s.id) === selectedSessionId,
-          );
-          if (
-            !session ||
-            (session.status !== "busy" && session.status !== "idle")
-          ) {
-            clearInterval(interval);
-            setSessions(sessionsList);
-            if (session) {
-              setSelectedSessionStatus(session.status);
-            }
-            await loadMessages(selectedSessionId);
-          } else {
-            // Just refresh messages while waiting
-            await loadMessages(selectedSessionId);
-          }
-        } catch (e) {
-          console.error("[Polling] Error:", e);
-        }
-      }, 10000);
-
-      return () => clearInterval(interval);
-    }, 10000);
-
-    return () => clearTimeout(pollTimeout);
-  }, [selectedSessionStatus, selectedSessionId, workspaceId]);
-
   useEffect(() => {
     return () => {
-      eventSourceRef.current?.close();
-      eventSourceRef.current = null;
       sessionSseRef.current?.close();
       sessionSseRef.current = null;
     };
   }, []);
 
-  // Persistent SSE for the selected session — keeps status in sync in real-time
-  // Note: In serverless environments, SSE may not work due to request being handled
+  // Persistent SSE for the selected session — SSE fallback polling on error.
   // by different processes. We use polling as a fallback when SSE fails.
   useEffect(() => {
     if (!selectedSessionId) {
@@ -220,29 +156,121 @@ export function OpenCodePage({
     es.onmessage = (e) => {
       try {
         const ev = JSON.parse(e.data) as SessionEvent;
+        const props = (ev as any).properties || {};
+
+        // ── Streaming: delta events — build messages progressively ─
+        if (ev.type === "message.part.delta") {
+          if (props.field === "text" && typeof props.delta === "string") {
+            const msgId = (props.messageID as string) || "unknown";
+            // Skip the model's echo of the context block on first message
+            if (skipMsgIdsRef.current.has(msgId)) return;
+            if (
+              !streamingMsgIdsRef.current.has(msgId) &&
+              props.delta.startsWith("Before doing anything else")
+            ) {
+              skipMsgIdsRef.current.add(msgId);
+              return;
+            }
+            streamingMsgIdsRef.current.add(msgId);
+            lastStreamingMsgRef.current = msgId;
+            setMessages((prev) => {
+              const idx = prev.findIndex((m) => (m as any)._msgId === msgId);
+              if (idx !== -1) {
+                return prev.map((m, i) =>
+                  i === idx ? { ...m, content: m.content + props.delta } : m,
+                );
+              }
+              return [
+                ...prev,
+                {
+                  role: "assistant",
+                  content: props.delta,
+                  _msgId: msgId,
+                  _streaming: true,
+                },
+              ];
+            });
+            stopPolling(); // SSE is alive — kill any polling fallback
+          }
+          return;
+        }
+
+        // ── Streaming: complete part — replace deltas with full text ─
+        if (ev.type === "message.part.updated") {
+          const part = props.part;
+          if (part?.type === "text" && typeof part.text === "string") {
+            const msgId =
+              (part.messageID as string) || (props.sessionID as string) || "";
+            // Skip the model's echo of the context block
+            if (skipMsgIdsRef.current.has(msgId)) return;
+            if (
+              !streamingMsgIdsRef.current.has(msgId) &&
+              part.text.startsWith("Before doing anything else")
+            ) {
+              skipMsgIdsRef.current.add(msgId);
+              return;
+            }
+            streamingMsgIdsRef.current.add(msgId);
+            lastStreamingMsgRef.current = msgId;
+            setMessages((prev) => {
+              const idx = prev.findIndex((m) => (m as any)._msgId === msgId);
+              if (idx !== -1) {
+                return prev.map((m, i) =>
+                  i === idx ? { ...m, content: part.text } : m,
+                );
+              }
+              return [
+                ...prev,
+                {
+                  role: "assistant",
+                  content: part.text,
+                  _msgId: msgId,
+                  _streaming: true,
+                },
+              ];
+            });
+            stopPolling();
+          }
+          return;
+        }
+
+        // ── Session became busy — clear streaming state ──────────
+        if (ev.type === "session.status") {
+          const statusType = props.status?.type;
+          if (statusType === "busy") {
+            streamingMsgIdsRef.current.clear();
+            skipMsgIdsRef.current.clear();
+            lastStreamingMsgRef.current = null;
+            setIsSending(true);
+            stopPolling();
+          }
+        }
+
+        // ── Session complete ─────────────────────────────────────
         if (ev.type === "session.idle" || ev.type === "session.error") {
           stopPolling();
           const newStatus = ev.type === "session.idle" ? "idle" : "error";
-          const content =
-            (ev as any).content ??
-            (ev as any).message?.content ??
-            (ev as any).message?.text ??
-            null;
+          streamingMsgIdsRef.current.clear();
+          skipMsgIdsRef.current.clear();
+          lastStreamingMsgRef.current = null;
+          setIsSending(false);
+          setSelectedSessionStatus(newStatus);
           setSessions((prev) =>
             prev.map((s) =>
               (s.sessionId || s.session_id || s.id) === selectedSessionId
-                ? { ...s, status: newStatus, lastMessage: content }
+                ? { ...s, status: newStatus }
                 : s,
             ),
           );
-          setSelectedSessionStatus(newStatus);
-          setSelectedSessionLastMessage(content);
-          setIsSending(false);
-          // Reload messages and sessions to reflect completion
+          // Reload canonical messages (replaces streaming ones) + sessions
           loadMessages(selectedSessionId).finally(() => {
             loadSessions();
           });
+          return;
         }
+
+        // ── Store other events for activity display ──────────────
+        setEvents((prev) => [...prev, ev]);
       } catch (err) {
         // Ignore parse errors
       }
@@ -361,59 +389,6 @@ export function OpenCodePage({
     }
   };
 
-  const connectEventStream = (sessionId: string) => {
-    eventSourceRef.current?.close();
-    setEvents([]);
-    const url = `${window.location.origin}/api/opencode/sessions/${sessionId}/events`;
-    const es = new EventSource(url);
-    eventSourceRef.current = es;
-
-    es.onmessage = (e) => {
-      try {
-        const ev = JSON.parse(e.data) as SessionEvent;
-        setEvents((prev) => [...prev, ev]);
-
-        // Update session status in-memory from SSE event immediately
-        if (ev.type === "session.idle" || ev.type === "session.error") {
-          const newStatus = ev.type === "session.idle" ? "idle" : "error";
-          const content =
-            (ev as any).content ??
-            (ev as any).message?.content ??
-            (ev as any).message?.text ??
-            selectedSessionLastMessage;
-          setSessions((prev) =>
-            prev.map((s) =>
-              (s.sessionId || s.session_id || s.id) === sessionId
-                ? { ...s, status: newStatus, lastMessage: content }
-                : s,
-            ),
-          );
-          setSelectedSessionStatus(newStatus);
-          setSelectedSessionLastMessage(content);
-          setIsSending(false); // clear immediately
-          setEvents([]);
-          es.close();
-          eventSourceRef.current = null;
-          loadMessages(sessionId).finally(() => {
-            loadSessions();
-          });
-        }
-      } catch (err) {
-        console.error("Failed to parse event:", err);
-      }
-    };
-
-    es.onerror = () => {
-      es.close();
-      eventSourceRef.current = null;
-      loadMessages(sessionId).finally(() => {
-        setIsSending(false);
-        setEvents([]);
-        loadSessions();
-      });
-    };
-  };
-
   const sendMessage = async () => {
     if (!input.trim() || !selectedSessionId) return;
 
@@ -421,6 +396,10 @@ export function OpenCodePage({
     setMessages((prev) => [...prev, userMessage]);
     setInput("");
     setIsSending(true);
+    streamingMsgIdsRef.current.clear();
+    skipMsgIdsRef.current.clear();
+    lastStreamingMsgRef.current = null;
+    setEvents([]);
 
     // Update status immediately in UI
     setSelectedSessionStatus("busy");
@@ -740,35 +719,51 @@ export function OpenCodePage({
                 </div>
               ) : (
                 <>
-                  {messages.map((msg, i) => (
-                    <div
-                      key={i}
-                      className={`flex ${
-                        msg.role === "user" ? "justify-end" : "justify-start"
-                      }`}
-                    >
+                  {messages.map((msg, i) => {
+                    const isStreaming = (msg as any)._streaming;
+                    const isLast = i === messages.length - 1;
+                    return (
                       <div
-                        className={`max-w-[85%] sm:max-w-[75%] rounded-xl px-4 py-3 whitespace-pre-wrap break-words ${
-                          msg.role === "user"
-                            ? "bg-[var(--accent)] text-white"
-                            : "bg-[var(--input-bg)] border border-[var(--border)] text-[var(--foreground)]"
+                        key={i}
+                        className={`flex ${
+                          msg.role === "user" ? "justify-end" : "justify-start"
                         }`}
                       >
-                        {msg.content}
-                      </div>
-                    </div>
-                  ))}
-                  {(isSending || events.length > 0) && (
-                    <div className="flex justify-start">
-                      <div className="max-w-[85%] sm:max-w-[75%] rounded-xl px-4 py-3 bg-[var(--input-bg)] border border-[var(--border)] text-[var(--foreground)]">
-                        <div className="flex items-center gap-2 mb-2 text-[var(--muted)]">
-                          <Activity className="h-4 w-4 shrink-0" />
-                          <span className="text-xs font-medium">
-                            {isSending ? "Session in progress..." : "Activity"}
-                          </span>
+                        <div
+                          className={`max-w-[85%] sm:max-w-[75%] rounded-xl px-4 py-3 whitespace-pre-wrap break-words ${
+                            msg.role === "user"
+                              ? "bg-[var(--accent)] text-white"
+                              : "bg-[var(--input-bg)] border border-[var(--border)] text-[var(--foreground)]"
+                          }`}
+                        >
+                          {msg.content}
+                          {isStreaming && isSending && isLast && (
+                            <span className="inline-block w-2 h-4 ml-0.5 bg-[var(--accent)] animate-pulse align-middle" />
+                          )}
                         </div>
-                        <div className="space-y-1 max-h-48 overflow-y-auto text-xs">
-                          {events.map((ev, i) => {
+                      </div>
+                    );
+                  })}
+                  {isSending &&
+                    lastStreamingMsgRef.current === null &&
+                    messages.length > 0 && (
+                      <div className="flex justify-start">
+                        <div className="max-w-[85%] sm:max-w-[75%] rounded-xl px-4 py-3 bg-[var(--input-bg)] border border-[var(--border)] text-[var(--foreground)]">
+                          <div className="flex items-center gap-2 text-[var(--muted)]">
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                            <span className="text-xs">Thinking...</span>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  {isSending && events.length > 0 && (
+                    <div className="flex justify-start">
+                      <details className="max-w-[85%] sm:max-w-[75%] text-xs text-[var(--muted)] cursor-pointer">
+                        <summary className="hover:text-[var(--foreground)] transition-colors">
+                          Activity ({events.length})
+                        </summary>
+                        <div className="mt-2 space-y-1 max-h-40 overflow-y-auto">
+                          {events.slice(-20).map((ev, i) => {
                             const e = ev as {
                               input?: { tool?: string };
                               properties?: { status?: string };
@@ -789,22 +784,14 @@ export function OpenCodePage({
                               e.properties?.status
                             )
                               label = String(e.properties.status);
-                            else if (ev.type === "message.part.updated")
-                              label = "Updating message...";
                             return (
-                              <div
-                                key={i}
-                                className="py-1 border-b border-[var(--border)]/50 last:border-0"
-                              >
-                                <span className="text-[var(--muted)]">
-                                  [{ev.type}]
-                                </span>{" "}
+                              <div key={i} className="py-0.5">
                                 {label}
                               </div>
                             );
                           })}
                         </div>
-                      </div>
+                      </details>
                     </div>
                   )}
                 </>
