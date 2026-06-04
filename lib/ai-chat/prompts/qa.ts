@@ -15,6 +15,9 @@ IMPORTANT: ONLY consider logs that occurred AFTER the most recent successful sta
 IF THE LOGS LOOK HEALTHY AND NORMAL:
 Do NOT create any opencode sessions. Simply reply: "Service is running successfully and logs look healthy. No further action needed."
 
+IMPORTANT — NORMAL SYSTEM BEHAVIOR:
+The log pattern "Force restarting service (PID: X)" immediately followed by "Process killed by signal SIGTERM" (or SIGKILL) is NORMAL system behavior during a redeploy or restart. Do NOT treat this as a crash or looping problem. If the service becomes healthy again afterwards, everything is working as intended. Only flag issues when the service fails to recover and reach a healthy state after the restart.
+
 IF THE LOGS INDICATE A SEVERE ISSUE (e.g. constant crashes, unhandled rejections):
 1. You MUST use the \`manage_opencode_sessions\` tool with action "create" to create a new session.
 2. You MUST attach the affected service to the session using the same tool with action "set_service".
