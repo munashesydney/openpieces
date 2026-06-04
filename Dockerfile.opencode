@@ -5,4 +5,6 @@
 # =============================================================================
 FROM ghcr.io/anomalyco/opencode:latest
 
-RUN apk add --no-cache nodejs npm python3 py3-pip
+RUN apk add --no-cache nodejs npm python3 py3-pip curl unzip && \
+    curl -fsSL https://deno.land/install.sh | DENO_INSTALL=/usr/local sh && \
+    apk del curl unzip
