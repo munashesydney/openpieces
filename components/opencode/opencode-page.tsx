@@ -4,6 +4,11 @@ import { useState, useEffect, useRef } from "react";
 import { Loader2, Send, Plus, Terminal, FolderOpen, X } from "lucide-react";
 import { Dropdown } from "@/components/basic/input/dropdown";
 import { OpenCodePageSkeleton } from "@/components/opencode/opencode-page-skeleton";
+import {
+  OpenCodeMessageCard,
+  type ChatMessage,
+  type ToolChip,
+} from "@/components/opencode/opencode-message-card";
 import type { Service } from "@/lib/db/schema";
 import { serviceDirectoryLabel } from "@/lib/utils/service-directory-label";
 
@@ -24,7 +29,7 @@ export function OpenCodePage({
   const [selectedSessionId, setSelectedSessionId] = useState<string | null>(
     null,
   );
-  const [messages, setMessages] = useState<any[]>([]);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
   /** Initial / refresh of session list (page 1) */
   const [isSessionsLoading, setIsSessionsLoading] = useState(true);
@@ -32,7 +37,6 @@ export function OpenCodePage({
   const [isMessagesLoading, setIsMessagesLoading] = useState(false);
   const [isCreatingSession, setIsCreatingSession] = useState(false);
   const [isSending, setIsSending] = useState(false);
-  const [events, setEvents] = useState<SessionEvent[]>([]);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [selectedServiceId, setSelectedServiceId] = useState("");
   const [selectedSessionDirectory, setSelectedSessionDirectory] = useState<
@@ -82,13 +86,11 @@ export function OpenCodePage({
       );
       setSelectedSessionStatus(session?.status ?? null);
       setSelectedSessionLastMessage(session?.lastMessage ?? null);
-      setEvents([]);
     } else {
       setMessages([]);
       setSelectedSessionDirectory(null);
       setSelectedSessionStatus(null);
       setSelectedSessionLastMessage(null);
-      setEvents([]);
     }
     // Note: intentionally NOT depending on `sessions` — we don't want to
     // close/recreate SSE whenever sessions list refreshes after a send.
@@ -96,7 +98,7 @@ export function OpenCodePage({
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages, events]);
+  }, [messages]);
 
   useEffect(() => {
     return () => {
@@ -162,7 +164,6 @@ export function OpenCodePage({
         if (ev.type === "message.part.delta") {
           if (props.field === "text" && typeof props.delta === "string") {
             const msgId = (props.messageID as string) || "unknown";
-            // Skip the model's echo of the context block on first message
             if (skipMsgIdsRef.current.has(msgId)) return;
             if (
               !streamingMsgIdsRef.current.has(msgId) &&
@@ -174,7 +175,7 @@ export function OpenCodePage({
             streamingMsgIdsRef.current.add(msgId);
             lastStreamingMsgRef.current = msgId;
             setMessages((prev) => {
-              const idx = prev.findIndex((m) => (m as any)._msgId === msgId);
+              const idx = prev.findIndex((m) => m._msgId === msgId);
               if (idx !== -1) {
                 return prev.map((m, i) =>
                   i === idx ? { ...m, content: m.content + props.delta } : m,
@@ -183,25 +184,28 @@ export function OpenCodePage({
               return [
                 ...prev,
                 {
-                  role: "assistant",
+                  role: "assistant" as const,
                   content: props.delta,
+                  _tools: [],
+                  _reasoning: null,
                   _msgId: msgId,
                   _streaming: true,
-                },
+                } satisfies ChatMessage,
               ];
             });
-            stopPolling(); // SSE is alive — kill any polling fallback
+            stopPolling();
           }
           return;
         }
 
-        // ── Streaming: complete part — replace deltas with full text ─
+        // ── Streaming: part updated — text, tool, reasoning, steps ─
         if (ev.type === "message.part.updated") {
           const part = props.part;
+          const msgId =
+            (part?.messageID as string) || (props.sessionID as string) || "";
+          if (!msgId) return;
+
           if (part?.type === "text" && typeof part.text === "string") {
-            const msgId =
-              (part.messageID as string) || (props.sessionID as string) || "";
-            // Skip the model's echo of the context block
             if (skipMsgIdsRef.current.has(msgId)) return;
             if (
               !streamingMsgIdsRef.current.has(msgId) &&
@@ -213,7 +217,7 @@ export function OpenCodePage({
             streamingMsgIdsRef.current.add(msgId);
             lastStreamingMsgRef.current = msgId;
             setMessages((prev) => {
-              const idx = prev.findIndex((m) => (m as any)._msgId === msgId);
+              const idx = prev.findIndex((m) => m._msgId === msgId);
               if (idx !== -1) {
                 return prev.map((m, i) =>
                   i === idx ? { ...m, content: part.text } : m,
@@ -222,14 +226,98 @@ export function OpenCodePage({
               return [
                 ...prev,
                 {
-                  role: "assistant",
+                  role: "assistant" as const,
                   content: part.text,
+                  _tools: [],
+                  _reasoning: null,
                   _msgId: msgId,
                   _streaming: true,
-                },
+                } satisfies ChatMessage,
               ];
             });
             stopPolling();
+          } else if (part?.type === "tool") {
+            const state = part.state || {};
+            const chip: ToolChip = {
+              name: part.tool || "tool",
+              title: state.title || undefined,
+              status: state.status || "unknown",
+            };
+            streamingMsgIdsRef.current.add(msgId);
+            setMessages((prev) => {
+              const idx = prev.findIndex((m) => m._msgId === msgId);
+              if (idx !== -1) {
+                return prev.map((m, i) =>
+                  i === idx ? { ...m, _tools: [...m._tools, chip] } : m,
+                );
+              }
+              return [
+                ...prev,
+                {
+                  role: "assistant" as const,
+                  content: "",
+                  _tools: [chip],
+                  _reasoning: null,
+                  _msgId: msgId,
+                  _streaming: true,
+                } satisfies ChatMessage,
+              ];
+            });
+          } else if (part?.type === "reasoning") {
+            streamingMsgIdsRef.current.add(msgId);
+            setMessages((prev) => {
+              const idx = prev.findIndex((m) => m._msgId === msgId);
+              if (idx !== -1) {
+                return prev.map((m, i) =>
+                  i === idx ? { ...m, _reasoning: part.text || null } : m,
+                );
+              }
+              return [
+                ...prev,
+                {
+                  role: "assistant" as const,
+                  content: "",
+                  _tools: [],
+                  _reasoning: part.text || null,
+                  _msgId: msgId,
+                  _streaming: true,
+                } satisfies ChatMessage,
+              ];
+            });
+          } else if (
+            part?.type === "step-start" ||
+            part?.type === "step-finish"
+          ) {
+            const label =
+              part.type === "step-start" ? "Step Start" : "Step Finish";
+            streamingMsgIdsRef.current.add(msgId);
+            setMessages((prev) => {
+              const idx = prev.findIndex((m) => m._msgId === msgId);
+              if (idx !== -1) {
+                return prev.map((m, i) =>
+                  i === idx
+                    ? {
+                        ...m,
+                        _tools: [
+                          ...m._tools,
+                          { name: label, status: "completed" },
+                        ],
+                      }
+                    : m,
+                );
+              }
+              return [
+                ...prev,
+                {
+                  role: "assistant" as const,
+                  content: "",
+                  _tools: [{ name: label, status: "completed" }],
+                  _reasoning: null,
+                  _msgId: msgId,
+                  _streaming: true,
+                } satisfies ChatMessage,
+              ];
+            });
           }
           return;
         }
@@ -246,7 +334,7 @@ export function OpenCodePage({
           }
         }
 
-        // ── Session complete ─────────────────────────────────────
+        // ── Session complete — keep streaming messages, strip flags ─
         if (ev.type === "session.idle" || ev.type === "session.error") {
           stopPolling();
           const newStatus = ev.type === "session.idle" ? "idle" : "error";
@@ -262,15 +350,15 @@ export function OpenCodePage({
                 : s,
             ),
           );
-          // Reload canonical messages (replaces streaming ones) + sessions
-          loadMessages(selectedSessionId).finally(() => {
-            loadSessions();
-          });
+          setMessages((prev) =>
+            prev.map((m) => {
+              const { _streaming, ...rest } = m;
+              return rest as ChatMessage;
+            }),
+          );
+          loadSessions();
           return;
         }
-
-        // ── Store other events for activity display ──────────────
-        setEvents((prev) => [...prev, ev]);
       } catch (err) {
         // Ignore parse errors
       }
@@ -362,26 +450,36 @@ export function OpenCodePage({
   };
 
   const loadMessages = async (id: string) => {
-    // Discard response if we're no longer on this session
-    if (id !== selectedSessionId) {
-      console.log(
-        "[loadMessages] Discarding messages for",
-        id,
-        "(current:",
-        selectedSessionId,
-        ")",
-      );
-      return;
-    }
+    if (id !== selectedSessionId) return;
     try {
       setIsMessagesLoading(true);
       const res = await fetch(`/api/opencode/sessions/${id}/messages`);
       if (!res.ok) return;
-      // Double-check after fetch
       if (id !== selectedSessionId) return;
       const data = await res.json();
-      const messagesList = Array.isArray(data) ? data : data.messages || [];
-      setMessages(messagesList);
+      const rawList = Array.isArray(data) ? data : data.messages || [];
+      const transformed: ChatMessage[] = rawList.map((msg: any) => {
+        const parts: any[] = msg.parts || [];
+        const textParts = parts.filter((p: any) => p.type === "text");
+        const toolParts = parts.filter((p: any) => p.type === "tool");
+        const reasoningParts = parts.filter((p: any) => p.type === "reasoning");
+        return {
+          role: msg.role === "user" ? "user" : "assistant",
+          content: textParts
+            .map((p: any) => p.display || p.text || "")
+            .join("\n"),
+          _tools: toolParts.map((p: any) => ({
+            name: p.display?.match(/\[Tool: (\w+)\]/)?.[1] || "tool",
+            title: p.display?.replace(/\[Tool: \w+\]\s*/, "") || undefined,
+            status: p.detail ? "completed" : "running",
+          })),
+          _reasoning:
+            reasoningParts
+              .map((p: any) => p.display || p.text || "")
+              .join("\n") || null,
+        };
+      });
+      setMessages(transformed);
     } catch (e) {
       console.error(e);
     } finally {
@@ -392,14 +490,18 @@ export function OpenCodePage({
   const sendMessage = async () => {
     if (!input.trim() || !selectedSessionId) return;
 
-    const userMessage = { role: "user", content: input };
+    const userMessage: ChatMessage = {
+      role: "user",
+      content: input,
+      _tools: [],
+      _reasoning: null,
+    };
     setMessages((prev) => [...prev, userMessage]);
     setInput("");
     setIsSending(true);
     streamingMsgIdsRef.current.clear();
     skipMsgIdsRef.current.clear();
     lastStreamingMsgRef.current = null;
-    setEvents([]);
 
     // Update status immediately in UI
     setSelectedSessionStatus("busy");
@@ -719,31 +821,14 @@ export function OpenCodePage({
                 </div>
               ) : (
                 <>
-                  {messages.map((msg, i) => {
-                    const isStreaming = (msg as any)._streaming;
-                    const isLast = i === messages.length - 1;
-                    return (
-                      <div
-                        key={i}
-                        className={`flex ${
-                          msg.role === "user" ? "justify-end" : "justify-start"
-                        }`}
-                      >
-                        <div
-                          className={`max-w-[85%] sm:max-w-[75%] rounded-xl px-4 py-3 whitespace-pre-wrap break-words ${
-                            msg.role === "user"
-                              ? "bg-[var(--accent)] text-white"
-                              : "bg-[var(--input-bg)] border border-[var(--border)] text-[var(--foreground)]"
-                          }`}
-                        >
-                          {msg.content}
-                          {isStreaming && isSending && isLast && (
-                            <span className="inline-block w-2 h-4 ml-0.5 bg-[var(--accent)] animate-pulse align-middle" />
-                          )}
-                        </div>
-                      </div>
-                    );
-                  })}
+                  {messages.map((msg, i) => (
+                    <OpenCodeMessageCard
+                      key={i}
+                      message={msg}
+                      isSending={isSending}
+                      isLast={i === messages.length - 1}
+                    />
+                  ))}
                   {isSending &&
                     lastStreamingMsgRef.current === null &&
                     messages.length > 0 && (
@@ -756,44 +841,6 @@ export function OpenCodePage({
                         </div>
                       </div>
                     )}
-                  {isSending && events.length > 0 && (
-                    <div className="flex justify-start">
-                      <details className="max-w-[85%] sm:max-w-[75%] text-xs text-[var(--muted)] cursor-pointer">
-                        <summary className="hover:text-[var(--foreground)] transition-colors">
-                          Activity ({events.length})
-                        </summary>
-                        <div className="mt-2 space-y-1 max-h-40 overflow-y-auto">
-                          {events.slice(-20).map((ev, i) => {
-                            const e = ev as {
-                              input?: { tool?: string };
-                              properties?: { status?: string };
-                            };
-                            let label = ev.type;
-                            if (
-                              ev.type === "tool.execute.before" &&
-                              e.input?.tool
-                            )
-                              label = `Running ${e.input.tool}...`;
-                            else if (
-                              ev.type === "tool.execute.after" &&
-                              e.input?.tool
-                            )
-                              label = `Finished ${e.input.tool}`;
-                            else if (
-                              ev.type === "session.status" &&
-                              e.properties?.status
-                            )
-                              label = String(e.properties.status);
-                            return (
-                              <div key={i} className="py-0.5">
-                                {label}
-                              </div>
-                            );
-                          })}
-                        </div>
-                      </details>
-                    </div>
-                  )}
                 </>
               )}
               <div ref={messagesEndRef} />
