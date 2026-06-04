@@ -507,7 +507,7 @@ async function executeServiceSpawnJob(job: ServiceSpawnJob) {
   proc.stderr?.on("data", (data: Buffer) => {
     const message = data.toString().trim();
     if (message) {
-      void appendServiceLog(directory, "error", message);
+      void appendServiceLog(directory, "info", message);
     }
   });
   proc.on("error", (err) => {
