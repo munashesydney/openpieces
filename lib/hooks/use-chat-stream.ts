@@ -105,16 +105,6 @@ export function useChatStream(chatId: string | null): UseChatStreamResult {
     return null;
   }, []);
 
-  const refetch = useCallback(async () => {
-    if (!chatIdRef.current) return;
-    setIsLoading(true);
-    try {
-      await load(chatIdRef.current);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [load]);
-
   // Start polling — reads latest chatId from the ref
   const startPolling = useCallback(() => {
     clearPolling();
@@ -148,6 +138,17 @@ export function useChatStream(chatId: string | null): UseChatStreamResult {
       }
     }, 1500);
   }, [clearPolling]);
+
+  const refetch = useCallback(async () => {
+    if (!chatIdRef.current) return;
+    setIsLoading(true);
+    try {
+      const s = await load(chatIdRef.current);
+      if (isRunning(s)) startPolling();
+    } finally {
+      setIsLoading(false);
+    }
+  }, [load, startPolling]);
 
   // Main lifecycle: reset + fetch on chatId change
   useEffect(() => {

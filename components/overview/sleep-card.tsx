@@ -78,7 +78,7 @@ export function SleepCard({
           {reason || (isPending ? "Sleeping..." : "Sleep complete")}
         </div>
         <span className="text-xs text-[var(--muted)] font-mono tabular-nums">
-          {Math.max(0, Math.ceil(remaining))}s / {seconds}s
+          {Math.max(0, Math.ceil(remaining))}s
         </span>
       </div>
       <div className="h-1.5 w-full rounded-full bg-[var(--border)] overflow-hidden">
