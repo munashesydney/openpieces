@@ -4,19 +4,10 @@ import { useState, useEffect, useRef } from "react";
 import { Loader2, Send, Plus, Terminal, FolderOpen, X } from "lucide-react";
 import { Dropdown } from "@/components/basic/input/dropdown";
 import { OpenCodePageSkeleton } from "@/components/opencode/opencode-page-skeleton";
-import {
-  OpenCodeMessageCard,
-  type ChatMessage,
-  type ToolChip,
-} from "@/components/opencode/opencode-message-card";
+import { OpenCodeMessageCard } from "@/components/opencode/opencode-message-card";
+import { useOpenCodeStream } from "@/lib/hooks/use-opencode-stream";
 import type { Service } from "@/lib/db/schema";
 import { serviceDirectoryLabel } from "@/lib/utils/service-directory-label";
-
-type SessionEvent = {
-  type: string;
-  sessionId?: string;
-  [key: string]: unknown;
-};
 
 export function OpenCodePage({
   workspaceId,
@@ -29,23 +20,13 @@ export function OpenCodePage({
   const [selectedSessionId, setSelectedSessionId] = useState<string | null>(
     null,
   );
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
-  /** Initial / refresh of session list (page 1) */
   const [isSessionsLoading, setIsSessionsLoading] = useState(true);
-  /** Loading messages for the selected session */
-  const [isMessagesLoading, setIsMessagesLoading] = useState(false);
   const [isCreatingSession, setIsCreatingSession] = useState(false);
   const [isSending, setIsSending] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [selectedServiceId, setSelectedServiceId] = useState("");
   const [selectedSessionDirectory, setSelectedSessionDirectory] = useState<
-    string | null
-  >(null);
-  const [selectedSessionStatus, setSelectedSessionStatus] = useState<
-    string | null
-  >(null);
-  const [selectedSessionLastMessage, setSelectedSessionLastMessage] = useState<
     string | null
   >(null);
   const [sessionsPage, setSessionsPage] = useState(1);
@@ -54,9 +35,14 @@ export function OpenCodePage({
   const [sendError, setSendError] = useState<string | null>(null);
   const [isAborting, setIsAborting] = useState(false);
   const [showSessions, setShowSessions] = useState(true);
-  const streamingMsgIdsRef = useRef<Set<string>>(new Set());
-  const lastStreamingMsgRef = useRef<string | null>(null);
-  const skipMsgIdsRef = useRef<Set<string>>(new Set());
+
+  const {
+    messages,
+    isStreaming,
+    sessionStatus,
+    isLoading: isMessagesLoading,
+    addUserMessage,
+  } = useOpenCodeStream(selectedSessionId);
 
   const showSessionsPanel = showSessions || !selectedSessionId;
 
@@ -67,7 +53,6 @@ export function OpenCodePage({
       s.directory.trim() !== "",
   );
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const sessionSseRef = useRef<EventSource | null>(null);
 
   useEffect(() => {
     loadSessions();
@@ -75,290 +60,18 @@ export function OpenCodePage({
 
   useEffect(() => {
     if (selectedSessionId) {
-      loadMessages(selectedSessionId);
       fetch(`/api/opencode/sessions/${selectedSessionId}/directory`)
         .then((res) => (res.ok ? res.json() : null))
         .then((data) => setSelectedSessionDirectory(data?.directory ?? null))
         .catch(() => setSelectedSessionDirectory(null));
-      // Grab status + lastMessage from the sessions list
-      const session = sessions.find(
-        (s) => (s.sessionId || s.session_id || s.id) === selectedSessionId,
-      );
-      setSelectedSessionStatus(session?.status ?? null);
-      setSelectedSessionLastMessage(session?.lastMessage ?? null);
     } else {
-      setMessages([]);
       setSelectedSessionDirectory(null);
-      setSelectedSessionStatus(null);
-      setSelectedSessionLastMessage(null);
     }
-    // Note: intentionally NOT depending on `sessions` — we don't want to
-    // close/recreate SSE whenever sessions list refreshes after a send.
   }, [selectedSessionId]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
-
-  useEffect(() => {
-    return () => {
-      sessionSseRef.current?.close();
-      sessionSseRef.current = null;
-    };
-  }, []);
-
-  // Persistent SSE for the selected session — SSE fallback polling on error.
-  // by different processes. We use polling as a fallback when SSE fails.
-  useEffect(() => {
-    if (!selectedSessionId) {
-      sessionSseRef.current?.close();
-      sessionSseRef.current = null;
-      return;
-    }
-
-    sessionSseRef.current?.close();
-    const es = new EventSource(
-      `${window.location.origin}/api/opencode/sessions/${selectedSessionId}/events`,
-    );
-    sessionSseRef.current = es;
-
-    let pollInterval: ReturnType<typeof setInterval> | null = null;
-
-    const stopPolling = () => {
-      if (pollInterval) {
-        clearInterval(pollInterval);
-        pollInterval = null;
-      }
-    };
-
-    const startPolling = () => {
-      if (pollInterval) return; // Already polling
-      console.log(
-        "[SSE] SSE failed, starting polling fallback for",
-        selectedSessionId,
-      );
-      stopPolling();
-      pollInterval = setInterval(async () => {
-        if (!selectedSessionId) {
-          stopPolling();
-          return;
-        }
-        // Check if session is still busy via selectedSessionStatus (DB-driven)
-        if (selectedSessionStatus !== "busy") {
-          stopPolling();
-          await loadMessages(selectedSessionId);
-          await loadSessions();
-          return;
-        }
-        // Poll for new messages while waiting
-        await loadMessages(selectedSessionId);
-      }, 2000);
-    };
-
-    es.onmessage = (e) => {
-      try {
-        const ev = JSON.parse(e.data) as SessionEvent;
-        const props = (ev as any).properties || {};
-
-        // ── Streaming: delta events — build messages progressively ─
-        if (ev.type === "message.part.delta") {
-          if (props.field === "text" && typeof props.delta === "string") {
-            const msgId = (props.messageID as string) || "unknown";
-            if (skipMsgIdsRef.current.has(msgId)) return;
-            if (
-              !streamingMsgIdsRef.current.has(msgId) &&
-              props.delta.startsWith("Before doing anything else")
-            ) {
-              skipMsgIdsRef.current.add(msgId);
-              return;
-            }
-            streamingMsgIdsRef.current.add(msgId);
-            lastStreamingMsgRef.current = msgId;
-            setMessages((prev) => {
-              const idx = prev.findIndex((m) => m._msgId === msgId);
-              if (idx !== -1) {
-                return prev.map((m, i) =>
-                  i === idx ? { ...m, content: m.content + props.delta } : m,
-                );
-              }
-              return [
-                ...prev,
-                {
-                  role: "assistant" as const,
-                  content: props.delta,
-                  _tools: [],
-                  _reasoning: null,
-                  _msgId: msgId,
-                  _streaming: true,
-                } satisfies ChatMessage,
-              ];
-            });
-            stopPolling();
-          }
-          return;
-        }
-
-        // ── Streaming: part updated — text, tool, reasoning, steps ─
-        if (ev.type === "message.part.updated") {
-          const part = props.part;
-          const msgId =
-            (part?.messageID as string) || (props.sessionID as string) || "";
-          if (!msgId) return;
-
-          if (part?.type === "text" && typeof part.text === "string") {
-            if (skipMsgIdsRef.current.has(msgId)) return;
-            if (
-              !streamingMsgIdsRef.current.has(msgId) &&
-              part.text.startsWith("Before doing anything else")
-            ) {
-              skipMsgIdsRef.current.add(msgId);
-              return;
-            }
-            streamingMsgIdsRef.current.add(msgId);
-            lastStreamingMsgRef.current = msgId;
-            setMessages((prev) => {
-              const idx = prev.findIndex((m) => m._msgId === msgId);
-              if (idx !== -1) {
-                return prev.map((m, i) =>
-                  i === idx ? { ...m, content: part.text } : m,
-                );
-              }
-              return [
-                ...prev,
-                {
-                  role: "assistant" as const,
-                  content: part.text,
-                  _tools: [],
-                  _reasoning: null,
-                  _msgId: msgId,
-                  _streaming: true,
-                } satisfies ChatMessage,
-              ];
-            });
-            stopPolling();
-          } else if (part?.type === "tool") {
-            const state = part.state || {};
-            const chip: ToolChip = {
-              name: part.tool || "tool",
-              title: state.title || undefined,
-              status: state.status || "unknown",
-            };
-            streamingMsgIdsRef.current.add(msgId);
-            setMessages((prev) => {
-              const idx = prev.findIndex((m) => m._msgId === msgId);
-              const addOrReplace = (tools: ToolChip[], c: ToolChip) => {
-                const existing = tools.findIndex((t) => t.name === c.name);
-                if (existing !== -1) {
-                  const next = [...tools];
-                  next[existing] = c;
-                  return next;
-                }
-                return [...tools, c];
-              };
-              if (idx !== -1) {
-                return prev.map((m, i) =>
-                  i === idx
-                    ? { ...m, _tools: addOrReplace(m._tools, chip) }
-                    : m,
-                );
-              }
-              return [
-                ...prev,
-                {
-                  role: "assistant" as const,
-                  content: "",
-                  _tools: [chip],
-                  _reasoning: null,
-                  _msgId: msgId,
-                  _streaming: true,
-                } satisfies ChatMessage,
-              ];
-            });
-          } else if (part?.type === "reasoning") {
-            streamingMsgIdsRef.current.add(msgId);
-            setMessages((prev) => {
-              const idx = prev.findIndex((m) => m._msgId === msgId);
-              if (idx !== -1) {
-                return prev.map((m, i) =>
-                  i === idx ? { ...m, _reasoning: part.text || null } : m,
-                );
-              }
-              return [
-                ...prev,
-                {
-                  role: "assistant" as const,
-                  content: "",
-                  _tools: [],
-                  _reasoning: part.text || null,
-                  _msgId: msgId,
-                  _streaming: true,
-                } satisfies ChatMessage,
-              ];
-            });
-          }
-          return;
-        }
-
-        // ── Session became busy — clear streaming state ──────────
-        if (ev.type === "session.status") {
-          const statusType = props.status?.type;
-          if (statusType === "busy") {
-            streamingMsgIdsRef.current.clear();
-            skipMsgIdsRef.current.clear();
-            lastStreamingMsgRef.current = null;
-            setIsSending(true);
-            stopPolling();
-          }
-        }
-
-        // ── Session complete — keep streaming messages, strip flags ─
-        if (ev.type === "session.idle" || ev.type === "session.error") {
-          stopPolling();
-          const newStatus = ev.type === "session.idle" ? "idle" : "error";
-          streamingMsgIdsRef.current.clear();
-          skipMsgIdsRef.current.clear();
-          lastStreamingMsgRef.current = null;
-          setIsSending(false);
-          setSelectedSessionStatus(newStatus);
-          setSessions((prev) =>
-            prev.map((s) =>
-              (s.sessionId || s.session_id || s.id) === selectedSessionId
-                ? { ...s, status: newStatus }
-                : s,
-            ),
-          );
-          setMessages((prev) =>
-            prev.map((m) => {
-              const { _streaming, ...rest } = m;
-              return rest as ChatMessage;
-            }),
-          );
-          loadSessions();
-          return;
-        }
-      } catch (err) {
-        // Ignore parse errors
-      }
-    };
-
-    es.onerror = () => {
-      es.close();
-      sessionSseRef.current = null;
-      // Don't poll immediately - SSE might recover
-      // Only start polling if the session is still "busy" (DB is source of truth)
-      setTimeout(() => {
-        if (selectedSessionStatus === "busy" && selectedSessionId) {
-          startPolling();
-        }
-      }, 5000);
-    };
-
-    return () => {
-      es.close();
-      sessionSseRef.current = null;
-      stopPolling();
-    };
-  }, [selectedSessionId, selectedSessionStatus]);
 
   const loadSessions = async (page = 1, append = false) => {
     try {
@@ -426,62 +139,14 @@ export function OpenCodePage({
     }
   };
 
-  const loadMessages = async (id: string) => {
-    if (id !== selectedSessionId) return;
-    try {
-      setIsMessagesLoading(true);
-      const res = await fetch(`/api/opencode/sessions/${id}/messages`);
-      if (!res.ok) return;
-      if (id !== selectedSessionId) return;
-      const data = await res.json();
-      const rawList = Array.isArray(data) ? data : data.messages || [];
-      const transformed: ChatMessage[] = rawList.map((msg: any) => {
-        const parts: any[] = msg.parts || [];
-        const textParts = parts.filter((p: any) => p.type === "text");
-        const toolParts = parts.filter((p: any) => p.type === "tool");
-        const reasoningParts = parts.filter((p: any) => p.type === "reasoning");
-        return {
-          role: msg.role === "user" ? "user" : "assistant",
-          content: textParts
-            .map((p: any) => p.display || p.text || "")
-            .join("\n"),
-          _tools: toolParts.map((p: any) => ({
-            name: p.display?.match(/\[Tool: (\w+)\]/)?.[1] || "tool",
-            title: p.display?.replace(/\[Tool: \w+\]\s*/, "") || undefined,
-            status: p.detail ? "completed" : "running",
-          })),
-          _reasoning:
-            reasoningParts
-              .map((p: any) => p.display || p.text || "")
-              .join("\n") || null,
-        };
-      });
-      setMessages(transformed);
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setIsMessagesLoading(false);
-    }
-  };
-
   const sendMessage = async () => {
     if (!input.trim() || !selectedSessionId) return;
 
-    const userMessage: ChatMessage = {
-      role: "user",
-      content: input,
-      _tools: [],
-      _reasoning: null,
-    };
-    setMessages((prev) => [...prev, userMessage]);
+    addUserMessage(input);
     setInput("");
     setIsSending(true);
-    streamingMsgIdsRef.current.clear();
-    skipMsgIdsRef.current.clear();
-    lastStreamingMsgRef.current = null;
+    setSendError(null);
 
-    // Update status immediately in UI
-    setSelectedSessionStatus("busy");
     setSessions((prev) =>
       prev.map((s) =>
         (s.sessionId || s.session_id || s.id) === selectedSessionId
@@ -496,23 +161,18 @@ export function OpenCodePage({
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ content: userMessage.content }),
+          body: JSON.stringify({ content: input }),
         },
       );
 
       if (res.status === 202) {
-        // SSE is already connected via persistent useEffect - just wait for completion
-        // No need to call connectEventStream here
         setSendError(null);
       } else if (res.ok) {
-        await loadMessages(selectedSessionId);
         setIsSending(false);
       } else {
         const errData = await res.json().catch(() => ({}));
-        console.error("Failed to send message", errData);
         setSendError(errData.error || "Failed to send message");
         setIsSending(false);
-        setSelectedSessionStatus("idle");
         setSessions((prev) =>
           prev.map((s) =>
             (s.sessionId || s.session_id || s.id) === selectedSessionId
@@ -525,7 +185,6 @@ export function OpenCodePage({
       console.error(e);
       setSendError("Failed to send message. Please try again.");
       setIsSending(false);
-      setSelectedSessionStatus("idle");
       setSessions((prev) =>
         prev.map((s) =>
           (s.sessionId || s.session_id || s.id) === selectedSessionId
@@ -549,7 +208,6 @@ export function OpenCodePage({
       );
 
       if (res.ok) {
-        setSelectedSessionStatus("error");
         setSessions((prev) =>
           prev.map((s) =>
             (s.sessionId || s.session_id || s.id) === selectedSessionId
@@ -558,7 +216,6 @@ export function OpenCodePage({
           ),
         );
         setIsSending(false);
-        await loadMessages(selectedSessionId);
       } else {
         const errData = await res.json().catch(() => ({}));
         console.error("Failed to abort session", errData);
@@ -713,7 +370,7 @@ export function OpenCodePage({
         ) : (
           <>
             {/* Mobile back button + directory bar */}
-            {(selectedSessionDirectory || selectedSessionStatus) && (
+            {(selectedSessionDirectory || sessionStatus) && (
               <div className="flex items-center gap-2 px-3 py-2 border-b border-[var(--border)] bg-[var(--hover-bg)]/50 min-w-0">
                 <button
                   onClick={() => {
@@ -746,22 +403,22 @@ export function OpenCodePage({
                   >
                     {selectedSessionDirectory}
                   </span>
-                  {selectedSessionStatus && (
+                  {sessionStatus && (
                     <span
                       className={`shrink-0 px-2 py-0.5 rounded-full text-[10px] font-medium ${
-                        selectedSessionStatus === "idle"
+                        sessionStatus === "idle"
                           ? "bg-green-500/20 text-green-400"
-                          : selectedSessionStatus === "busy"
+                          : sessionStatus === "busy"
                             ? "bg-yellow-500/20 text-yellow-400"
-                            : selectedSessionStatus === "error"
+                            : sessionStatus === "error"
                               ? "bg-red-500/20 text-red-400"
                               : "bg-gray-500/20 text-gray-400"
                       }`}
                     >
-                      {selectedSessionStatus}
+                      {sessionStatus}
                     </span>
                   )}
-                  {selectedSessionStatus && (
+                  {sessionStatus && (
                     <button
                       onClick={abortSession}
                       disabled={isAborting}
@@ -807,7 +464,7 @@ export function OpenCodePage({
                     />
                   ))}
                   {isSending &&
-                    lastStreamingMsgRef.current === null &&
+                    !messages.some((m) => m._streaming) &&
                     messages.length > 0 && (
                       <div className="flex justify-start">
                         <div className="max-w-[85%] sm:max-w-[75%] rounded-xl px-4 py-3 bg-[var(--input-bg)] border border-[var(--border)] text-[var(--foreground)]">
@@ -852,7 +509,7 @@ export function OpenCodePage({
                 />
                 <button
                   onClick={sendMessage}
-                  disabled={!input.trim() || isSending}
+                  disabled={!input.trim() || isSending || isStreaming}
                   className="p-3 bg-[var(--accent)] text-white rounded-xl hover:opacity-90 disabled:opacity-50 transition-opacity"
                 >
                   <Send className="h-5 w-5" />
