@@ -46,12 +46,8 @@ function mapToolsToOverview(
   return { calls, results };
 }
 
-function assistantLabel(content?: string): string {
-  if (content) {
-    const preview = content.slice(0, 60).replace(/\n/g, " ");
-    return preview.length < content.length ? `${preview}…` : preview;
-  }
-  return "OpenCode Agent";
+function cardLabel(content?: string): string {
+  return "Coding Agent";
 }
 
 export function SpawnOpenCodeCard({
@@ -92,7 +88,7 @@ export function SpawnOpenCodeCard({
         <Wrench className="h-4 w-4 shrink-0 text-[var(--muted)]" />
         <div className="flex-1 min-w-0">
           <div className="text-sm font-medium text-[var(--foreground)] truncate">
-            {assistantLabel(input.content)}
+            {cardLabel(input.content)}
           </div>
           <div className="flex items-center gap-1.5 mt-0.5">
             {isPendingSpawn ? (
@@ -131,7 +127,7 @@ export function SpawnOpenCodeCard({
                 <div key={i} className="px-4 py-3">
                   {/* Role label */}
                   <div className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--muted)] mb-1.5">
-                    {msg.role === "user" ? "You" : "OpenCode"}
+                    {msg.role === "user" ? "ORCHESTRATOR" : "OpenCode"}
                   </div>
 
                   {/* Tool chips + reasoning (always visible, compact) */}

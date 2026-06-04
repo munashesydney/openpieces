@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { ChevronDown, ChevronRight, Timer } from "lucide-react";
+import { ChevronDown, ChevronRight } from "lucide-react";
 import { useChatStream } from "@/lib/hooks/use-chat-stream";
 import { ChatToolCalls } from "./chat-tool-calls";
 import { MarkdownRenderer } from "./markdown-renderer";
@@ -183,9 +183,6 @@ export function SpawnedAgentCard({
               <span className="inline-block h-2 w-2 rounded-full bg-red-500" />
             ) : null}
             <span className="text-xs text-[var(--muted)]">{label}</span>
-            {spawnedLoading && (
-              <Timer className="h-3 w-3 text-[var(--muted)] animate-spin" />
-            )}
           </div>
         </div>
 

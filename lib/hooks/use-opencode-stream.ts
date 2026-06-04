@@ -45,6 +45,7 @@ export function useOpenCodeStream(
   const streamingMsgIdsRef = useRef<Set<string>>(new Set());
   const skipMsgIdsRef = useRef<Set<string>>(new Set());
   const sessionRef = useRef(sessionId);
+  const statusRef = useRef<"idle" | "busy" | "error" | null>(null);
 
   useEffect(() => {
     sessionRef.current = sessionId;
@@ -92,6 +93,7 @@ export function useOpenCodeStream(
       setMessages([]);
       setIsStreaming(false);
       setSessionStatus(null);
+      statusRef.current = null;
       setIsLoading(false);
       setError(null);
       return;
@@ -101,6 +103,7 @@ export function useOpenCodeStream(
     skipMsgIdsRef.current.clear();
     setIsStreaming(false);
     setSessionStatus(null);
+    statusRef.current = null;
     setError(null);
     setIsLoading(true);
 
@@ -111,6 +114,11 @@ export function useOpenCodeStream(
         if (sessionRef.current !== sessionId) return;
         const rawList: any[] = Array.isArray(data) ? data : data.messages || [];
         setMessages(rawList.map(transformApiMessage));
+        // If messages exist and no SSE status yet, assume idle
+        if (rawList.length > 0 && statusRef.current === null) {
+          setSessionStatus("idle");
+          statusRef.current = "idle";
+        }
       })
       .catch(() => {})
       .finally(() => {
@@ -272,6 +280,7 @@ export function useOpenCodeStream(
             skipMsgIdsRef.current.clear();
             setIsStreaming(true);
             setSessionStatus("busy");
+            statusRef.current = "busy";
             stopPolling();
           }
           return;
@@ -284,6 +293,7 @@ export function useOpenCodeStream(
           skipMsgIdsRef.current.clear();
           setIsStreaming(false);
           setSessionStatus(ev.type === "session.idle" ? "idle" : "error");
+          statusRef.current = ev.type === "session.idle" ? "idle" : "error";
           setMessages((prev) =>
             prev.map((m) => {
               const { _streaming, ...rest } = m;
@@ -326,6 +336,7 @@ export function useOpenCodeStream(
   const addUserMessage = useCallback((content: string) => {
     streamingMsgIdsRef.current.clear();
     skipMsgIdsRef.current.clear();
+    statusRef.current = null;
     setError(null);
     setMessages((prev) => [
       ...prev,
