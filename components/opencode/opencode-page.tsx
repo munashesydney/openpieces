@@ -1,15 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import {
-  Loader2,
-  Send,
-  Plus,
-  Terminal,
-  FolderOpen,
-  X,
-  Activity,
-} from "lucide-react";
+import { Loader2, Send, Plus, Terminal, FolderOpen, X } from "lucide-react";
 import { Dropdown } from "@/components/basic/input/dropdown";
 import { OpenCodePageSkeleton } from "@/components/opencode/opencode-page-skeleton";
 import type { Service } from "@/lib/db/schema";
@@ -58,6 +50,7 @@ export function OpenCodePage({
   const [sendError, setSendError] = useState<string | null>(null);
   const [isAborting, setIsAborting] = useState(false);
   const [showSessions, setShowSessions] = useState(true);
+  const [streamingText, setStreamingText] = useState("");
 
   const showSessionsPanel = showSessions || !selectedSessionId;
 
@@ -68,7 +61,6 @@ export function OpenCodePage({
       s.directory.trim() !== "",
   );
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const eventSourceRef = useRef<EventSource | null>(null);
   const sessionSseRef = useRef<EventSource | null>(null);
 
   useEffect(() => {
@@ -96,8 +88,6 @@ export function OpenCodePage({
       setSelectedSessionLastMessage(null);
       setEvents([]);
     }
-    eventSourceRef.current?.close();
-    eventSourceRef.current = null;
     // Note: intentionally NOT depending on `sessions` — we don't want to
     // close/recreate SSE whenever sessions list refreshes after a send.
   }, [selectedSessionId]);
@@ -161,8 +151,6 @@ export function OpenCodePage({
 
   useEffect(() => {
     return () => {
-      eventSourceRef.current?.close();
-      eventSourceRef.current = null;
       sessionSseRef.current?.close();
       sessionSseRef.current = null;
     };
@@ -220,13 +208,46 @@ export function OpenCodePage({
     es.onmessage = (e) => {
       try {
         const ev = JSON.parse(e.data) as SessionEvent;
+        const props = (ev as any).properties || {};
+
+        // ── Streaming: delta events ──────────────────────────────
+        if (ev.type === "message.part.delta") {
+          if (props.field === "text" && typeof props.delta === "string") {
+            setStreamingText((prev) => prev + props.delta);
+            stopPolling(); // SSE is alive — kill any polling fallback
+          }
+          return;
+        }
+
+        // ── Streaming: complete part arrived ─────────────────────
+        if (ev.type === "message.part.updated") {
+          const part = props.part;
+          if (part?.type === "text" && typeof part.text === "string") {
+            setStreamingText(part.text);
+            stopPolling();
+          }
+          return;
+        }
+
+        // ── Session became busy — clear previous stream ──────────
+        if (ev.type === "session.status") {
+          const statusType = props.status?.type;
+          if (statusType === "busy") {
+            setStreamingText("");
+            setIsSending(true);
+            stopPolling();
+          }
+        }
+
+        // ── Session complete ─────────────────────────────────────
         if (ev.type === "session.idle" || ev.type === "session.error") {
           stopPolling();
           const newStatus = ev.type === "session.idle" ? "idle" : "error";
           const content =
-            (ev as any).content ??
-            (ev as any).message?.content ??
-            (ev as any).message?.text ??
+            ((ev as any).content ??
+              (ev as any).message?.content ??
+              (ev as any).message?.text ??
+              streamingText) ||
             null;
           setSessions((prev) =>
             prev.map((s) =>
@@ -238,11 +259,16 @@ export function OpenCodePage({
           setSelectedSessionStatus(newStatus);
           setSelectedSessionLastMessage(content);
           setIsSending(false);
+          setStreamingText("");
           // Reload messages and sessions to reflect completion
           loadMessages(selectedSessionId).finally(() => {
             loadSessions();
           });
+          return;
         }
+
+        // ── Store other events for activity display ──────────────
+        setEvents((prev) => [...prev, ev]);
       } catch (err) {
         // Ignore parse errors
       }
@@ -361,59 +387,6 @@ export function OpenCodePage({
     }
   };
 
-  const connectEventStream = (sessionId: string) => {
-    eventSourceRef.current?.close();
-    setEvents([]);
-    const url = `${window.location.origin}/api/opencode/sessions/${sessionId}/events`;
-    const es = new EventSource(url);
-    eventSourceRef.current = es;
-
-    es.onmessage = (e) => {
-      try {
-        const ev = JSON.parse(e.data) as SessionEvent;
-        setEvents((prev) => [...prev, ev]);
-
-        // Update session status in-memory from SSE event immediately
-        if (ev.type === "session.idle" || ev.type === "session.error") {
-          const newStatus = ev.type === "session.idle" ? "idle" : "error";
-          const content =
-            (ev as any).content ??
-            (ev as any).message?.content ??
-            (ev as any).message?.text ??
-            selectedSessionLastMessage;
-          setSessions((prev) =>
-            prev.map((s) =>
-              (s.sessionId || s.session_id || s.id) === sessionId
-                ? { ...s, status: newStatus, lastMessage: content }
-                : s,
-            ),
-          );
-          setSelectedSessionStatus(newStatus);
-          setSelectedSessionLastMessage(content);
-          setIsSending(false); // clear immediately
-          setEvents([]);
-          es.close();
-          eventSourceRef.current = null;
-          loadMessages(sessionId).finally(() => {
-            loadSessions();
-          });
-        }
-      } catch (err) {
-        console.error("Failed to parse event:", err);
-      }
-    };
-
-    es.onerror = () => {
-      es.close();
-      eventSourceRef.current = null;
-      loadMessages(sessionId).finally(() => {
-        setIsSending(false);
-        setEvents([]);
-        loadSessions();
-      });
-    };
-  };
-
   const sendMessage = async () => {
     if (!input.trim() || !selectedSessionId) return;
 
@@ -421,6 +394,8 @@ export function OpenCodePage({
     setMessages((prev) => [...prev, userMessage]);
     setInput("");
     setIsSending(true);
+    setStreamingText("");
+    setEvents([]);
 
     // Update status immediately in UI
     setSelectedSessionStatus("busy");
@@ -758,17 +733,31 @@ export function OpenCodePage({
                       </div>
                     </div>
                   ))}
-                  {(isSending || events.length > 0) && (
+                  {(isSending || streamingText) && (
                     <div className="flex justify-start">
                       <div className="max-w-[85%] sm:max-w-[75%] rounded-xl px-4 py-3 bg-[var(--input-bg)] border border-[var(--border)] text-[var(--foreground)]">
-                        <div className="flex items-center gap-2 mb-2 text-[var(--muted)]">
-                          <Activity className="h-4 w-4 shrink-0" />
-                          <span className="text-xs font-medium">
-                            {isSending ? "Session in progress..." : "Activity"}
-                          </span>
-                        </div>
-                        <div className="space-y-1 max-h-48 overflow-y-auto text-xs">
-                          {events.map((ev, i) => {
+                        {streamingText ? (
+                          <div className="whitespace-pre-wrap break-words">
+                            {streamingText}
+                            <span className="inline-block w-2 h-4 ml-0.5 bg-[var(--accent)] animate-pulse align-middle" />
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-2 text-[var(--muted)]">
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                            <span className="text-xs">Thinking...</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                  {isSending && events.length > 0 && (
+                    <div className="flex justify-start">
+                      <details className="max-w-[85%] sm:max-w-[75%] text-xs text-[var(--muted)] cursor-pointer">
+                        <summary className="hover:text-[var(--foreground)] transition-colors">
+                          Activity ({events.length})
+                        </summary>
+                        <div className="mt-2 space-y-1 max-h-40 overflow-y-auto">
+                          {events.slice(-20).map((ev, i) => {
                             const e = ev as {
                               input?: { tool?: string };
                               properties?: { status?: string };
@@ -789,22 +778,14 @@ export function OpenCodePage({
                               e.properties?.status
                             )
                               label = String(e.properties.status);
-                            else if (ev.type === "message.part.updated")
-                              label = "Updating message...";
                             return (
-                              <div
-                                key={i}
-                                className="py-1 border-b border-[var(--border)]/50 last:border-0"
-                              >
-                                <span className="text-[var(--muted)]">
-                                  [{ev.type}]
-                                </span>{" "}
+                              <div key={i} className="py-0.5">
                                 {label}
                               </div>
                             );
                           })}
                         </div>
-                      </div>
+                      </details>
                     </div>
                   )}
                 </>
