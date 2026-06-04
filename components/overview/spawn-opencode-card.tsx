@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { ChevronDown, ChevronRight, Wrench } from "lucide-react";
 import { useOpenCodeStream } from "@/lib/hooks/use-opencode-stream";
 import { ChatToolCalls } from "./chat-tool-calls";
@@ -46,7 +46,7 @@ function mapToolsToOverview(
   return { calls, results };
 }
 
-function cardLabel(content?: string): string {
+function cardLabel(_content?: string): string {
   return "Coding Agent";
 }
 
@@ -56,6 +56,8 @@ export function SpawnOpenCodeCard({
   isPending,
 }: SpawnOpenCodeCardProps) {
   const [expanded, setExpanded] = useState(false);
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const userScrolledUpRef = useRef(false);
   const sessionId = result?.sessionId ?? input.sessionId ?? null;
 
   const { messages, sessionStatus } = useOpenCodeStream(sessionId);
@@ -64,6 +66,24 @@ export function SpawnOpenCodeCard({
   const isRunning = sessionStatus === "busy";
   const isCompleted = sessionStatus === "idle";
   const isFailed = sessionStatus === "error";
+
+  // Auto-scroll to bottom while running, unless user scrolled up
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const handleScroll = () => {
+      const atBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 30;
+      userScrolledUpRef.current = !atBottom;
+    };
+    el.addEventListener("scroll", handleScroll, { passive: true });
+    return () => el.removeEventListener("scroll", handleScroll);
+  }, [expanded]);
+
+  useEffect(() => {
+    if (!expanded || userScrolledUpRef.current) return;
+    const el = scrollRef.current;
+    if (el) el.scrollTop = el.scrollHeight;
+  }, [expanded, messages]);
 
   const statusLabel = isPendingSpawn
     ? "Spawning…"
@@ -112,7 +132,10 @@ export function SpawnOpenCodeCard({
 
       {/* Expanded content */}
       {expanded && (
-        <div className="border-t border-[var(--border)] max-h-[420px] overflow-y-auto divide-y divide-[var(--border)]">
+        <div
+          className="border-t border-[var(--border)] max-h-[420px] overflow-y-auto divide-y divide-[var(--border)]"
+          ref={scrollRef}
+        >
           {messages.length === 0 ? (
             <p className="px-4 py-3 text-xs text-[var(--muted)]">
               {isPendingSpawn ? "Waiting for session…" : "No messages yet"}

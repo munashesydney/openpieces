@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { ChevronDown, ChevronRight } from "lucide-react";
 import { useChatStream } from "@/lib/hooks/use-chat-stream";
 import { ChatToolCalls } from "./chat-tool-calls";
@@ -138,6 +138,8 @@ export function SpawnedAgentCard({
   isPending,
 }: SpawnedAgentCardProps) {
   const [expanded, setExpanded] = useState(false);
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const userScrolledUpRef = useRef(false);
 
   const spawnedChatId = result?.chatId ?? input.chatId ?? null;
 
@@ -159,6 +161,24 @@ export function SpawnedAgentCard({
     displayStatus === "pending" || displayStatus === "processing";
   const isCompleted = displayStatus === "completed";
   const isFailed = displayStatus === "failed";
+
+  // Auto-scroll to bottom while running, unless user scrolled up
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const handleScroll = () => {
+      const atBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 30;
+      userScrolledUpRef.current = !atBottom;
+    };
+    el.addEventListener("scroll", handleScroll, { passive: true });
+    return () => el.removeEventListener("scroll", handleScroll);
+  }, [expanded]);
+
+  useEffect(() => {
+    if (!expanded || userScrolledUpRef.current) return;
+    const el = scrollRef.current;
+    if (el) el.scrollTop = el.scrollHeight;
+  }, [expanded, displayMessages]);
 
   return (
     <div className="rounded-xl border border-[var(--border)] bg-[var(--sidebar-bg)] overflow-hidden">
@@ -195,7 +215,10 @@ export function SpawnedAgentCard({
 
       {/* ── Dropdown content ── */}
       {expanded && (
-        <div className="border-t border-[var(--border)] max-h-[420px] overflow-y-auto">
+        <div
+          className="border-t border-[var(--border)] max-h-[420px] overflow-y-auto"
+          ref={scrollRef}
+        >
           {displayMessages.length === 0 ? (
             <p className="px-4 py-3 text-xs text-[var(--muted)]">
               {spawnedLoading ? "Loading messages..." : "No messages yet"}
