@@ -150,6 +150,11 @@ docker compose restart app
 docker compose up -d --build
 ```
 
+**Build fails with "unlazy requires an applier"?** Clear stale BuildKit cache:
+```bash
+docker builder prune -af
+```
+
 **Stop everything:**
 ```bash
 docker compose down
