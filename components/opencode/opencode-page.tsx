@@ -246,9 +246,20 @@ export function OpenCodePage({
             streamingMsgIdsRef.current.add(msgId);
             setMessages((prev) => {
               const idx = prev.findIndex((m) => m._msgId === msgId);
+              const addOrReplace = (tools: ToolChip[], c: ToolChip) => {
+                const existing = tools.findIndex((t) => t.name === c.name);
+                if (existing !== -1) {
+                  const next = [...tools];
+                  next[existing] = c;
+                  return next;
+                }
+                return [...tools, c];
+              };
               if (idx !== -1) {
                 return prev.map((m, i) =>
-                  i === idx ? { ...m, _tools: [...m._tools, chip] } : m,
+                  i === idx
+                    ? { ...m, _tools: addOrReplace(m._tools, chip) }
+                    : m,
                 );
               }
               return [
@@ -279,40 +290,6 @@ export function OpenCodePage({
                   content: "",
                   _tools: [],
                   _reasoning: part.text || null,
-                  _msgId: msgId,
-                  _streaming: true,
-                } satisfies ChatMessage,
-              ];
-            });
-          } else if (
-            part?.type === "step-start" ||
-            part?.type === "step-finish"
-          ) {
-            const label =
-              part.type === "step-start" ? "Step Start" : "Step Finish";
-            streamingMsgIdsRef.current.add(msgId);
-            setMessages((prev) => {
-              const idx = prev.findIndex((m) => m._msgId === msgId);
-              if (idx !== -1) {
-                return prev.map((m, i) =>
-                  i === idx
-                    ? {
-                        ...m,
-                        _tools: [
-                          ...m._tools,
-                          { name: label, status: "completed" },
-                        ],
-                      }
-                    : m,
-                );
-              }
-              return [
-                ...prev,
-                {
-                  role: "assistant" as const,
-                  content: "",
-                  _tools: [{ name: label, status: "completed" }],
-                  _reasoning: null,
                   _msgId: msgId,
                   _streaming: true,
                 } satisfies ChatMessage,

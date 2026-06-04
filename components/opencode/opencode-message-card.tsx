@@ -68,9 +68,11 @@ export function OpenCodeMessageCard({
         {/* Tool chips row */}
         {message._tools.length > 0 && (
           <div className="flex flex-wrap gap-1 px-4 pt-3 pb-1">
-            {message._tools.map((chip, i) => (
-              <ToolChipBadge key={i} chip={chip} />
-            ))}
+            {message._tools
+              .filter((chip) => isStreaming || chip.status === "completed")
+              .map((chip, i) => (
+                <ToolChipBadge key={i} chip={chip} />
+              ))}
           </div>
         )}
 
