@@ -207,6 +207,7 @@ export function ChatMessageCard({
           return (
             <div key={tc.toolCallId} className="w-full mt-3">
               <SleepCard
+                toolCallId={tc.toolCallId}
                 seconds={input.seconds ?? 0}
                 reason={input.reason}
                 isPending={!result}
