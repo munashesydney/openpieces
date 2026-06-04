@@ -6,7 +6,23 @@ import type { AiToolCall, AiToolResult } from "@/lib/ai-chat/types";
 import { ChatToolCalls } from "./chat-tool-calls";
 import { QuestionInputCard } from "./question-input-card";
 import { SleepCard } from "./sleep-card";
+import { SpawnedAgentCard } from "./spawned-agent-card";
 import { MarkdownRenderer } from "./markdown-renderer";
+
+type SpawnResult = { chatId?: string; status?: string } | undefined;
+
+/** Tool outputs are JSON-stringified by the storage layer. Parse if needed. */
+function parseToolOutput(raw: unknown): SpawnResult {
+  if (!raw) return undefined;
+  if (typeof raw === "string") {
+    try {
+      return JSON.parse(raw) as SpawnResult;
+    } catch {
+      return undefined;
+    }
+  }
+  return raw as SpawnResult;
+}
 
 type ChatMessageCardProps = {
   content: string;
@@ -57,9 +73,16 @@ export function ChatMessageCard({
   const sleepToolCalls = toolCalls.filter(
     (tc) => (tc.input as { action?: string })?.action === "sleep",
   );
+  const spawnToolCalls = toolCalls.filter(
+    (tc) => (tc.input as { action?: string })?.action === "spawn_agent",
+  );
   const otherToolCalls = toolCalls.filter((tc) => {
     const action = (tc.input as { action?: string })?.action;
-    return action !== "ask_question" && action !== "sleep";
+    return (
+      action !== "ask_question" &&
+      action !== "sleep" &&
+      action !== "spawn_agent"
+    );
   });
 
   // ── Thinking section visibility ──
@@ -215,6 +238,27 @@ export function ChatMessageCard({
             </div>
           );
         })}
+
+      {/* Render spawned agent cards — persists even after streaming ends */}
+      {spawnToolCalls.map((tc) => {
+        const result = toolResults.find((r) => r.toolCallId === tc.toolCallId);
+        const input = tc.input as {
+          agentType?: string;
+          prompt?: string;
+          chatId?: string;
+        };
+        const rawOutput = result?.output;
+        const output = parseToolOutput(rawOutput);
+        return (
+          <div key={tc.toolCallId} className="w-full mt-3">
+            <SpawnedAgentCard
+              input={input}
+              result={output}
+              isPending={!result}
+            />
+          </div>
+        );
+      })}
 
       {/* Render question cards after content (bottom of message) when there is body text */}
       {(hasBody || hasReasoning) &&
