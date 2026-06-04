@@ -537,9 +537,13 @@ export function OverviewPersonalView({
         {selectedChat ? (
           <>
             <header className="shrink-0 px-4 py-4 sm:px-6 sm:py-5 flex justify-center">
-              <h2 className="text-sm font-semibold text-[var(--foreground)] text-center line-clamp-2">
-                {selectedChat.title}
-              </h2>
+              {streamLoading ? (
+                <div className="h-5 w-48 rounded-md animate-pulse bg-[var(--hover-bg)]" />
+              ) : (
+                <h2 className="text-sm font-semibold text-[var(--foreground)] text-center line-clamp-2">
+                  {selectedChat.title}
+                </h2>
+              )}
             </header>
             <OverviewChatArea
               messages={selectedMessages}

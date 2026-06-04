@@ -154,11 +154,14 @@ export function useChatStream(chatId: string | null): UseChatStreamResult {
   useEffect(() => {
     clearPolling();
 
+    // Always reset state when chatId changes, so stale data never
+    // bleeds into the next chat selection.
+    setMessages([]);
+    setStatus(null);
+    setTitle(null);
+    setError(null);
+
     if (!chatId) {
-      setMessages([]);
-      setStatus(null);
-      setTitle(null);
-      setError(null);
       setIsLoading(false);
       return;
     }

@@ -85,7 +85,8 @@ export function OverviewChatArea({
   /** Auto-scroll on new content, but only if the user hasn't scrolled up. */
   useEffect(() => {
     if (!scrollRef.current) return;
-    if (messages.length === 0 && !isLoadingMessages) return;
+    if (isLoadingMessages) return;
+    if (messages.length === 0) return;
     if (userScrolledUpRef.current) return;
     scrollRef.current.scrollTo({
       top: scrollRef.current.scrollHeight,
