@@ -7,6 +7,7 @@ import { ChatToolCalls } from "./chat-tool-calls";
 import { QuestionInputCard } from "./question-input-card";
 import { SleepCard } from "./sleep-card";
 import { SpawnedAgentCard } from "./spawned-agent-card";
+import { SpawnOpenCodeCard } from "./spawn-opencode-card";
 import { MarkdownRenderer } from "./markdown-renderer";
 
 type SpawnResult = { chatId?: string; status?: string } | undefined;
@@ -76,12 +77,18 @@ export function ChatMessageCard({
   const spawnToolCalls = toolCalls.filter(
     (tc) => (tc.input as { action?: string })?.action === "spawn_agent",
   );
+  const opencodeToolCalls = toolCalls.filter(
+    (tc) =>
+      tc.toolName === "manage_opencode_messages" &&
+      (tc.input as { action?: string })?.action === "send",
+  );
   const otherToolCalls = toolCalls.filter((tc) => {
     const action = (tc.input as { action?: string })?.action;
     return (
       action !== "ask_question" &&
       action !== "sleep" &&
-      action !== "spawn_agent"
+      action !== "spawn_agent" &&
+      tc.toolName !== "manage_opencode_messages"
     );
   });
 
@@ -254,6 +261,31 @@ export function ChatMessageCard({
             <SpawnedAgentCard
               input={input}
               result={output}
+              isPending={!result}
+            />
+          </div>
+        );
+      })}
+
+      {/* Render OpenCode session cards */}
+      {opencodeToolCalls.map((tc) => {
+        const result = toolResults.find((r) => r.toolCallId === tc.toolCallId);
+        const input = tc.input as {
+          sessionId?: string;
+          content?: string;
+        };
+        const rawOutput = result?.output;
+        const output = parseToolOutput(rawOutput) as
+          | {
+              sessionId?: string;
+              message?: string;
+            }
+          | undefined;
+        return (
+          <div key={tc.toolCallId} className="w-full mt-3">
+            <SpawnOpenCodeCard
+              input={input}
+              result={output ?? null}
               isPending={!result}
             />
           </div>
