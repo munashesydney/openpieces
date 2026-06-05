@@ -1061,7 +1061,8 @@ export async function startServiceWorker() {
             errMessage.includes(`missing required "entrypoint"`) ||
             errMessage.includes("podman is not available") ||
             errMessage.includes("podman feature flag is disabled") ||
-            errMessage.includes("Missing or empty required secrets");
+            errMessage.includes("Missing or empty required secrets") ||
+            errMessage.includes("is already being spawned by another worker");
 
           if (isSoftError) {
             await db.execute(
@@ -1110,7 +1111,10 @@ export async function startServiceWorker() {
               error.message.includes(`missing required "entrypoint"`) ||
               error.message.includes("podman is not available") ||
               error.message.includes("podman feature flag is disabled") ||
-              error.message.includes("Missing or empty required secrets"))
+              error.message.includes("Missing or empty required secrets") ||
+              error.message.includes(
+                "is already being spawned by another worker",
+              ))
               ? "stopped"
               : "crashed";
           console.error(
