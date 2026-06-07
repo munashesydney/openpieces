@@ -173,13 +173,13 @@ function OrgCard({ org }: { org: Organization }) {
       <button
         type="button"
         onClick={() => setExpanded((v) => !v)}
-        className="flex w-full items-start gap-4 p-5 text-left hover:bg-[var(--hover-bg)] transition-colors"
+        className="flex w-full items-start gap-4 p-6 text-left hover:bg-[var(--hover-bg)] transition-colors"
       >
-        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded border border-[var(--accent)]/15 bg-[var(--accent)]/10 text-[var(--accent)] transition-all group-hover:bg-[var(--accent)] group-hover:text-white group-hover:shadow-[0_0_16px_var(--accent-glow)]">
-          <Building2 className="h-5 w-5" />
+        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded border border-[var(--accent)]/15 bg-[var(--accent)]/10 text-[var(--accent)] transition-all group-hover:bg-[var(--accent)] group-hover:text-white group-hover:shadow-[0_0_16px_var(--accent-glow)]">
+          <Building2 className="h-6 w-6" />
         </div>
         <div className="min-w-0 flex-1">
-          <h3 className="text-base font-medium text-[var(--foreground)]">
+          <h3 className="text-lg font-medium text-[var(--foreground)]">
             {org.name}
           </h3>
           <p className="mt-1 text-sm text-[var(--muted)] truncate">
@@ -222,13 +222,13 @@ function OrgCard({ org }: { org: Organization }) {
 function StandaloneCard({ ws }: { ws: StandaloneWorkspace }) {
   return (
     <Link href={`/workspace/${ws.id}/personal`} className="block">
-      <Card hoverable className="group cursor-pointer p-5 h-full">
+      <Card hoverable className="group cursor-pointer p-6 h-full">
         <div className="flex items-start gap-4">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded border border-[var(--border)] bg-[var(--hover-bg)] text-[var(--muted)] transition-all group-hover:border-[var(--secondary)]/20 group-hover:bg-[var(--secondary)]/10 group-hover:text-[var(--secondary)] group-hover:shadow-[0_0_16px_var(--secondary-glow)]">
-            <Folder className="h-5 w-5" />
+          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded border border-[var(--border)] bg-[var(--hover-bg)] text-[var(--muted)] transition-all group-hover:border-[var(--secondary)]/20 group-hover:bg-[var(--secondary)]/10 group-hover:text-[var(--secondary)] group-hover:shadow-[0_0_16px_var(--secondary-glow)]">
+            <Folder className="h-6 w-6" />
           </div>
           <div className="min-w-0 flex-1">
-            <h3 className="text-base font-medium text-[var(--foreground)]">
+            <h3 className="text-lg font-medium text-[var(--foreground)]">
               {ws.name}
             </h3>
             <p className="mt-1 text-sm text-[var(--muted)] truncate">
@@ -247,15 +247,15 @@ export default function OrgPage() {
   return (
     <div className="flex flex-col min-h-screen bg-[var(--background)]">
       {/* Header */}
-      <header className="flex h-14 shrink-0 items-center border-b border-[var(--border)] bg-[var(--sidebar-bg)]/80 backdrop-blur-sm">
+      <header className="flex h-20 shrink-0 items-center border-b border-[var(--border)] bg-[var(--sidebar-bg)]/80 backdrop-blur-sm">
         <div className="flex items-center justify-between w-full max-w-7xl mx-auto px-6">
           <div className="flex items-center gap-2.5">
             <img
               src="/op-not-moving.png"
               alt="OpenPieces"
-              className="h-7 w-7 rounded object-cover"
+              className="h-12 w-12 rounded object-cover"
             />
-            <span className="text-sm font-semibold text-[var(--foreground)]">
+            <span className="text-lg font-bold text-[var(--foreground)]">
               openpieces
             </span>
           </div>
@@ -268,10 +268,10 @@ export default function OrgPage() {
         {/* Heading — minimal */}
         <div className="mb-8 flex items-end justify-between">
           <div>
-            <h1 className="text-xl font-semibold text-[var(--foreground)]">
+            <h1 className="text-4xl font-bold text-[var(--foreground)]">
               Organizations &amp; workspaces
             </h1>
-            <p className="mt-1 text-[13px] text-[var(--muted)]">
+            <p className="mt-2 text-base text-[var(--muted)]">
               Choose where you want to work.
             </p>
           </div>
