@@ -200,9 +200,11 @@ function OrgCard({ org }: { org: Organization }) {
             <Link
               key={ws.id}
               href={`/workspace/${ws.id}/personal`}
-              className="flex items-center gap-3 rounded px-3 py-2.5 hover:bg-[var(--hover-bg)] transition-colors"
+              className="group/ws flex items-center gap-3 rounded border border-transparent px-3 py-2.5 hover:border-[var(--border)] transition-colors"
             >
-              <Folder className="h-3.5 w-3.5 shrink-0 text-[var(--muted)]" />
+              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded border border-[var(--border)] bg-[var(--hover-bg)] text-[var(--muted)] transition-all group-hover/ws:border-[var(--secondary)]/20 group-hover/ws:bg-[var(--secondary)]/10 group-hover/ws:text-[var(--secondary)] group-hover/ws:shadow-[0_0_16px_var(--secondary-glow)]">
+                <Folder className="h-4 w-4" />
+              </div>
               <div className="min-w-0 flex-1">
                 <p className="text-[13px] font-medium text-[var(--foreground)]">
                   {ws.name}
@@ -244,6 +246,8 @@ function StandaloneCard({ ws }: { ws: StandaloneWorkspace }) {
 // ─── Main page ───────────────────────────────────────────────────────────
 
 export default function OrgPage() {
+  const [newMenuOpen, setNewMenuOpen] = useState(false);
+
   return (
     <div className="flex flex-col min-h-screen bg-[var(--background)]">
       {/* Header */}
@@ -276,13 +280,45 @@ export default function OrgPage() {
             </p>
           </div>
           <div className="flex items-center gap-2">
-            <button
-              type="button"
-              className="flex items-center gap-2 rounded bg-[var(--accent)] px-5 py-2.5 text-sm font-medium text-white hover:opacity-90 transition-opacity"
-            >
-              <Plus className="h-4 w-4" strokeWidth={2.5} />
-              New
-            </button>
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => setNewMenuOpen((v) => !v)}
+                className="flex items-center gap-2 rounded bg-[var(--accent)] px-5 py-2.5 text-sm font-medium text-white hover:opacity-90 transition-opacity"
+              >
+                <Plus className="h-4 w-4" strokeWidth={2.5} />
+                New
+              </button>
+              {newMenuOpen && (
+                <>
+                  <button
+                    type="button"
+                    className="fixed inset-0 z-10"
+                    onClick={() => setNewMenuOpen(false)}
+                    aria-label="Close"
+                  />
+                  <div className="absolute right-0 top-full z-20 mt-2 w-52 rounded border border-[var(--border)] bg-[var(--sidebar-bg)] shadow-[0_12px_40px_rgba(0,0,0,0.35)] overflow-hidden">
+                    <button
+                      type="button"
+                      onClick={() => setNewMenuOpen(false)}
+                      className="flex w-full items-center gap-2.5 px-3 py-2.5 text-left text-[13px] font-medium text-[var(--foreground)] hover:bg-[var(--hover-bg)] transition-colors"
+                    >
+                      <Building2 className="h-3.5 w-3.5 text-[var(--muted)]" />
+                      New organization
+                    </button>
+                    <div className="h-px bg-[var(--border)]" />
+                    <button
+                      type="button"
+                      onClick={() => setNewMenuOpen(false)}
+                      className="flex w-full items-center gap-2.5 px-3 py-2.5 text-left text-[13px] font-medium text-[var(--foreground)] hover:bg-[var(--hover-bg)] transition-colors"
+                    >
+                      <Folder className="h-3.5 w-3.5 text-[var(--muted)]" />
+                      New workspace
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
           </div>
         </div>
 
