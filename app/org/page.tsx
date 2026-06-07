@@ -195,7 +195,7 @@ function OrgCard({ org }: { org: Organization }) {
 
       {/* Expanded workspace rows */}
       {expanded && (
-        <div className="border-t border-[var(--border)] p-3 pl-12 space-y-1">
+        <div className="border-t border-[var(--border)] p-3 space-y-1">
           {org.workspaces.map((ws) => (
             <Link
               key={ws.id}
@@ -278,9 +278,9 @@ export default function OrgPage() {
           <div className="flex items-center gap-2">
             <button
               type="button"
-              className="flex items-center gap-1.5 rounded border border-[var(--border)] px-3 py-1.5 text-[12px] font-medium text-[var(--muted)] hover:bg-[var(--hover-bg)] hover:text-[var(--foreground)] transition-colors"
+              className="flex items-center gap-2 rounded bg-[var(--accent)] px-5 py-2.5 text-sm font-medium text-white hover:opacity-90 transition-opacity"
             >
-              <Plus className="h-3 w-3" />
+              <Plus className="h-4 w-4" strokeWidth={2.5} />
               New
             </button>
           </div>
