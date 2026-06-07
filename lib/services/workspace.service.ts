@@ -1,4 +1,4 @@
-import { asc, eq, and } from "drizzle-orm";
+import { asc, eq, and, isNull } from "drizzle-orm";
 import { db } from "../db";
 import { workspaces, type NewWorkspace, type Workspace } from "../db/schema";
 
@@ -63,4 +63,23 @@ export async function getWorkspaceOwnerId(
     .where(eq(workspaces.id, workspaceId))
     .limit(1);
   return result[0]?.userId ?? null;
+}
+
+export async function assignWorkspaceToOrg(
+  workspaceId: string,
+  orgId: string,
+): Promise<void> {
+  await db
+    .update(workspaces)
+    .set({ orgId })
+    .where(eq(workspaces.id, workspaceId));
+}
+
+export async function unassignWorkspaceFromOrg(
+  workspaceId: string,
+): Promise<void> {
+  await db
+    .update(workspaces)
+    .set({ orgId: null })
+    .where(eq(workspaces.id, workspaceId));
 }

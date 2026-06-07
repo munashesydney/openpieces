@@ -1,15 +1,18 @@
 "use client";
 
-import { useState } from "react";
-import { ChevronDown, Building2, Folder, Plus } from "lucide-react";
+import { useState, useCallback } from "react";
+import { Building2, Folder, Plus } from "lucide-react";
 import Link from "next/link";
 import { ThemeToggle } from "@/components/theme-toggle";
-import { Card } from "@/components/ui/card";
 import { Modal } from "@/components/ui/modal";
 import { Button } from "@/components/basic/buttons/button";
 import { Input } from "@/components/basic/input/input";
 import { Textarea } from "@/components/basic/input/textarea";
-import { createOrganisationAction } from "./actions";
+import {
+  createOrganisationAction,
+  assignToOrganisationAction,
+} from "./actions";
+import { DroppableOrgCard, DraggableStandaloneCard } from "./drag-drop";
 import type { Organization, Workspace } from "@/lib/db/schema";
 
 type Props = {
@@ -27,6 +30,10 @@ export function OrgPageClient({
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [createPending, setCreatePending] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
+  const [dragState, setDragState] = useState<{
+    workspaceId: string;
+    workspaceName: string;
+  } | null>(null);
 
   const handleCreateOrg = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -46,6 +53,14 @@ export function OrgPageClient({
     setCreateModalOpen(false);
     setNewMenuOpen(false);
   };
+
+  const handleAssign = useCallback(
+    async (workspaceId: string, orgId: string) => {
+      await assignToOrganisationAction(workspaceId, orgId);
+      setDragState(null);
+    },
+    [],
+  );
 
   return (
     <div className="flex flex-col min-h-screen bg-[var(--background)]">
@@ -75,7 +90,7 @@ export function OrgPageClient({
         <div className="mb-8 flex items-end justify-between">
           <div>
             <h1 className="text-4xl font-bold text-[var(--foreground)]">
-              Organizations &amp; workspaces
+              Organizations &amp; Workspaces
             </h1>
             <p className="mt-2 text-base text-[var(--muted)]">
               Choose where you want to work.
@@ -150,10 +165,12 @@ export function OrgPageClient({
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3 items-start">
               {organisations.map((org) => (
-                <OrgCard
+                <DroppableOrgCard
                   key={org.id}
                   org={org}
                   workspaces={workspaceMap.get(org.id) ?? []}
+                  dragState={dragState}
+                  onAssignment={handleAssign}
                 />
               ))}
             </div>
@@ -172,7 +189,14 @@ export function OrgPageClient({
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3 items-start">
               {standaloneWorkspaces.map((ws) => (
-                <StandaloneCard key={ws.id} ws={ws} />
+                <DraggableStandaloneCard
+                  key={ws.id}
+                  ws={ws}
+                  onDragStart={(id, name) =>
+                    setDragState({ workspaceId: id, workspaceName: name })
+                  }
+                  onDragEnd={() => setDragState(null)}
+                />
               ))}
             </div>
           </section>
@@ -237,96 +261,5 @@ export function OrgPageClient({
         </form>
       </Modal>
     </div>
-  );
-}
-
-// ─── Cards ───────────────────────────────────────────────────────────────
-
-function OrgCard({
-  org,
-  workspaces,
-}: {
-  org: Organization;
-  workspaces: Workspace[];
-}) {
-  const [expanded, setExpanded] = useState(false);
-
-  return (
-    <div className="rounded border border-[var(--border)] bg-[var(--sidebar-bg)]">
-      <button
-        type="button"
-        onClick={() => setExpanded((v) => !v)}
-        className="flex w-full items-start gap-4 p-6 text-left hover:bg-[var(--hover-bg)] transition-colors"
-      >
-        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded border border-[var(--accent)]/15 bg-[var(--accent)]/10 text-[var(--accent)] transition-all group-hover:bg-[var(--accent)] group-hover:text-white group-hover:shadow-[0_0_16px_var(--accent-glow)]">
-          <Building2 className="h-6 w-6" />
-        </div>
-        <div className="min-w-0 flex-1">
-          <h3 className="text-lg font-medium text-[var(--foreground)]">
-            {org.name}
-          </h3>
-          <p className="mt-1 text-sm text-[var(--muted)] truncate">
-            {org.description || "No description"}
-          </p>
-        </div>
-        <ChevronDown
-          className={`h-4 w-4 shrink-0 mt-1 text-[var(--muted)] transition-transform duration-200 ${
-            expanded ? "rotate-180" : ""
-          }`}
-        />
-      </button>
-
-      {expanded && (
-        <div className="border-t border-[var(--border)] p-3 space-y-1">
-          {workspaces.length === 0 ? (
-            <p className="px-3 py-2 text-[12px] text-[var(--muted)]">
-              No workspaces yet.
-            </p>
-          ) : (
-            workspaces.map((ws) => (
-              <Link
-                key={ws.id}
-                href={`/org/${org.id}/workspace/${ws.id}/personal`}
-                className="group/ws flex items-center gap-3 rounded border border-transparent px-3 py-2.5 hover:border-[var(--border)] transition-colors"
-              >
-                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded border border-[var(--border)] bg-[var(--hover-bg)] text-[var(--muted)] transition-all group-hover/ws:border-[var(--secondary)]/20 group-hover/ws:bg-[var(--secondary)]/10 group-hover/ws:text-[var(--secondary)] group-hover/ws:shadow-[0_0_16px_var(--secondary-glow)]">
-                  <Folder className="h-4 w-4" />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <p className="text-[13px] font-medium text-[var(--foreground)]">
-                    {ws.name}
-                  </p>
-                  <p className="text-[12px] text-[var(--muted)] truncate">
-                    {ws.description}
-                  </p>
-                </div>
-              </Link>
-            ))
-          )}
-        </div>
-      )}
-    </div>
-  );
-}
-
-function StandaloneCard({ ws }: { ws: Workspace }) {
-  return (
-    <Link href={`/org/s/workspace/${ws.id}/personal`} className="block">
-      <Card hoverable className="group cursor-pointer p-6 h-full">
-        <div className="flex items-start gap-4">
-          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded border border-[var(--border)] bg-[var(--hover-bg)] text-[var(--muted)] transition-all group-hover:border-[var(--secondary)]/20 group-hover:bg-[var(--secondary)]/10 group-hover:text-[var(--secondary)] group-hover:shadow-[0_0_16px_var(--secondary-glow)]">
-            <Folder className="h-6 w-6" />
-          </div>
-          <div className="min-w-0 flex-1">
-            <h3 className="text-lg font-medium text-[var(--foreground)]">
-              {ws.name}
-            </h3>
-            <p className="mt-1 text-sm text-[var(--muted)] truncate">
-              {ws.description || "No description"}
-            </p>
-          </div>
-        </div>
-      </Card>
-    </Link>
   );
 }
