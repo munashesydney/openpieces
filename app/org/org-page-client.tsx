@@ -11,8 +11,13 @@ import { Textarea } from "@/components/basic/input/textarea";
 import {
   createOrganisationAction,
   assignToOrganisationAction,
+  unassignFromOrganisationAction,
 } from "./actions";
-import { DroppableOrgCard, DraggableStandaloneCard } from "./drag-drop";
+import {
+  DroppableOrgCard,
+  DraggableStandaloneCard,
+  StandaloneDropZone,
+} from "./drag-drop";
 import type { Organization, Workspace } from "@/lib/db/schema";
 
 type Props = {
@@ -61,6 +66,11 @@ export function OrgPageClient({
     },
     [],
   );
+
+  const handleUnassign = useCallback(async (workspaceId: string) => {
+    await unassignFromOrganisationAction(workspaceId);
+    setDragState(null);
+  }, []);
 
   return (
     <div className="flex flex-col min-h-screen bg-[var(--background)]">
@@ -170,7 +180,11 @@ export function OrgPageClient({
                   org={org}
                   workspaces={workspaceMap.get(org.id) ?? []}
                   dragState={dragState}
-                  onAssignment={handleAssign}
+                  onAssign={handleAssign}
+                  onDragStart={(id, name) =>
+                    setDragState({ workspaceId: id, workspaceName: name })
+                  }
+                  onDragEnd={() => setDragState(null)}
                 />
               ))}
             </div>
@@ -179,7 +193,7 @@ export function OrgPageClient({
 
         {/* Standalone workspaces */}
         {standaloneWorkspaces.length > 0 && (
-          <section>
+          <StandaloneDropZone dragState={dragState} onUnassign={handleUnassign}>
             <div className="mb-3 flex items-center gap-2">
               <Folder className="h-3.5 w-3.5 text-[var(--muted)]" />
               <h2 className="text-[12px] font-medium uppercase tracking-[0.12em] text-[var(--muted)]">
@@ -199,7 +213,7 @@ export function OrgPageClient({
                 />
               ))}
             </div>
-          </section>
+          </StandaloneDropZone>
         )}
       </main>
 

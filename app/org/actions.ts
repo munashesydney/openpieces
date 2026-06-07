@@ -3,7 +3,10 @@
 import { revalidatePath } from "next/cache";
 import { requireUser } from "@/lib/services/auth.service";
 import { createOrganisation } from "@/lib/services/organisation.service";
-import { assignWorkspaceToOrg } from "@/lib/services/workspace.service";
+import {
+  assignWorkspaceToOrg,
+  unassignWorkspaceFromOrg,
+} from "@/lib/services/workspace.service";
 
 export async function createOrganisationAction(formData: FormData) {
   const user = await requireUser();
@@ -37,6 +40,17 @@ export async function assignToOrganisationAction(
     await assignWorkspaceToOrg(workspaceId, orgId);
   } catch {
     return { error: "Failed to assign workspace." };
+  }
+
+  revalidatePath("/org");
+  return { success: true };
+}
+
+export async function unassignFromOrganisationAction(workspaceId: string) {
+  try {
+    await unassignWorkspaceFromOrg(workspaceId);
+  } catch {
+    return { error: "Failed to unassign workspace." };
   }
 
   revalidatePath("/org");
