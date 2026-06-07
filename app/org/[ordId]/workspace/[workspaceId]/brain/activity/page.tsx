@@ -1,6 +1,6 @@
 "use server";
 
-import { ActivityView } from "../../../../../components/brain/activity-view";
+import { ActivityView } from "@/components/brain/activity-view";
 import { getActivityByTypeAction } from "../actions";
 
 export default async function ActivityPage(props: {
@@ -10,5 +10,7 @@ export default async function ActivityPage(props: {
 
   const getActivity = getActivityByTypeAction.bind(null, workspaceId);
 
-  return <ActivityView workspaceId={workspaceId} getActivityAction={getActivity} />;
+  return (
+    <ActivityView workspaceId={workspaceId} getActivityAction={getActivity} />
+  );
 }

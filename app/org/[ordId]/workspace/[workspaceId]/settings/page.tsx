@@ -1,6 +1,6 @@
 import { requireWorkspaceOwner } from "@/lib/services/auth.service";
 import { getWorkspaceSettings } from "@/lib/services/workspace-settings.service";
-import { GeneralSettings } from "../../../../components/settings/general-settings";
+import { GeneralSettings } from "@/components/settings/general-settings";
 
 export default async function SettingsPage(props: {
   params: Promise<{ workspaceId: string }>;

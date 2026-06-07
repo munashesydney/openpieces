@@ -1,19 +1,19 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { requireWorkspaceOwner } from "../../../../../lib/services/auth.service";
+import { requireWorkspaceOwner } from "@/lib/services/auth.service";
 import {
   createWorkflow,
   deleteWorkflow,
   updateWorkflow,
   getWorkflowById,
-} from "../../../../../lib/services/workflow.service";
+} from "@/lib/services/workflow.service";
 import {
   linkActionServiceToWorkflow,
   unlinkActionServiceFromWorkflow,
-} from "../../../../../lib/services/workflow-action.service";
-import { getWorkflowExecutions } from "../../../../../lib/services/workflow-execution.service";
-import { ValidationError } from "../../../../../lib/errors/validation-error";
+} from "@/lib/services/workflow-action.service";
+import { getWorkflowExecutions } from "@/lib/services/workflow-execution.service";
+import { ValidationError } from "@/lib/errors/validation-error";
 
 export type ActionResult = { error: string } | { success: true };
 
@@ -115,8 +115,7 @@ export async function addDetailedStepAction(
   }
 
   try {
-    const { getWorkflowById } =
-      await import("../../../../../lib/services/workflow.service");
+    const { getWorkflowById } = await import("@/lib/services/workflow.service");
     const existing = await getWorkflowById(workflowId, workspaceId);
     if (!existing) {
       return { error: "Workflow not found." };
@@ -152,8 +151,7 @@ export async function updateDetailedStepAction(
   }
 
   try {
-    const { getWorkflowById } =
-      await import("../../../../../lib/services/workflow.service");
+    const { getWorkflowById } = await import("@/lib/services/workflow.service");
     const existing = await getWorkflowById(workflowId, workspaceId);
     if (!existing) {
       return { error: "Workflow not found." };
@@ -338,8 +336,7 @@ export async function deleteDetailedStepAction(
   await requireWorkspaceOwner(workspaceId);
 
   try {
-    const { getWorkflowById } =
-      await import("../../../../../lib/services/workflow.service");
+    const { getWorkflowById } = await import("@/lib/services/workflow.service");
     const existing = await getWorkflowById(workflowId, workspaceId);
     if (!existing) {
       return { error: "Workflow not found." };

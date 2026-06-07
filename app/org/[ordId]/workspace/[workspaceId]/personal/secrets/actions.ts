@@ -1,19 +1,19 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { requireWorkspaceOwner } from "../../../../../lib/services/auth.service";
+import { requireWorkspaceOwner } from "@/lib/services/auth.service";
 import {
   createSecret,
   deleteSecret,
   updateSecret,
-} from "../../../../../lib/services/secret.service";
-import { ValidationError } from "../../../../../lib/errors/validation-error";
+} from "@/lib/services/secret.service";
+import { ValidationError } from "@/lib/errors/validation-error";
 
 export type ActionResult = { error: string } | { success: true };
 
 export async function createSecretAction(
   workspaceId: string,
-  formData: FormData
+  formData: FormData,
 ): Promise<ActionResult> {
   const { user } = await requireWorkspaceOwner(workspaceId);
 
@@ -42,7 +42,7 @@ export async function createSecretAction(
 export async function updateSecretAction(
   workspaceId: string,
   secretId: string,
-  formData: FormData
+  formData: FormData,
 ): Promise<ActionResult> {
   const { user } = await requireWorkspaceOwner(workspaceId);
 
@@ -71,10 +71,9 @@ export async function updateSecretAction(
 
 export async function deleteSecretAction(
   workspaceId: string,
-  secretId: string
+  secretId: string,
 ): Promise<void> {
   const { user } = await requireWorkspaceOwner(workspaceId);
   await deleteSecret(secretId, workspaceId, user.id);
   revalidatePath(`/workspace/${workspaceId}/personal/secrets`);
 }
-

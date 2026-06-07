@@ -1,12 +1,12 @@
-import { DashboardLayout } from "../../../../components/layout/dashboard-layout";
-import { MainArea } from "../../../../components/layout/main-area";
-import { OverviewPersonalView } from "../../../../components/overview/overview-personal-view";
-import { requireWorkspaceOwner } from "../../../../lib/services/auth.service";
+import { DashboardLayout } from "@/components/layout/dashboard-layout";
+import { MainArea } from "@/components/layout/main-area";
+import { OverviewPersonalView } from "@/components/overview/overview-personal-view";
+import { requireWorkspaceOwner } from "@/lib/services/auth.service";
 import {
   getAiChatsForWorkspace,
   getAiMessages,
-} from "../../../../lib/services/chat.service";
-import { getWorkspaceSettings } from "../../../../lib/services/workspace-settings.service";
+} from "@/lib/services/chat.service";
+import { getWorkspaceSettings } from "@/lib/services/workspace-settings.service";
 import {
   sendAiMessageAction,
   updateWorkspaceModelAction,

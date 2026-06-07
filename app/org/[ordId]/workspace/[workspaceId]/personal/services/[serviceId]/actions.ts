@@ -6,27 +6,24 @@ import {
   updateEndpoint,
   deleteEndpoint,
   getEndpointsByServiceId,
-} from "../../../../../../lib/services/service-endpoint.service";
+} from "@/lib/services/service-endpoint.service";
 import {
   requireWorkspaceOwner,
   requireUser,
-} from "../../../../../../lib/services/auth.service";
+} from "@/lib/services/auth.service";
 import {
   getServiceById,
   validateServiceForSpawn,
   resetSpawnFailCount,
   decrementQaSpawnCount,
-} from "../../../../../../lib/services/service.service";
-import {
-  enqueueServiceSpawn,
-  enqueueServiceStop,
-} from "../../../../../../lib/queues/pg-boss";
-import { ValidationError } from "../../../../../../lib/errors/validation-error";
+} from "@/lib/services/service.service";
+import { enqueueServiceSpawn, enqueueServiceStop } from "@/lib/queues/pg-boss";
+import { ValidationError } from "@/lib/errors/validation-error";
 import {
   getRequiredSecrets,
   addRequiredSecret,
   removeRequiredSecret,
-} from "../../../../../../lib/services/service-required-secrets.service";
+} from "@/lib/services/service-required-secrets.service";
 
 export type ActionResult = { error: string } | { success: true };
 

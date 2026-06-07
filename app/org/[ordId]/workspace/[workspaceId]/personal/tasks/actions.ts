@@ -6,10 +6,10 @@ import {
   updateTask,
   deleteTask,
   getTaskById,
-} from "../../../../../lib/services/task.service";
-import { calculateNextRunTime } from "../../../../../lib/services/task-execution.service";
-import { requireWorkspaceOwner } from "../../../../../lib/services/auth.service";
-import { ValidationError } from "../../../../../lib/errors/validation-error";
+} from "@/lib/services/task.service";
+import { calculateNextRunTime } from "@/lib/services/task-execution.service";
+import { requireWorkspaceOwner } from "@/lib/services/auth.service";
+import { ValidationError } from "@/lib/errors/validation-error";
 
 export type ActionResult = { error: string } | { success: true };
 

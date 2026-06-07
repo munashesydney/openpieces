@@ -1,5 +1,9 @@
-import { BrainView } from "../../../../components/brain/brain-view";
-import { getBrainStats, getOrCreateBrainSettings, getBrainEntries } from "@/lib/services/brain.service";
+import { BrainView } from "@/components/brain/brain-view";
+import {
+  getBrainStats,
+  getOrCreateBrainSettings,
+  getBrainEntries,
+} from "@/lib/services/brain.service";
 
 export default async function BrainPage(props: {
   params: Promise<{ workspaceId: string }>;

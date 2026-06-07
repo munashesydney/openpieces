@@ -1,12 +1,9 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import {
-  createService,
-  deleteService,
-} from "../../../../../lib/services/service.service";
-import { requireWorkspaceOwner } from "../../../../../lib/services/auth.service";
-import { ValidationError } from "../../../../../lib/errors/validation-error";
+import { createService, deleteService } from "@/lib/services/service.service";
+import { requireWorkspaceOwner } from "@/lib/services/auth.service";
+import { ValidationError } from "@/lib/errors/validation-error";
 
 export type ActionResult = { error: string } | { success: true };
 

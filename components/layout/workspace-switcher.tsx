@@ -8,6 +8,7 @@ import { useRouter } from "next/navigation";
 type Workspace = {
   id: string;
   name: string;
+  orgId?: string | null;
 };
 
 export function WorkspaceSwitcher({
@@ -131,7 +132,9 @@ export function WorkspaceSwitcher({
           } z-50 overflow-y-auto max-h-[min(50vh,320px)] rounded border border-[var(--border)] bg-[var(--sidebar-bg)] shadow-[0_12px_40px_rgba(0,0,0,0.35)]`}
         >
           <div className="px-2.5 pt-2.5 pb-1.5">
-            <p className="text-[10px] uppercase tracking-[0.15em] text-[var(--muted)]/60">Workspaces</p>
+            <p className="text-[10px] uppercase tracking-[0.15em] text-[var(--muted)]/60">
+              Workspaces
+            </p>
           </div>
           <ul className="px-1 pb-1">
             {workspaces.map((w) => {
@@ -144,17 +147,23 @@ export function WorkspaceSwitcher({
                     role="menuitem"
                     onClick={() => {
                       setOpen(false);
-                      router.push(`/workspace/${w.id}/personal`);
+                      router.push(
+                        w.orgId
+                          ? `/org/${w.orgId}/workspace/${w.id}/personal`
+                          : `/org/s/workspace/${w.id}/personal`,
+                      );
                     }}
                     className={`flex w-full items-center gap-2.5 rounded px-2 py-2 text-left transition-all hover:bg-[var(--hover-bg)] ${
                       selected ? "bg-[var(--hover-bg-strong)]" : ""
                     }`}
                   >
-                    <div className={`flex h-6 w-6 shrink-0 items-center justify-center rounded text-[10px] font-bold ${
-                      selected
-                        ? "bg-[var(--accent)]/20 text-[var(--accent)]"
-                        : "bg-[var(--hover-bg)] text-[var(--foreground)]"
-                    }`}>
+                    <div
+                      className={`flex h-6 w-6 shrink-0 items-center justify-center rounded text-[10px] font-bold ${
+                        selected
+                          ? "bg-[var(--accent)]/20 text-[var(--accent)]"
+                          : "bg-[var(--hover-bg)] text-[var(--foreground)]"
+                      }`}
+                    >
                       {wInitial}
                     </div>
                     <div className="min-w-0 flex-1">

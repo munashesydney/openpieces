@@ -1,6 +1,6 @@
-import { requireWorkspaceOwner } from "../../../lib/services/auth.service";
-import { getWorkspaceChatLimitInfo } from "../../../lib/services/workspace-settings.service";
-import { ChatLimitBanner } from "../../../components/layout/chat-limit-banner";
+import { requireWorkspaceOwner } from "@/lib/services/auth.service";
+import { getWorkspaceChatLimitInfo } from "@/lib/services/workspace-settings.service";
+import { ChatLimitBanner } from "@/components/layout/chat-limit-banner";
 import { resetChatLimitAction } from "./actions";
 
 export default async function WorkspaceLayout(props: {

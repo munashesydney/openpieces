@@ -1,11 +1,11 @@
 import { notFound } from "next/navigation";
-import { DashboardLayout } from "../../../../../../components/layout/dashboard-layout";
-import { MainArea } from "../../../../../../components/layout/main-area";
-import { ServiceDetail } from "../../../../../../components/services/service-detail";
-import { getServiceById } from "../../../../../../lib/services/service.service";
-import { getEndpointsByServiceId } from "../../../../../../lib/services/service-endpoint.service";
-import { getRequiredSecrets } from "../../../../../../lib/services/service-required-secrets.service";
-import { getSecrets } from "../../../../../../lib/services/secret.service";
+import { DashboardLayout } from "@/components/layout/dashboard-layout";
+import { MainArea } from "@/components/layout/main-area";
+import { ServiceDetail } from "@/components/services/service-detail";
+import { getServiceById } from "@/lib/services/service.service";
+import { getEndpointsByServiceId } from "@/lib/services/service-endpoint.service";
+import { getRequiredSecrets } from "@/lib/services/service-required-secrets.service";
+import { getSecrets } from "@/lib/services/secret.service";
 import { auth } from "@/auth";
 
 interface PageProps {

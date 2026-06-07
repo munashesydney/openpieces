@@ -1,8 +1,8 @@
-import { DashboardLayout } from "../../../../../components/layout/dashboard-layout";
-import { MainArea } from "../../../../../components/layout/main-area";
-import { ServicesList } from "../../../../../components/services/services-list";
-import { getServices } from "../../../../../lib/services/service.service";
-import { getWorkflows } from "../../../../../lib/services/workflow.service";
+import { DashboardLayout } from "@/components/layout/dashboard-layout";
+import { MainArea } from "@/components/layout/main-area";
+import { ServicesList } from "@/components/services/services-list";
+import { getServices } from "@/lib/services/service.service";
+import { getWorkflows } from "@/lib/services/workflow.service";
 import { isFeatureEnabled } from "@/lib/services/feature-flags.service";
 
 export default async function ServicesPage(props: {

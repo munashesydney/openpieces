@@ -19,19 +19,36 @@ type SidebarProps = {
 export function Sidebar({ collapsed, onToggle }: SidebarProps) {
   const pathname = usePathname();
   const segments = pathname.split("/").filter(Boolean);
-  const workspaceId = segments[1]; // ['', 'workspace', '{id}', 'personal'] -> ['workspace','{id}','personal']
-  const personalHref = workspaceId ? `/workspace/${workspaceId}/personal` : "/";
+  // New: /org/[orgId]/workspace/[workspaceId]/...
+  // segments[0]='org', [1]=orgId, [2]='workspace', [3]=workspaceId
+  const isOrgRoute = segments[0] === "org";
+  const orgId = isOrgRoute ? segments[1] : null;
+  const workspaceId =
+    isOrgRoute && segments[2] === "workspace" ? segments[3] : null;
+
+  const personalHref =
+    orgId && workspaceId
+      ? `/org/${orgId}/workspace/${workspaceId}/personal`
+      : "/org";
   const personalActive = pathname.startsWith(personalHref);
 
-  const brainHref = workspaceId ? `/workspace/${workspaceId}/brain` : "/brain";
-  const brainActive = pathname.startsWith(`/workspace/${workspaceId}/brain`);
+  const brainHref =
+    orgId && workspaceId
+      ? `/org/${orgId}/workspace/${workspaceId}/brain`
+      : "/brain";
+  const brainActive =
+    orgId && workspaceId
+      ? pathname.startsWith(`/org/${orgId}/workspace/${workspaceId}/brain`)
+      : false;
 
-  const settingsHref = workspaceId
-    ? `/workspace/${workspaceId}/settings/general`
-    : "/settings";
-  const settingsActive = workspaceId
-    ? pathname.includes(`/workspace/${workspaceId}/settings`)
-    : pathname.startsWith(settingsHref);
+  const settingsHref =
+    orgId && workspaceId
+      ? `/org/${orgId}/workspace/${workspaceId}/settings/general`
+      : "/settings";
+  const settingsActive =
+    orgId && workspaceId
+      ? pathname.includes(`/org/${orgId}/workspace/${workspaceId}/settings`)
+      : pathname.startsWith("/settings");
 
   if (collapsed) {
     return (
@@ -107,7 +124,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
           <WorkspaceSwitcher
             placement="up"
             variant="icon"
-            activeWorkspaceId={workspaceId}
+            activeWorkspaceId={workspaceId ?? undefined}
           />
         </div>
       </aside>
@@ -137,8 +154,6 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
           <PanelLeftClose className="h-4 w-4" />
         </button>
       </div>
-
-
 
       {/* Navigation */}
       <section className="flex-1 overflow-auto px-3">
@@ -208,7 +223,10 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
 
       {/* Bottom workspace switcher (drop-up) */}
       <div className="border-t border-[var(--border)] py-3">
-        <WorkspaceSwitcher placement="up" activeWorkspaceId={workspaceId} />
+        <WorkspaceSwitcher
+          placement="up"
+          activeWorkspaceId={workspaceId ?? undefined}
+        />
       </div>
     </aside>
   );
