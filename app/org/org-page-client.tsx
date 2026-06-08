@@ -192,19 +192,16 @@ export function OrgPageClient({
         </section>
 
         {/* Standalone workspaces */}
-        {standaloneWorkspaces.length > 0 && (
-          <section>
-            <div className="mb-3 flex items-center gap-2">
-              <Folder className="h-3.5 w-3.5 text-[var(--muted)]" />
-              <h2 className="text-[12px] font-medium uppercase tracking-[0.12em] text-[var(--muted)]">
-                Standalone workspaces
-              </h2>
-            </div>
+        <section>
+          <div className="mb-3 flex items-center gap-2">
+            <Folder className="h-3.5 w-3.5 text-[var(--muted)]" />
+            <h2 className="text-[12px] font-medium uppercase tracking-[0.12em] text-[var(--muted)]">
+              Standalone workspaces
+            </h2>
+          </div>
 
-            <StandaloneDropZone
-              dragState={dragState}
-              onUnassign={handleUnassign}
-            >
+          <StandaloneDropZone dragState={dragState} onUnassign={handleUnassign}>
+            {standaloneWorkspaces.length > 0 ? (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3 items-start">
                 {standaloneWorkspaces.map((ws) => (
                   <DraggableStandaloneCard
@@ -217,9 +214,19 @@ export function OrgPageClient({
                   />
                 ))}
               </div>
-            </StandaloneDropZone>
-          </section>
-        )}
+            ) : (
+              !dragState && (
+                <div className="rounded border border-dashed border-[var(--border)] p-8 text-center">
+                  <Folder className="mx-auto h-6 w-6 text-[var(--muted)]" />
+                  <p className="mt-2 text-[13px] text-[var(--muted)]">
+                    No standalone workspaces. Drag one out of an organization or
+                    create one.
+                  </p>
+                </div>
+              )
+            )}
+          </StandaloneDropZone>
+        </section>
       </main>
 
       {/* Create organisation modal */}

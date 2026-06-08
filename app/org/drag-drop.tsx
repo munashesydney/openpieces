@@ -107,30 +107,42 @@ export function DroppableOrgCard({
 
       {expanded && (
         <div className="border-t border-[var(--border)] p-3 space-y-1">
-          {workspaces.length === 0 ? (
-            isOver && dragState ? (
-              <div className="rounded border border-dashed border-[var(--accent)]/40 p-4 flex items-center justify-center gap-3">
-                <Folder className="h-5 w-5 text-[var(--accent)]/60" />
-                <span className="text-sm text-[var(--accent)]/60">
-                  Drop &quot;{dragState.workspaceName}&quot; here
-                </span>
-              </div>
-            ) : (
-              <p className="px-3 py-2 text-[12px] text-[var(--muted)]">
-                No workspaces yet.
-              </p>
-            )
-          ) : (
-            workspaces.map((ws) => (
-              <DraggableWorkspaceRow
-                key={ws.id}
-                ws={ws}
-                orgId={org.id}
-                onDragStart={onDragStart}
-                onDragEnd={onDragEnd}
+          {isOver && dragState && (
+            <div
+              className={`rounded border border-dashed border-[var(--accent)]/40 ${
+                workspaces.length === 0 ? "p-4" : "p-3"
+              } flex items-center justify-center gap-3`}
+            >
+              <Folder
+                className={`${
+                  workspaces.length === 0 ? "h-5 w-5" : "h-4 w-4"
+                } text-[var(--accent)]/60`}
               />
-            ))
+              <span
+                className={`${
+                  workspaces.length === 0 ? "text-sm" : "text-[13px]"
+                } text-[var(--accent)]/60`}
+              >
+                {workspaces.length === 0
+                  ? `Drop "${dragState.workspaceName}" here`
+                  : `Add "${dragState.workspaceName}"`}
+              </span>
+            </div>
           )}
+          {workspaces.length === 0 && !(isOver && dragState) && (
+            <p className="px-3 py-2 text-[12px] text-[var(--muted)]">
+              No workspaces yet.
+            </p>
+          )}
+          {workspaces.map((ws) => (
+            <DraggableWorkspaceRow
+              key={ws.id}
+              ws={ws}
+              orgId={org.id}
+              onDragStart={onDragStart}
+              onDragEnd={onDragEnd}
+            />
+          ))}
         </div>
       )}
     </div>
