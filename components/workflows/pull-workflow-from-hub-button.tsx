@@ -14,7 +14,7 @@ import { Button } from "@/components/basic/buttons/button";
 import { Sheet } from "../ui/sheet";
 import { Input } from "@/components/basic/input/input";
 import { checkHubSetup } from "@/lib/services/hub-setup.service";
-import { pullWorkflowFromHubAction } from "@/app/workspace/[workspaceId]/personal/workflows/actions";
+import { pullWorkflowFromHubAction } from "@/app/org/[ordId]/workspace/[workspaceId]/personal/workflows/actions";
 
 // Local type matching what the proxy API returns
 type HubWorkflowListItem = {
@@ -27,9 +27,11 @@ type HubWorkflowListItem = {
 export function PullWorkflowFromHubButton({
   workspaceId,
   existingWorkflowId,
+  orgId,
 }: {
   workspaceId: string;
   existingWorkflowId?: string;
+  orgId: string;
 }) {
   const router = useRouter();
   const [isSheetOpen, setIsSheetOpen] = useState(false);
@@ -281,7 +283,9 @@ export function PullWorkflowFromHubButton({
               size="sm"
               onClick={() => {
                 setShowSetupModal(false);
-                router.push(`/workspace/${workspaceId}/settings/hub`);
+                router.push(
+                  `/org/${orgId}/workspace/${workspaceId}/settings/hub`,
+                );
               }}
             >
               <Settings size={12} />

@@ -1,15 +1,17 @@
 import { Copy } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { forkServiceLocallyAction } from "@/app/workspace/[workspaceId]/personal/services/[serviceId]/actions";
+import { forkServiceLocallyAction } from "@/app/org/[ordId]/workspace/[workspaceId]/personal/services/[serviceId]/actions";
 import { Button } from "@/components/basic/buttons/button";
 
 export function ForkServiceButton({
   workspaceId,
   serviceId,
+  orgId,
 }: {
   workspaceId: string;
   serviceId: string;
+  orgId: string;
 }) {
   const router = useRouter();
   const [forking, setForking] = useState(false);
@@ -28,7 +30,7 @@ export function ForkServiceButton({
     }
 
     // Navigating to the services list so they can see their new fork
-    router.push(`/workspace/${workspaceId}/personal/services`);
+    router.push(`/org/${orgId}/workspace/${workspaceId}/personal/services`);
   };
 
   return (

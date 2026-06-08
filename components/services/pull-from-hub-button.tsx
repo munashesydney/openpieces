@@ -12,7 +12,7 @@ import { useState, useEffect, useRef } from "react";
 import { Sheet } from "../ui/sheet";
 import { Modal } from "../ui/modal";
 import { Button } from "@/components/basic/buttons/button";
-import { pullFromHubAction } from "@/app/workspace/[workspaceId]/personal/services/[serviceId]/actions";
+import { pullFromHubAction } from "@/app/org/[ordId]/workspace/[workspaceId]/personal/services/[serviceId]/actions";
 import { checkHubSetup } from "@/lib/services/hub-setup.service";
 
 type HubPiece = {
@@ -26,10 +26,12 @@ export function PullFromHubButton({
   workspaceId,
   serviceId,
   serviceType,
+  orgId,
 }: {
   workspaceId: string;
   serviceId: string;
   serviceType: "trigger" | "action";
+  orgId: string;
 }) {
   const router = useRouter();
 
@@ -507,7 +509,9 @@ export function PullFromHubButton({
               size="sm"
               onClick={() => {
                 setShowSetupModal(false);
-                router.push(`/workspace/${workspaceId}/settings/hub`);
+                router.push(
+                  `/org/${orgId}/workspace/${workspaceId}/settings/hub`,
+                );
               }}
             >
               <Settings size={12} />

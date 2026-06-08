@@ -14,9 +14,7 @@ import { Input } from "@/components/basic/input/input";
 import { Textarea } from "@/components/basic/input/textarea";
 import { Dropdown } from "@/components/basic/input/dropdown";
 import type { DropdownOption } from "@/components/basic/input/dropdown";
-import {
-  updateGeneralSettingsAction,
-} from "@/app/workspace/[workspaceId]/settings/general/actions";
+import { updateGeneralSettingsAction } from "@/app/org/[ordId]/workspace/[workspaceId]/settings/general/actions";
 import { COMMON_TIMEZONES } from "@/lib/utils/timezones";
 
 type GeneralSettingsProps = {
@@ -71,9 +69,15 @@ export function GeneralSettings({
     <div className="flex w-full px-6 pb-20 pt-8">
       <div className="w-full px-4">
         <div className="mb-6">
-          <p className="text-[10px] uppercase tracking-[0.2em] text-[var(--secondary)] mb-1.5">Configuration</p>
-          <h1 className="text-2xl font-semibold tracking-tight text-[var(--foreground)]">General Settings</h1>
-          <p className="mt-1 text-[13px] text-[var(--muted)]">Manage how your workspace is identified and configured.</p>
+          <p className="text-[10px] uppercase tracking-[0.2em] text-[var(--secondary)] mb-1.5">
+            Configuration
+          </p>
+          <h1 className="text-2xl font-semibold tracking-tight text-[var(--foreground)]">
+            General Settings
+          </h1>
+          <p className="mt-1 text-[13px] text-[var(--muted)]">
+            Manage how your workspace is identified and configured.
+          </p>
         </div>
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <Card>

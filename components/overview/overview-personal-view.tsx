@@ -5,7 +5,7 @@ import { useMediaQuery } from "@/lib/hooks/use-media-query";
 import { PanelLeftOpen } from "lucide-react";
 import { Button } from "@/components/basic/buttons/button";
 import type { AiChatListItem, AiChatMessage } from "@/lib/ai-chat/types";
-import type { SendAiMessageActionResult } from "@/app/workspace/[workspaceId]/personal/actions";
+import type { SendAiMessageActionResult } from "@/app/org/[ordId]/workspace/[workspaceId]/personal/actions";
 import {
   OverviewAiChatsSidebar,
   type AgentType,

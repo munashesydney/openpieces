@@ -26,7 +26,7 @@ import {
   resumeTaskAction,
   completeTaskAction,
   deleteTaskAction,
-} from "@/app/workspace/[workspaceId]/personal/tasks/actions";
+} from "@/app/org/[ordId]/workspace/[workspaceId]/personal/tasks/actions";
 import { type Task, type Workflow } from "@/lib/db/schema";
 import { TaskDeleteModal } from "./task-delete-modal";
 import { TaskAddEditSheet } from "./task-add-edit-sheet";
@@ -428,7 +428,9 @@ export function TasksList({
         {/* Header Section */}
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-[10px] uppercase tracking-[0.2em] text-[var(--secondary)] mb-1.5">Scheduling</p>
+            <p className="text-[10px] uppercase tracking-[0.2em] text-[var(--secondary)] mb-1.5">
+              Scheduling
+            </p>
             <h1 className="text-2xl font-semibold tracking-tight text-foreground">
               Tasks
             </h1>

@@ -23,7 +23,7 @@ import {
   deleteWorkflowAction,
   linkActionServiceToWorkflowAction,
   unlinkActionServiceFromWorkflowAction,
-} from "@/app/workspace/[workspaceId]/personal/workflows/actions";
+} from "@/app/org/[ordId]/workspace/[workspaceId]/personal/workflows/actions";
 import Link from "next/link";
 import { WorkflowDeleteModal } from "./workflow-delete-modal";
 import { WorkflowSteps } from "./workflow-steps";
@@ -34,6 +34,7 @@ import { WorkflowHubBadge } from "./workflow-hub-badge";
 interface WorkflowDetailProps {
   workflow: Workflow;
   workspaceId: string;
+  orgId: string;
   triggerServices: Service[];
   tasks: Task[];
   linkedActionServices: Service[];
@@ -43,6 +44,7 @@ interface WorkflowDetailProps {
 export function WorkflowDetail({
   workflow,
   workspaceId,
+  orgId,
   triggerServices,
   tasks,
   linkedActionServices,
@@ -57,7 +59,7 @@ export function WorkflowDetail({
   const handleDelete = () => {
     startTransition(async () => {
       await deleteWorkflowAction(workspaceId, workflow.id);
-      router.push(`/workspace/${workspaceId}/personal/workflows`);
+      router.push(`/org/${orgId}/workspace/${workspaceId}/personal/workflows`);
     });
   };
 
@@ -133,13 +135,15 @@ export function WorkflowDetail({
               <PushWorkflowToHubButton
                 workspaceId={workspaceId}
                 workflowId={workflow.id}
+                orgId={orgId}
               />
               <PullWorkflowFromHubButton
                 workspaceId={workspaceId}
                 existingWorkflowId={workflow.id}
+                orgId={orgId}
               />
               <Link
-                href={`/workspace/${workspaceId}/personal/workflows/${workflow.id}/executions`}
+                href={`/org/${orgId}/workspace/${workspaceId}/personal/workflows/${workflow.id}/executions`}
               >
                 <Button variant="outline" size="sm" className="gap-1.5">
                   <Play className="h-3.5 w-3.5" />
@@ -204,6 +208,7 @@ export function WorkflowDetail({
                         key={s.id}
                         service={s}
                         workspaceId={workspaceId}
+                        orgId={orgId}
                       />
                     ))}
                   </div>
@@ -313,6 +318,7 @@ export function WorkflowDetail({
                   key={s.id}
                   service={s}
                   workspaceId={workspaceId}
+                  orgId={orgId}
                   onUnlink={() => handleUnlinkActionService(s.id)}
                 />
               ))}
@@ -335,9 +341,11 @@ function EmptySlot({ label }: { label: string }) {
 function ServiceRow({
   service,
   workspaceId,
+  orgId,
 }: {
   service: Service;
   workspaceId: string;
+  orgId: string;
 }) {
   const Icon = service.type === "trigger" ? Zap : Terminal;
   const iconColor =
@@ -348,7 +356,9 @@ function ServiceRow({
       : "bg-[var(--accent-glow)]/10";
 
   return (
-    <Link href={`/workspace/${workspaceId}/personal/services/${service.id}`}>
+    <Link
+      href={`/org/${orgId}/workspace/${workspaceId}/personal/services/${service.id}`}
+    >
       <Card hoverable className="cursor-pointer p-4">
         <div className="flex items-center gap-4">
           <div
@@ -415,10 +425,12 @@ function TaskRow({ task }: { task: Task }) {
 function LinkedActionRow({
   service,
   workspaceId,
+  orgId,
   onUnlink,
 }: {
   service: Service;
   workspaceId: string;
+  orgId: string;
   onUnlink: () => void;
 }) {
   const [isPending, startTransition] = useTransition();
@@ -433,7 +445,7 @@ function LinkedActionRow({
           <Terminal className="h-4 w-4" />
         </div>
         <Link
-          href={`/workspace/${workspaceId}/personal/services/${service.id}`}
+          href={`/org/${orgId}/workspace/${workspaceId}/personal/services/${service.id}`}
           className="flex-1 min-w-0"
         >
           <p className="text-sm font-medium text-[var(--foreground)] truncate">

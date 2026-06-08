@@ -22,7 +22,7 @@ import { ActionMenu } from "@/components/basic/input/action-menu";
 import {
   createWorkflowAction,
   deleteWorkflowAction,
-} from "@/app/workspace/[workspaceId]/personal/workflows/actions";
+} from "@/app/org/[ordId]/workspace/[workspaceId]/personal/workflows/actions";
 import { type Workflow as WorkflowType } from "@/lib/db/schema";
 import { WorkflowDeleteModal } from "./workflow-delete-modal";
 
@@ -41,12 +41,14 @@ function timeAgo(date: Date): string {
 export function WorkflowsList({
   initialWorkflows,
   workspaceId,
+  orgId,
   total,
   currentPage,
   pageSize,
 }: {
   initialWorkflows: WorkflowType[];
   workspaceId: string;
+  orgId: string;
   total: number;
   currentPage: number;
   pageSize: number;
@@ -83,7 +85,9 @@ export function WorkflowsList({
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-[10px] uppercase tracking-[0.2em] text-[var(--secondary)] mb-1.5">Automation</p>
+            <p className="text-[10px] uppercase tracking-[0.2em] text-[var(--secondary)] mb-1.5">
+              Automation
+            </p>
             <h1 className="text-2xl font-semibold tracking-tight text-foreground">
               Workflows
             </h1>
@@ -155,6 +159,7 @@ export function WorkflowsList({
               key={workflow.id}
               workflow={workflow}
               workspaceId={workspaceId}
+              orgId={orgId}
             />
           ))}
           {initialWorkflows.length === 0 && (
@@ -233,9 +238,11 @@ export function WorkflowsList({
 function WorkflowCard({
   workflow,
   workspaceId,
+  orgId,
 }: {
   workflow: WorkflowType;
   workspaceId: string;
+  orgId: string;
 }) {
   const [isPending, startTransition] = useTransition();
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
@@ -250,7 +257,7 @@ function WorkflowCard({
   return (
     <>
       <Link
-        href={`/workspace/${workspaceId}/personal/workflows/${workflow.id}`}
+        href={`/org/${orgId}/workspace/${workspaceId}/personal/workflows/${workflow.id}`}
       >
         <Card
           hoverable

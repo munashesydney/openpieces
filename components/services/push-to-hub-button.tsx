@@ -5,15 +5,17 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Modal } from "../ui/modal";
 import { Button } from "@/components/basic/buttons/button";
-import { pushToHubAction } from "@/app/workspace/[workspaceId]/personal/services/[serviceId]/actions";
+import { pushToHubAction } from "@/app/org/[ordId]/workspace/[workspaceId]/personal/services/[serviceId]/actions";
 import { checkHubSetup } from "@/lib/services/hub-setup.service";
 
 export function PushToHubButton({
   workspaceId,
   serviceId,
+  orgId,
 }: {
   workspaceId: string;
   serviceId: string;
+  orgId: string;
 }) {
   const router = useRouter();
   const [status, setStatus] = useState<
@@ -138,7 +140,9 @@ export function PushToHubButton({
               size="sm"
               onClick={() => {
                 setShowSetupModal(false);
-                router.push(`/workspace/${workspaceId}/settings/hub`);
+                router.push(
+                  `/org/${orgId}/workspace/${workspaceId}/settings/hub`,
+                );
               }}
             >
               <Settings size={12} />

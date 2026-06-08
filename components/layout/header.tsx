@@ -30,158 +30,133 @@ export function Header() {
   const pathname = usePathname();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const segments = pathname.split("/").filter(Boolean);
-  const workspaceId = segments[1];
+  // New: /org/[orgId]/workspace/[workspaceId]/...
+  const isOrgRoute = segments[0] === "org";
+  const orgId = isOrgRoute ? segments[1] : null;
+  const workspaceId =
+    isOrgRoute && segments[2] === "workspace" ? segments[3] : null;
+
+  const prefix =
+    orgId && workspaceId ? `/org/${orgId}/workspace/${workspaceId}` : "";
 
   const isSettingsPage = pathname.includes("/settings");
-  const isBrainPage = pathname.startsWith(`/workspace/${workspaceId}/brain`);
+  const isBrainPage =
+    orgId && workspaceId
+      ? pathname.startsWith(`/org/${orgId}/workspace/${workspaceId}/brain`)
+      : false;
 
-  const personalHref = workspaceId ? `/workspace/${workspaceId}/personal` : "/";
-  const brainHref = workspaceId ? `/workspace/${workspaceId}/brain` : "/brain";
-  const settingsHref = workspaceId
-    ? `/workspace/${workspaceId}/settings/general`
-    : "/settings";
+  const personalHref = prefix ? `${prefix}/personal` : "/org";
+  const brainHref = prefix ? `${prefix}/brain` : "/brain";
+  const settingsHref = prefix ? `${prefix}/settings/general` : "/settings";
 
-  const personalActive = pathname.startsWith(personalHref);
-  const brainActive = pathname.startsWith(`/workspace/${workspaceId}/brain`);
-  const settingsActive = workspaceId
-    ? pathname.includes(`/workspace/${workspaceId}/settings`)
-    : pathname.startsWith(settingsHref);
+  const personalActive = prefix
+    ? pathname.startsWith(`${prefix}/personal`)
+    : false;
+  const brainActive =
+    orgId && workspaceId
+      ? pathname.startsWith(`/org/${orgId}/workspace/${workspaceId}/brain`)
+      : false;
+  const settingsActive = prefix
+    ? pathname.includes(`${prefix}/settings`)
+    : pathname.startsWith("/settings");
 
   const brainNavItems = [
     {
       label: "Brain",
-      href: workspaceId ? `/workspace/${workspaceId}/brain` : "/brain",
+      href: prefix ? `${prefix}/brain` : "/brain",
       icon: Brain,
-      activePattern: workspaceId ? `/workspace/${workspaceId}/brain` : "/brain",
+      activePattern: prefix ? `${prefix}/brain` : "/brain",
     },
     {
       label: "Activity",
-      href: workspaceId
-        ? `/workspace/${workspaceId}/brain/activity`
-        : "/brain/activity",
+      href: prefix ? `${prefix}/brain/activity` : "/brain/activity",
       icon: Activity,
-      activePattern: workspaceId
-        ? `/workspace/${workspaceId}/brain/activity`
-        : "/brain/activity",
+      activePattern: prefix ? `${prefix}/brain/activity` : "/brain/activity",
     },
   ];
 
   const personalNavItems = [
     {
       label: "Overview",
-      href: workspaceId ? `/workspace/${workspaceId}/personal` : "/",
+      href: prefix ? `${prefix}/personal` : "/org",
       icon: LayoutDashboard,
-      activePattern: workspaceId ? `/workspace/${workspaceId}/personal` : "/",
+      activePattern: prefix ? `${prefix}/personal` : "/org",
     },
     {
       label: "Workflows",
-      href: workspaceId
-        ? `/workspace/${workspaceId}/personal/workflows`
-        : "/workflows",
+      href: prefix ? `${prefix}/personal/workflows` : "/workflows",
       icon: Workflow,
-      activePattern: workspaceId
-        ? `/workspace/${workspaceId}/personal/workflows`
-        : "/workflows",
+      activePattern: prefix ? `${prefix}/personal/workflows` : "/workflows",
     },
     {
       label: "Pieces",
-      href: workspaceId
-        ? `/workspace/${workspaceId}/personal/services`
-        : "/services",
+      href: prefix ? `${prefix}/personal/services` : "/services",
       icon: Puzzle,
-      activePattern: workspaceId
-        ? `/workspace/${workspaceId}/personal/services`
-        : "/services",
+      activePattern: prefix ? `${prefix}/personal/services` : "/services",
     },
     {
       label: "Tasks",
-      href: workspaceId ? `/workspace/${workspaceId}/personal/tasks` : "/tasks",
+      href: prefix ? `${prefix}/personal/tasks` : "/tasks",
       icon: Calendar,
-      activePattern: workspaceId
-        ? `/workspace/${workspaceId}/personal/tasks`
-        : "/tasks",
+      activePattern: prefix ? `${prefix}/personal/tasks` : "/tasks",
     },
     {
       label: "Secrets",
-      href: workspaceId
-        ? `/workspace/${workspaceId}/personal/secrets`
-        : "/secrets",
+      href: prefix ? `${prefix}/personal/secrets` : "/secrets",
       icon: KeyRound,
-      activePattern: workspaceId
-        ? `/workspace/${workspaceId}/personal/secrets`
-        : "/secrets",
+      activePattern: prefix ? `${prefix}/personal/secrets` : "/secrets",
     },
     {
       label: "OpenCode",
-      href: workspaceId
-        ? `/workspace/${workspaceId}/personal/opencode`
-        : "/opencode",
+      href: prefix ? `${prefix}/personal/opencode` : "/opencode",
       icon: Terminal,
-      activePattern: workspaceId
-        ? `/workspace/${workspaceId}/personal/opencode`
-        : "/opencode",
+      activePattern: prefix ? `${prefix}/personal/opencode` : "/opencode",
     },
   ];
 
   const settingsNavItems = [
     {
       label: "General",
-      href: workspaceId
-        ? `/workspace/${workspaceId}/settings/general`
-        : "/settings/general",
+      href: prefix ? `${prefix}/settings/general` : "/settings/general",
       icon: Settings,
-      activePattern: workspaceId
-        ? `/workspace/${workspaceId}/settings/general`
+      activePattern: prefix
+        ? `${prefix}/settings/general`
         : "/settings/general",
     },
     {
       label: "Your Open Pieces",
-      href: workspaceId
-        ? `/workspace/${workspaceId}/settings/agent`
-        : "/settings/agent",
+      href: prefix ? `${prefix}/settings/agent` : "/settings/agent",
       icon: Bot,
-      activePattern: workspaceId
-        ? `/workspace/${workspaceId}/settings/agent`
-        : "/settings/agent",
+      activePattern: prefix ? `${prefix}/settings/agent` : "/settings/agent",
     },
     {
       label: "Security",
-      href: workspaceId
-        ? `/workspace/${workspaceId}/settings/security`
-        : "/settings/security",
+      href: prefix ? `${prefix}/settings/security` : "/settings/security",
       icon: Shield,
-      activePattern: workspaceId
-        ? `/workspace/${workspaceId}/settings/security`
+      activePattern: prefix
+        ? `${prefix}/settings/security`
         : "/settings/security",
     },
     {
       label: "Preferences",
-      href: workspaceId
-        ? `/workspace/${workspaceId}/settings/preferences`
-        : "/settings/preferences",
+      href: prefix ? `${prefix}/settings/preferences` : "/settings/preferences",
       icon: Monitor,
-      activePattern: workspaceId
-        ? `/workspace/${workspaceId}/settings/preferences`
+      activePattern: prefix
+        ? `${prefix}/settings/preferences`
         : "/settings/preferences",
     },
     {
       label: "Hub",
-      href: workspaceId
-        ? `/workspace/${workspaceId}/settings/hub`
-        : "/settings/hub",
+      href: prefix ? `${prefix}/settings/hub` : "/settings/hub",
       icon: ExternalLink,
-      activePattern: workspaceId
-        ? `/workspace/${workspaceId}/settings/hub`
-        : "/settings/hub",
+      activePattern: prefix ? `${prefix}/settings/hub` : "/settings/hub",
     },
     {
       label: "Features",
-      href: workspaceId
-        ? `/workspace/${workspaceId}/settings/features`
-        : "/settings/features",
+      href: prefix ? `${prefix}/settings/features` : "/settings/features",
       icon: Flag,
-      activePattern: workspaceId
-        ? `/workspace/${workspaceId}/settings/features`
+      activePattern: prefix
+        ? `${prefix}/settings/features`
         : "/settings/features",
     },
   ];
@@ -420,7 +395,7 @@ export function Header() {
             <div className="border-t border-[var(--border)] bg-[var(--sidebar-bg)] px-3 py-3">
               <WorkspaceSwitcher
                 placement="up"
-                activeWorkspaceId={workspaceId}
+                activeWorkspaceId={workspaceId ?? undefined}
               />
             </div>
           </div>
