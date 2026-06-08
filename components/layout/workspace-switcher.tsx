@@ -1,12 +1,6 @@
 "use client";
 
-import {
-  ChevronRight,
-  ChevronsUpDown,
-  Plus,
-  Building2,
-  Check,
-} from "lucide-react";
+import { ChevronRight, ChevronsUpDown, Plus, Building2 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 
@@ -34,6 +28,7 @@ export function WorkspaceSwitcher({
   const [open, setOpen] = useState(false);
   const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
   const [orgs, setOrgs] = useState<Organization[]>([]);
+  const [hoveredOrgId, setHoveredOrgId] = useState<string | null>(null);
   const rootRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -71,7 +66,6 @@ export function WorkspaceSwitcher({
     };
   }, [open]);
 
-  // Group workspaces by orgId
   const orgWorkspaceMap = useMemo(() => {
     const map = new Map<string, Workspace[]>();
     for (const w of workspaces) {
@@ -122,7 +116,10 @@ export function WorkspaceSwitcher({
     >
       <button
         type="button"
-        onClick={() => setOpen((v) => !v)}
+        onClick={() => {
+          setOpen((v) => !v);
+          setHoveredOrgId(null);
+        }}
         className={
           isIconVariant
             ? "flex h-9 w-9 items-center justify-center rounded border border-[var(--border)] bg-[var(--hover-bg)] text-left transition-all hover:bg-[var(--hover-bg-strong)] hover:border-[var(--accent)]/20"
@@ -152,165 +149,182 @@ export function WorkspaceSwitcher({
 
       {open && (
         <div
-          role="menu"
           className={`absolute ${
             isIconVariant
               ? iconMenuPositionClass
-              : `left-0 right-0 ${menuPositionClass}`
-          } z-50 overflow-y-auto max-h-[min(50vh,320px)] rounded border border-[var(--border)] bg-[var(--sidebar-bg)] shadow-[0_12px_40px_rgba(0,0,0,0.35)]`}
+              : `left-0 ${menuPositionClass}`
+          } z-50 flex`}
+          onMouseLeave={() => setHoveredOrgId(null)}
         >
-          {/* Organizations */}
-          {orgs.length > 0 && (
-            <>
-              <div className="px-2.5 pt-2.5 pb-1">
-                <p className="text-[10px] uppercase tracking-[0.15em] text-[var(--muted)]/60">
-                  Organizations
-                </p>
-              </div>
-              <ul className="px-1 pb-1">
-                {orgs.map((org) => {
-                  const wsList = orgWorkspaceMap.get(org.id) ?? [];
-                  return (
-                    <li key={org.id} className="group/org relative">
-                      <div className="flex w-full items-center gap-2.5 rounded px-2 py-2 text-left transition-all hover:bg-[var(--hover-bg)] cursor-default">
-                        <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded bg-[var(--hover-bg)] text-[10px] font-bold text-[var(--muted)]">
-                          <Building2 className="h-3 w-3" />
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <p className="truncate text-[13px] font-medium text-[var(--foreground)]">
-                            {org.name}
-                          </p>
-                        </div>
-                        {wsList.length > 0 && (
-                          <ChevronRight className="h-3 w-3 text-[var(--muted)]" />
-                        )}
-                      </div>
-
-                      {/* Submenu — workspaces in this org */}
-                      {wsList.length > 0 && (
-                        <div className="absolute left-full top-0 ml-1 hidden group-hover/org:block z-50 w-56 rounded border border-[var(--border)] bg-[var(--sidebar-bg)] shadow-[0_12px_40px_rgba(0,0,0,0.35)]">
-                          <div className="px-2.5 pt-2.5 pb-1">
-                            <p className="truncate text-[10px] uppercase tracking-[0.15em] text-[var(--muted)]/60">
+          {/* Left panel: orgs + standalone */}
+          <div
+            className={`${isIconVariant ? "w-60" : "w-56"} max-h-[min(50vh,340px)] overflow-y-auto rounded border border-[var(--border)] bg-[var(--sidebar-bg)] shadow-[0_12px_40px_rgba(0,0,0,0.35)]`}
+          >
+            {/* Organizations */}
+            {orgs.length > 0 && (
+              <>
+                <div className="px-2.5 pt-2.5 pb-1">
+                  <p className="text-[10px] uppercase tracking-[0.15em] text-[var(--muted)]/60">
+                    Organizations
+                  </p>
+                </div>
+                <ul className="px-1 pb-1">
+                  {orgs.map((org) => {
+                    const wsList = orgWorkspaceMap.get(org.id) ?? [];
+                    return (
+                      <li key={org.id}>
+                        <button
+                          type="button"
+                          onMouseEnter={() => setHoveredOrgId(org.id)}
+                          className={`flex w-full items-center gap-2.5 rounded px-2 py-2 text-left transition-all hover:bg-[var(--hover-bg)] ${
+                            hoveredOrgId === org.id
+                              ? "bg-[var(--hover-bg)] text-[var(--foreground)]"
+                              : "text-[var(--muted)] hover:text-[var(--foreground)]"
+                          }`}
+                        >
+                          <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded bg-[var(--hover-bg)] text-[10px] font-bold text-[var(--muted)]">
+                            <Building2 className="h-3 w-3" />
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <p className="truncate text-[13px] font-medium">
                               {org.name}
                             </p>
                           </div>
-                          <ul className="px-1 pb-1">
-                            {wsList.map((w) => {
-                              const selected = w.id === active?.id;
-                              return (
-                                <li key={w.id}>
-                                  <button
-                                    type="button"
-                                    role="menuitem"
-                                    onClick={() => {
-                                      setOpen(false);
-                                      router.push(
-                                        `/org/${org.id}/workspace/${w.id}/personal`,
-                                      );
-                                    }}
-                                    className={`flex w-full items-center gap-2.5 rounded px-2 py-2 text-left transition-all hover:bg-[var(--hover-bg)] ${
-                                      selected
-                                        ? "bg-[var(--hover-bg-strong)]"
-                                        : ""
-                                    }`}
-                                  >
-                                    <div
-                                      className={`flex h-6 w-6 shrink-0 items-center justify-center rounded text-[10px] font-bold ${
-                                        selected
-                                          ? "bg-[var(--accent)]/20 text-[var(--accent)]"
-                                          : "bg-[var(--hover-bg)] text-[var(--foreground)]"
-                                      }`}
-                                    >
-                                      {w.name.trim().slice(0, 1).toUpperCase()}
-                                    </div>
-                                    <div className="min-w-0 flex-1">
-                                      <p className="truncate text-[13px] font-medium text-[var(--foreground)]">
-                                        {w.name}
-                                      </p>
-                                    </div>
-                                    {selected && (
-                                      <span className="h-3.5 w-3.5 rounded-full bg-[var(--secondary)]" />
-                                    )}
-                                  </button>
-                                </li>
-                              );
-                            })}
-                          </ul>
-                        </div>
-                      )}
-                    </li>
-                  );
-                })}
-              </ul>
-            </>
-          )}
+                          {wsList.length > 0 && (
+                            <ChevronRight className="h-3 w-3 opacity-50" />
+                          )}
+                        </button>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </>
+            )}
 
-          {/* Standalone workspaces */}
-          {standalone.length > 0 && (
-            <>
-              {orgs.length > 0 && (
-                <div className="h-px bg-[var(--border)] mx-2.5" />
-              )}
-              <div className="px-2.5 pt-2.5 pb-1">
-                <p className="text-[10px] uppercase tracking-[0.15em] text-[var(--muted)]/60">
-                  Standalone
-                </p>
-              </div>
-              <ul className="px-1 pb-1">
-                {standalone.map((w) => {
-                  const selected = w.id === active?.id;
-                  const wInitial = w.name.trim().slice(0, 1).toUpperCase();
-                  return (
-                    <li key={w.id}>
-                      <button
-                        type="button"
-                        role="menuitem"
-                        onClick={() => {
-                          setOpen(false);
-                          router.push(`/org/s/workspace/${w.id}/personal`);
-                        }}
-                        className={`flex w-full items-center gap-2.5 rounded px-2 py-2 text-left transition-all hover:bg-[var(--hover-bg)] ${
-                          selected ? "bg-[var(--hover-bg-strong)]" : ""
-                        }`}
-                      >
-                        <div
-                          className={`flex h-6 w-6 shrink-0 items-center justify-center rounded text-[10px] font-bold ${
-                            selected
-                              ? "bg-[var(--accent)]/20 text-[var(--accent)]"
-                              : "bg-[var(--hover-bg)] text-[var(--foreground)]"
+            {/* Standalone */}
+            {standalone.length > 0 && (
+              <>
+                {orgs.length > 0 && (
+                  <div className="h-px bg-[var(--border)] mx-2.5" />
+                )}
+                <div className="px-2.5 pt-2.5 pb-1">
+                  <p className="text-[10px] uppercase tracking-[0.15em] text-[var(--muted)]/60">
+                    Standalone
+                  </p>
+                </div>
+                <ul className="px-1 pb-1">
+                  {standalone.map((w) => {
+                    const selected = w.id === active?.id;
+                    const wInitial = w.name.trim().slice(0, 1).toUpperCase();
+                    return (
+                      <li key={w.id}>
+                        <button
+                          type="button"
+                          role="menuitem"
+                          onClick={() => {
+                            setOpen(false);
+                            router.push(`/org/s/workspace/${w.id}/personal`);
+                          }}
+                          className={`flex w-full items-center gap-2.5 rounded px-2 py-2 text-left transition-all hover:bg-[var(--hover-bg)] ${
+                            selected ? "bg-[var(--hover-bg-strong)]" : ""
                           }`}
                         >
-                          {wInitial}
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <p className="truncate text-[13px] font-medium text-[var(--foreground)]">
-                            {w.name}
-                          </p>
-                        </div>
-                        {selected && (
-                          <Check className="h-3.5 w-3.5 text-[var(--secondary)]" />
-                        )}
-                      </button>
-                    </li>
-                  );
-                })}
-              </ul>
-            </>
-          )}
+                          <div
+                            className={`flex h-6 w-6 shrink-0 items-center justify-center rounded text-[10px] font-bold ${
+                              selected
+                                ? "bg-[var(--accent)]/20 text-[var(--accent)]"
+                                : "bg-[var(--hover-bg)] text-[var(--foreground)]"
+                            }`}
+                          >
+                            {wInitial}
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <p className="truncate text-[13px] font-medium text-[var(--foreground)]">
+                              {w.name}
+                            </p>
+                          </div>
+                          {selected && (
+                            <span className="h-1.5 w-1.5 rounded-full bg-[var(--secondary)]" />
+                          )}
+                        </button>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </>
+            )}
 
-          <div className="h-px bg-[var(--border)]" />
-          <button
-            type="button"
-            role="menuitem"
-            onClick={() => {
-              setOpen(false);
-              router.push("/workspace/create");
-            }}
-            className="flex w-full items-center gap-2 px-3 py-2.5 text-[13px] font-medium text-[var(--foreground)] transition-all hover:bg-[var(--hover-bg)]"
-          >
-            <Plus className="h-3.5 w-3.5 text-[var(--secondary)]" />
-            Create workspace
-          </button>
+            <div className="h-px bg-[var(--border)]" />
+            <button
+              type="button"
+              role="menuitem"
+              onClick={() => {
+                setOpen(false);
+                router.push("/workspace/create");
+              }}
+              className="flex w-full items-center gap-2 px-3 py-2.5 text-[13px] font-medium text-[var(--foreground)] transition-all hover:bg-[var(--hover-bg)]"
+            >
+              <Plus className="h-3.5 w-3.5 text-[var(--secondary)]" />
+              Create workspace
+            </button>
+          </div>
+
+          {/* Right panel: workspaces for hovered org */}
+          {hoveredOrgId &&
+            (() => {
+              const org = orgs.find((o) => o.id === hoveredOrgId);
+              const wsList = orgWorkspaceMap.get(hoveredOrgId) ?? [];
+              if (!org || wsList.length === 0) return null;
+              return (
+                <div className="ml-2 w-52 max-h-[min(50vh,340px)] overflow-y-auto rounded border border-[var(--border)] bg-[var(--sidebar-bg)] shadow-[0_12px_40px_rgba(0,0,0,0.35)]">
+                  <div className="px-2.5 pt-2.5 pb-1">
+                    <p className="truncate text-[10px] uppercase tracking-[0.15em] text-[var(--muted)]/60">
+                      {org.name}
+                    </p>
+                  </div>
+                  <ul className="px-1 pb-1">
+                    {wsList.map((w) => {
+                      const selected = w.id === active?.id;
+                      return (
+                        <li key={w.id}>
+                          <button
+                            type="button"
+                            role="menuitem"
+                            onClick={() => {
+                              setOpen(false);
+                              router.push(
+                                `/org/${org.id}/workspace/${w.id}/personal`,
+                              );
+                            }}
+                            className={`flex w-full items-center gap-2.5 rounded px-2 py-2 text-left transition-all hover:bg-[var(--hover-bg)] ${
+                              selected ? "bg-[var(--hover-bg-strong)]" : ""
+                            }`}
+                          >
+                            <div
+                              className={`flex h-6 w-6 shrink-0 items-center justify-center rounded text-[10px] font-bold ${
+                                selected
+                                  ? "bg-[var(--accent)]/20 text-[var(--accent)]"
+                                  : "bg-[var(--hover-bg)] text-[var(--foreground)]"
+                              }`}
+                            >
+                              {w.name.trim().slice(0, 1).toUpperCase()}
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <p className="truncate text-[13px] font-medium text-[var(--foreground)]">
+                                {w.name}
+                              </p>
+                            </div>
+                            {selected && (
+                              <span className="h-1.5 w-1.5 rounded-full bg-[var(--secondary)]" />
+                            )}
+                          </button>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </div>
+              );
+            })()}
         </div>
       )}
     </div>
