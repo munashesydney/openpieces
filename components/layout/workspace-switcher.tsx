@@ -158,7 +158,7 @@ export function WorkspaceSwitcher({
         >
           {/* Left panel: orgs + standalone */}
           <div
-            className={`${isIconVariant ? "w-60" : "w-56"} max-h-[min(50vh,340px)] overflow-y-auto rounded border border-[var(--border)] bg-[var(--sidebar-bg)] shadow-[0_12px_40px_rgba(0,0,0,0.35)]`}
+            className={`${isIconVariant ? "w-60" : "w-54"} max-h-[min(50vh,340px)] overflow-y-auto rounded border border-[var(--border)] bg-[var(--sidebar-bg)] shadow-[0_12px_40px_rgba(0,0,0,0.35)]`}
           >
             {/* Organizations */}
             {orgs.length > 0 && (

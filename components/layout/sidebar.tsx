@@ -8,6 +8,7 @@ import {
   PanelLeftClose,
   Settings,
   Brain,
+  Building2,
 } from "lucide-react";
 import { WorkspaceSwitcher } from "./workspace-switcher";
 
@@ -222,12 +223,20 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
       </section>
 
       {/* Bottom workspace switcher (drop-up) */}
-      <div className="border-t border-[var(--border)] py-3">
+
+      <div className="border-b border-[var(--border)] py-3">
         <WorkspaceSwitcher
           placement="up"
           activeWorkspaceId={workspaceId ?? undefined}
         />
       </div>
+      <Link
+        href="/org"
+        className="flex items-center justify-center gap-1 px-4 py-4 text-[13px] font-medium text-[var(--muted)] hover:bg-[var(--hover-bg)] hover:text-[var(--foreground)] transition-colors"
+      >
+        <Building2 className="h-4 w-4 shrink-0" />
+        Manage organizations
+      </Link>
     </aside>
   );
 }
