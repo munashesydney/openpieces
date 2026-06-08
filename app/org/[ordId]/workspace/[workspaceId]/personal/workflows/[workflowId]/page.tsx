@@ -3,18 +3,24 @@ import { DashboardLayout } from "@/components/layout/dashboard-layout";
 import { MainArea } from "@/components/layout/main-area";
 import { WorkflowDetail } from "@/components/workflows/workflow-detail";
 import { getWorkflowById } from "@/lib/services/workflow.service";
-import { getServicesByWorkflowId, getServices } from "@/lib/services/service.service";
+import {
+  getServicesByWorkflowId,
+  getServices,
+} from "@/lib/services/service.service";
 import { getTasksByWorkflowId } from "@/lib/services/task.service";
 import { getActionServicesForWorkflow } from "@/lib/services/workflow-action.service";
 
 export default async function WorkflowDetailPage({
   params,
 }: {
-  params: Promise<{ workspaceId: string; workflowId: string }>;
+  params: Promise<{ ordId: string; workspaceId: string; workflowId: string }>;
 }) {
-  const { workspaceId, workflowId } = await params;
+  const { workspaceId, workflowId, ordId } = await params;
 
-  const [[workflow, triggerServices, tasks, linkedActionServices], allServicesResult] = await Promise.all([
+  const [
+    [workflow, triggerServices, tasks, linkedActionServices],
+    allServicesResult,
+  ] = await Promise.all([
     Promise.all([
       getWorkflowById(workflowId, workspaceId),
       getServicesByWorkflowId(workflowId, workspaceId),
@@ -28,7 +34,7 @@ export default async function WorkflowDetailPage({
 
   // Filter to get only action services for the linking dropdown
   const availableActionServices = allServicesResult.data.filter(
-    (s) => s.type === "action"
+    (s) => s.type === "action",
   );
 
   return (
@@ -37,6 +43,7 @@ export default async function WorkflowDetailPage({
         <WorkflowDetail
           workflow={workflow}
           workspaceId={workspaceId}
+          orgId={ordId}
           triggerServices={triggerServices}
           tasks={tasks}
           linkedActionServices={linkedActionServices}

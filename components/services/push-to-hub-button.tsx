@@ -11,9 +11,11 @@ import { checkHubSetup } from "@/lib/services/hub-setup.service";
 export function PushToHubButton({
   workspaceId,
   serviceId,
+  orgId,
 }: {
   workspaceId: string;
   serviceId: string;
+  orgId: string;
 }) {
   const router = useRouter();
   const [status, setStatus] = useState<
@@ -138,7 +140,9 @@ export function PushToHubButton({
               size="sm"
               onClick={() => {
                 setShowSetupModal(false);
-                router.push(`/workspace/${workspaceId}/settings/hub`);
+                router.push(
+                  `/org/${orgId}/workspace/${workspaceId}/settings/hub`,
+                );
               }}
             >
               <Settings size={12} />

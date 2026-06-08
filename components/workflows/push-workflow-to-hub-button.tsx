@@ -10,9 +10,11 @@ import { pushWorkflowToHubAction } from "@/app/org/[ordId]/workspace/[workspaceI
 export function PushWorkflowToHubButton({
   workspaceId,
   workflowId,
+  orgId,
 }: {
   workspaceId: string;
   workflowId: string;
+  orgId: string;
 }) {
   const router = useRouter();
   const [status, setStatus] = useState<

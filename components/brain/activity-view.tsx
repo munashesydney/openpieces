@@ -3,7 +3,16 @@
 import * as React from "react";
 import { useTransition } from "react";
 import Link from "next/link";
-import { Search, Workflow, Puzzle, Calendar, Code, Route, ChevronRight, ArrowRight } from "lucide-react";
+import {
+  Search,
+  Workflow,
+  Puzzle,
+  Calendar,
+  Code,
+  Route,
+  ChevronRight,
+  ArrowRight,
+} from "lucide-react";
 import type { ActivityLog } from "../../lib/db/schema";
 
 type SearchMode = "workflows" | "services" | "tasks" | "endpoints" | "opencode";
@@ -16,21 +25,84 @@ interface SearchResult {
 }
 
 const mockResults: SearchResult[] = [
-  { id: "w1", name: "Email Parser", description: "Parse emails and extract data", type: "workflows" },
-  { id: "w2", name: "GitHub Issue Creator", description: "Create issues from sources", type: "workflows" },
-  { id: "w3", name: "Slack Notifier", description: "Send Slack notifications", type: "workflows" },
-  { id: "s1", name: "GitHub API", description: "Connect to GitHub", type: "services" },
-  { id: "s2", name: "Slack API", description: "Connect to Slack", type: "services" },
-  { id: "s3", name: "Email Service", description: "SMTP email service", type: "services" },
-  { id: "t1", name: "Review PR #142", description: "Review and merge PR", type: "tasks" },
-  { id: "t2", name: "Update Documentation", description: "Update API docs", type: "tasks" },
-  { id: "e1", name: "POST /api/webhooks", description: "Receive webhooks", type: "endpoints" },
-  { id: "e2", name: "GET /api/users", description: "List users", type: "endpoints" },
-  { id: "o1", name: "Debug auth flow", description: "Fix login issue", type: "opencode" },
-  { id: "o2", name: "Add user validation", description: "Validate user input", type: "opencode" },
+  {
+    id: "w1",
+    name: "Email Parser",
+    description: "Parse emails and extract data",
+    type: "workflows",
+  },
+  {
+    id: "w2",
+    name: "GitHub Issue Creator",
+    description: "Create issues from sources",
+    type: "workflows",
+  },
+  {
+    id: "w3",
+    name: "Slack Notifier",
+    description: "Send Slack notifications",
+    type: "workflows",
+  },
+  {
+    id: "s1",
+    name: "GitHub API",
+    description: "Connect to GitHub",
+    type: "services",
+  },
+  {
+    id: "s2",
+    name: "Slack API",
+    description: "Connect to Slack",
+    type: "services",
+  },
+  {
+    id: "s3",
+    name: "Email Service",
+    description: "SMTP email service",
+    type: "services",
+  },
+  {
+    id: "t1",
+    name: "Review PR #142",
+    description: "Review and merge PR",
+    type: "tasks",
+  },
+  {
+    id: "t2",
+    name: "Update Documentation",
+    description: "Update API docs",
+    type: "tasks",
+  },
+  {
+    id: "e1",
+    name: "POST /api/webhooks",
+    description: "Receive webhooks",
+    type: "endpoints",
+  },
+  {
+    id: "e2",
+    name: "GET /api/users",
+    description: "List users",
+    type: "endpoints",
+  },
+  {
+    id: "o1",
+    name: "Debug auth flow",
+    description: "Fix login issue",
+    type: "opencode",
+  },
+  {
+    id: "o2",
+    name: "Add user validation",
+    description: "Validate user input",
+    type: "opencode",
+  },
 ];
 
-const modeConfig: Record<SearchMode, { label: string; icon: typeof Workflow; recordType: string }> = {
+const modeConfig: Record<
+  SearchMode,
+  { label: string; icon: typeof Workflow; recordType: string }
+> = {
   workflows: { label: "Workflows", icon: Workflow, recordType: "workflow" },
   services: { label: "Services", icon: Puzzle, recordType: "service" },
   tasks: { label: "Tasks", icon: Calendar, recordType: "task" },
@@ -39,20 +111,27 @@ const modeConfig: Record<SearchMode, { label: string; icon: typeof Workflow; rec
 };
 
 interface ActivityViewProps {
+  orgId: string;
   workspaceId: string;
   getActivityAction: (
     recordType: string,
     limit?: number,
-    offset?: number
+    offset?: number,
   ) => Promise<ActivityLog[]>;
 }
 
-export function ActivityView({ workspaceId, getActivityAction }: ActivityViewProps) {
+export function ActivityView({
+  orgId,
+  workspaceId,
+  getActivityAction,
+}: ActivityViewProps) {
   const [isPending, startTransition] = useTransition();
   const [searchQuery, setSearchQuery] = React.useState("");
   const [isDropdownOpen, setIsDropdownOpen] = React.useState(false);
-  const [selectedMode, setSelectedMode] = React.useState<SearchMode>("workflows");
-  const [selectedResult, setSelectedResult] = React.useState<SearchResult | null>(null);
+  const [selectedMode, setSelectedMode] =
+    React.useState<SearchMode>("workflows");
+  const [selectedResult, setSelectedResult] =
+    React.useState<SearchResult | null>(null);
   const [activityData, setActivityData] = React.useState<ActivityLog[]>([]);
   const inputRef = React.useRef<HTMLInputElement>(null);
   const containerRef = React.useRef<HTMLDivElement>(null);
@@ -62,7 +141,7 @@ export function ActivityView({ workspaceId, getActivityAction }: ActivityViewPro
     .filter(
       (r) =>
         r.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        r.description.toLowerCase().includes(searchQuery.toLowerCase())
+        r.description.toLowerCase().includes(searchQuery.toLowerCase()),
     );
 
   const fetchActivity = React.useCallback(
@@ -72,7 +151,7 @@ export function ActivityView({ workspaceId, getActivityAction }: ActivityViewPro
         setActivityData(data);
       });
     },
-    [getActivityAction]
+    [getActivityAction],
   );
 
   // Fetch activity when mode changes
@@ -84,7 +163,10 @@ export function ActivityView({ workspaceId, getActivityAction }: ActivityViewPro
 
   React.useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
-      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+      if (
+        containerRef.current &&
+        !containerRef.current.contains(event.target as Node)
+      ) {
         setIsDropdownOpen(false);
       }
     }
@@ -260,7 +342,7 @@ export function ActivityView({ workspaceId, getActivityAction }: ActivityViewPro
               {displayedActivity.map((activity) => (
                 <Link
                   key={activity.id}
-                  href={`/workspace/${workspaceId}/brain/activity/${activity.id}`}
+                  href={`/org/${orgId}/workspace/${workspaceId}/brain/activity/${activity.id}`}
                   className="flex items-center justify-between rounded border border-[var(--border)] bg-[var(--sidebar-bg)] px-4 py-3 transition-colors hover:bg-[var(--hover-bg)]"
                 >
                   <div className="flex items-center gap-3">
@@ -269,8 +351,8 @@ export function ActivityView({ workspaceId, getActivityAction }: ActivityViewPro
                         activity.operation === "INSERT"
                           ? "bg-green-500"
                           : activity.operation === "UPDATE"
-                          ? "bg-yellow-500"
-                          : "bg-red-500"
+                            ? "bg-yellow-500"
+                            : "bg-red-500"
                       }`}
                     />
                     <span className="text-sm text-[var(--foreground)]">

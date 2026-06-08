@@ -5,7 +5,7 @@ import { getTasks } from "@/lib/services/task.service";
 import { getWorkflows } from "@/lib/services/workflow.service";
 
 export default async function TasksPage(props: {
-  params: Promise<{ workspaceId: string }>;
+  params: Promise<{ ordId: string; workspaceId: string }>;
   searchParams: Promise<{ page?: string }>;
 }) {
   const params = await props.params;

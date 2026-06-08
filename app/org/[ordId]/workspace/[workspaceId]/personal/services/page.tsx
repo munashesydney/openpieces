@@ -6,7 +6,7 @@ import { getWorkflows } from "@/lib/services/workflow.service";
 import { isFeatureEnabled } from "@/lib/services/feature-flags.service";
 
 export default async function ServicesPage(props: {
-  params: Promise<{ workspaceId: string }>;
+  params: Promise<{ ordId: string; workspaceId: string }>;
   searchParams?: Promise<{ [key: string]: string | string[] | undefined }>;
 }) {
   const params = await props.params;
@@ -30,6 +30,7 @@ export default async function ServicesPage(props: {
         <ServicesList
           initialServices={services}
           workspaceId={params.workspaceId}
+          orgId={params.ordId}
           total={total}
           currentPage={page}
           pageSize={pageSize}

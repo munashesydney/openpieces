@@ -260,7 +260,7 @@ export function WorkspaceSwitcher({
               role="menuitem"
               onClick={() => {
                 setOpen(false);
-                router.push("./s/workspace/create");
+                router.push("/org/s/workspace/create");
               }}
               className="flex w-full items-center gap-2 px-3 py-2.5 text-[13px] font-medium text-[var(--foreground)] transition-all hover:bg-[var(--hover-bg)]"
             >

@@ -8,15 +8,19 @@ export default async function WorkflowsPage({
   params,
   searchParams,
 }: {
-  params: Promise<{ workspaceId: string }>;
+  params: Promise<{ ordId: string; workspaceId: string }>;
   searchParams: Promise<{ page?: string }>;
 }) {
-  const { workspaceId } = await params;
+  const { workspaceId, ordId } = await params;
   const resolvedSearch = await searchParams;
   const currentPage = Number(resolvedSearch?.page ?? 1);
   const pageSize = 10;
 
-  const { data: workflows, total } = await getWorkflows(workspaceId, currentPage, pageSize);
+  const { data: workflows, total } = await getWorkflows(
+    workspaceId,
+    currentPage,
+    pageSize,
+  );
 
   return (
     <DashboardLayout>
@@ -24,6 +28,7 @@ export default async function WorkflowsPage({
         <WorkflowsList
           initialWorkflows={workflows}
           workspaceId={workspaceId}
+          orgId={ordId}
           total={total}
           currentPage={currentPage}
           pageSize={pageSize}

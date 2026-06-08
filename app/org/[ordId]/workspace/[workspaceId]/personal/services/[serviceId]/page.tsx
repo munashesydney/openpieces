@@ -10,13 +10,14 @@ import { auth } from "@/auth";
 
 interface PageProps {
   params: Promise<{
+    ordId: string;
     workspaceId: string;
     serviceId: string;
   }>;
 }
 
 export default async function ServiceIdPage({ params }: PageProps) {
-  const { workspaceId, serviceId } = await params;
+  const { ordId, workspaceId, serviceId } = await params;
 
   const service = await getServiceById(serviceId, workspaceId);
   if (!service) {
@@ -49,6 +50,7 @@ export default async function ServiceIdPage({ params }: PageProps) {
           requiredSecrets={requiredSecrets}
           workspaceSecrets={workspaceSecrets}
           workspaceId={workspaceId}
+          orgId={ordId}
         />
       </MainArea>
     </DashboardLayout>

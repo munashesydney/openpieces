@@ -41,12 +41,14 @@ function timeAgo(date: Date): string {
 export function WorkflowsList({
   initialWorkflows,
   workspaceId,
+  orgId,
   total,
   currentPage,
   pageSize,
 }: {
   initialWorkflows: WorkflowType[];
   workspaceId: string;
+  orgId: string;
   total: number;
   currentPage: number;
   pageSize: number;
@@ -157,6 +159,7 @@ export function WorkflowsList({
               key={workflow.id}
               workflow={workflow}
               workspaceId={workspaceId}
+              orgId={orgId}
             />
           ))}
           {initialWorkflows.length === 0 && (
@@ -235,9 +238,11 @@ export function WorkflowsList({
 function WorkflowCard({
   workflow,
   workspaceId,
+  orgId,
 }: {
   workflow: WorkflowType;
   workspaceId: string;
+  orgId: string;
 }) {
   const [isPending, startTransition] = useTransition();
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
@@ -252,7 +257,7 @@ function WorkflowCard({
   return (
     <>
       <Link
-        href={`/workspace/${workspaceId}/personal/workflows/${workflow.id}`}
+        href={`/org/${orgId}/workspace/${workspaceId}/personal/workflows/${workflow.id}`}
       >
         <Card
           hoverable

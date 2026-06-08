@@ -26,10 +26,12 @@ export function PullFromHubButton({
   workspaceId,
   serviceId,
   serviceType,
+  orgId,
 }: {
   workspaceId: string;
   serviceId: string;
   serviceType: "trigger" | "action";
+  orgId: string;
 }) {
   const router = useRouter();
 
@@ -507,7 +509,9 @@ export function PullFromHubButton({
               size="sm"
               onClick={() => {
                 setShowSetupModal(false);
-                router.push(`/workspace/${workspaceId}/settings/hub`);
+                router.push(
+                  `/org/${orgId}/workspace/${workspaceId}/settings/hub`,
+                );
               }}
             >
               <Settings size={12} />

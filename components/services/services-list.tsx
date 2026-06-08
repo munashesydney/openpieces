@@ -29,6 +29,7 @@ import { ServiceDeleteModal } from "./service-delete-modal";
 export function ServicesList({
   initialServices,
   workspaceId,
+  orgId,
   total,
   currentPage,
   pageSize,
@@ -37,6 +38,7 @@ export function ServicesList({
 }: {
   initialServices: Service[];
   workspaceId: string;
+  orgId: string;
   total: number;
   currentPage: number;
   pageSize: number;
@@ -221,6 +223,7 @@ export function ServicesList({
                 key={service.id}
                 service={service}
                 workspaceId={workspaceId}
+                orgId={orgId}
               />
             ))}
             {triggers.length === 0 && (
@@ -245,6 +248,7 @@ export function ServicesList({
                 key={service.id}
                 service={service}
                 workspaceId={workspaceId}
+                orgId={orgId}
               />
             ))}
             {actions.length === 0 && (
@@ -327,9 +331,11 @@ export function ServicesList({
 function ServiceCard({
   service,
   workspaceId,
+  orgId,
 }: {
   service: Service;
   workspaceId: string;
+  orgId: string;
 }) {
   const [isPending, startTransition] = useTransition();
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
@@ -345,7 +351,9 @@ function ServiceCard({
 
   return (
     <>
-      <Link href={`/workspace/${workspaceId}/personal/services/${service.id}`}>
+      <Link
+        href={`/org/${orgId}/workspace/${workspaceId}/personal/services/${service.id}`}
+      >
         <Card
           hoverable
           className={`group cursor-pointer p-5 ${isPending ? "opacity-50 pointer-events-none" : ""}`}

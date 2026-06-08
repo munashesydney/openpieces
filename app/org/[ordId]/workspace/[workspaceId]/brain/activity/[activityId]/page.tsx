@@ -6,12 +6,15 @@ import { requireWorkspaceOwner } from "@/lib/services/auth.service";
 import type { ActivityLog } from "@/lib/db/schema";
 
 export default async function ActivityDetailPage(props: {
-  params: Promise<{ workspaceId: string; activityId: string }>;
+  params: Promise<{ ordId: string; workspaceId: string; activityId: string }>;
 }) {
-  const { workspaceId, activityId } = await props.params;
+  const { ordId, workspaceId, activityId } = await props.params;
   await requireWorkspaceOwner(workspaceId);
 
-  const activity: ActivityLog | null = await getActivityByIdAction(workspaceId, activityId);
+  const activity: ActivityLog | null = await getActivityByIdAction(
+    workspaceId,
+    activityId,
+  );
 
   if (!activity) {
     notFound();
@@ -51,7 +54,7 @@ export default async function ActivityDetailPage(props: {
   return (
     <div className="mx-auto max-w-2xl px-8 py-8">
       <Link
-        href={`/workspace/${workspaceId}/brain/activity`}
+        href={`/org/${ordId}/workspace/${workspaceId}/brain/activity`}
         className="mb-6 inline-flex items-center gap-2 text-sm text-[var(--muted)] hover:text-[var(--foreground)] transition-colors"
       >
         <ArrowLeft className="h-4 w-4" />
@@ -59,7 +62,9 @@ export default async function ActivityDetailPage(props: {
       </Link>
 
       <div className="mb-8">
-        <p className="text-[10px] uppercase tracking-[0.2em] text-[var(--secondary)] mb-1.5">Audit Log</p>
+        <p className="text-[10px] uppercase tracking-[0.2em] text-[var(--secondary)] mb-1.5">
+          Audit Log
+        </p>
         <h1 className="text-2xl font-semibold tracking-tight text-[var(--foreground)]">
           Activity Details
         </h1>
@@ -70,12 +75,15 @@ export default async function ActivityDetailPage(props: {
 
       <div className="rounded border border-[var(--border)] bg-[var(--sidebar-bg)] p-6">
         <div className="mb-6 flex items-center gap-4">
-          <div className={`flex h-10 w-10 items-center justify-center rounded ${getOperationColor(operation)}`}>
+          <div
+            className={`flex h-10 w-10 items-center justify-center rounded ${getOperationColor(operation)}`}
+          >
             <Tag className="h-5 w-5" />
           </div>
           <div>
             <p className="text-base font-medium text-[var(--foreground)]">
-              {recordType.charAt(0).toUpperCase() + recordType.slice(1)} {getOperationText(operation)}
+              {recordType.charAt(0).toUpperCase() + recordType.slice(1)}{" "}
+              {getOperationText(operation)}
             </p>
             <p className="text-sm text-[var(--muted)]">ID: {id}</p>
           </div>
@@ -85,7 +93,9 @@ export default async function ActivityDetailPage(props: {
           <div className="flex items-start gap-3">
             <Database className="mt-0.5 h-4 w-4 text-[var(--muted)]" />
             <div>
-              <p className="text-xs font-medium text-[var(--muted)]">Record Type</p>
+              <p className="text-xs font-medium text-[var(--muted)]">
+                Record Type
+              </p>
               <p className="text-sm text-[var(--foreground)]">{recordType}</p>
             </div>
           </div>
@@ -94,8 +104,12 @@ export default async function ActivityDetailPage(props: {
             <div className="flex items-start gap-3">
               <Tag className="mt-0.5 h-4 w-4 text-[var(--muted)]" />
               <div>
-                <p className="text-xs font-medium text-[var(--muted)]">Record ID</p>
-                <p className="text-sm text-[var(--foreground)] font-mono">{String(recordId)}</p>
+                <p className="text-xs font-medium text-[var(--muted)]">
+                  Record ID
+                </p>
+                <p className="text-sm text-[var(--foreground)] font-mono">
+                  {String(recordId)}
+                </p>
               </div>
             </div>
           )}
@@ -103,15 +117,21 @@ export default async function ActivityDetailPage(props: {
           <div className="flex items-start gap-3">
             <Clock className="mt-0.5 h-4 w-4 text-[var(--muted)]" />
             <div>
-              <p className="text-xs font-medium text-[var(--muted)]">Timestamp</p>
-              <p className="text-sm text-[var(--foreground)]">{formatDate(createdAt)}</p>
+              <p className="text-xs font-medium text-[var(--muted)]">
+                Timestamp
+              </p>
+              <p className="text-sm text-[var(--foreground)]">
+                {formatDate(createdAt)}
+              </p>
             </div>
           </div>
         </div>
 
         {oldData != null && (
           <div className="mt-6">
-            <p className="mb-2 text-xs font-medium text-[var(--muted)]">Old Data</p>
+            <p className="mb-2 text-xs font-medium text-[var(--muted)]">
+              Old Data
+            </p>
             <pre className="overflow-auto rounded bg-[var(--hover-bg)] p-4 text-xs text-[var(--foreground)]">
               {JSON.stringify(oldData as object, null, 2)}
             </pre>
@@ -120,7 +140,9 @@ export default async function ActivityDetailPage(props: {
 
         {newData != null && (
           <div className="mt-6">
-            <p className="mb-2 text-xs font-medium text-[var(--muted)]">New Data</p>
+            <p className="mb-2 text-xs font-medium text-[var(--muted)]">
+              New Data
+            </p>
             <pre className="overflow-auto rounded bg-[var(--hover-bg)] p-4 text-xs text-[var(--foreground)]">
               {JSON.stringify(newData as object, null, 2)}
             </pre>

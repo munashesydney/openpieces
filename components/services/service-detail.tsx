@@ -63,6 +63,7 @@ interface ServiceDetailProps {
   requiredSecrets: ServiceRequiredSecret[];
   workspaceSecrets: { key: string; id: string; value: string }[];
   workspaceId: string;
+  orgId: string;
 }
 
 type HealthStatus = {
@@ -77,6 +78,7 @@ export function ServiceDetail({
   requiredSecrets,
   workspaceSecrets,
   workspaceId,
+  orgId,
 }: ServiceDetailProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -244,7 +246,7 @@ export function ServiceDetail({
     startTransition(async () => {
       await deleteServiceAction(workspaceId, service.id);
       setIsDeleteModalOpen(false);
-      router.push(`/workspace/${workspaceId}/personal/services`);
+      router.push(`/org/${orgId}/workspace/${workspaceId}/personal/services`);
     });
   };
 
@@ -279,15 +281,18 @@ export function ServiceDetail({
                   <PushToHubButton
                     workspaceId={workspaceId}
                     serviceId={service.id}
+                    orgId={orgId}
                   />
                   <ForkServiceButton
                     workspaceId={workspaceId}
                     serviceId={service.id}
+                    orgId={orgId}
                   />
                   <PullFromHubButton
                     workspaceId={workspaceId}
                     serviceId={service.id}
                     serviceType={service.type}
+                    orgId={orgId}
                   />
                 </div>
               </div>

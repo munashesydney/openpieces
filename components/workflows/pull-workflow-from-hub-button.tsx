@@ -27,9 +27,11 @@ type HubWorkflowListItem = {
 export function PullWorkflowFromHubButton({
   workspaceId,
   existingWorkflowId,
+  orgId,
 }: {
   workspaceId: string;
   existingWorkflowId?: string;
+  orgId: string;
 }) {
   const router = useRouter();
   const [isSheetOpen, setIsSheetOpen] = useState(false);
@@ -281,7 +283,9 @@ export function PullWorkflowFromHubButton({
               size="sm"
               onClick={() => {
                 setShowSetupModal(false);
-                router.push(`/workspace/${workspaceId}/settings/hub`);
+                router.push(
+                  `/org/${orgId}/workspace/${workspaceId}/settings/hub`,
+                );
               }}
             >
               <Settings size={12} />
