@@ -14,7 +14,7 @@ import { Button } from "@/components/basic/buttons/button";
 import { Sheet } from "../ui/sheet";
 import { Input } from "@/components/basic/input/input";
 import { checkHubSetup } from "@/lib/services/hub-setup.service";
-import { pullWorkflowFromHubAction } from "@/app/workspace/[workspaceId]/personal/workflows/actions";
+import { pullWorkflowFromHubAction } from "@/app/org/[ordId]/workspace/[workspaceId]/personal/workflows/actions";
 
 // Local type matching what the proxy API returns
 type HubWorkflowListItem = {

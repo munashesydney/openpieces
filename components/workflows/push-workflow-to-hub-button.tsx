@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Modal } from "../ui/modal";
 import { Button } from "@/components/basic/buttons/button";
-import { pushWorkflowToHubAction } from "@/app/workspace/[workspaceId]/personal/workflows/actions";
+import { pushWorkflowToHubAction } from "@/app/org/[ordId]/workspace/[workspaceId]/personal/workflows/actions";
 
 export function PushWorkflowToHubButton({
   workspaceId,
@@ -33,7 +33,9 @@ export function PushWorkflowToHubButton({
 
     if ("notOwner" in result) {
       setStatus("error");
-      setMessage("You don't own one of the services on the hub. Fork them individually first.");
+      setMessage(
+        "You don't own one of the services on the hub. Fork them individually first.",
+      );
       setTimeout(() => setStatus("idle"), 5000);
       return;
     }

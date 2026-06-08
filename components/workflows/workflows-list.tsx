@@ -22,7 +22,7 @@ import { ActionMenu } from "@/components/basic/input/action-menu";
 import {
   createWorkflowAction,
   deleteWorkflowAction,
-} from "@/app/workspace/[workspaceId]/personal/workflows/actions";
+} from "@/app/org/[ordId]/workspace/[workspaceId]/personal/workflows/actions";
 import { type Workflow as WorkflowType } from "@/lib/db/schema";
 import { WorkflowDeleteModal } from "./workflow-delete-modal";
 
@@ -83,7 +83,9 @@ export function WorkflowsList({
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-[10px] uppercase tracking-[0.2em] text-[var(--secondary)] mb-1.5">Automation</p>
+            <p className="text-[10px] uppercase tracking-[0.2em] text-[var(--secondary)] mb-1.5">
+              Automation
+            </p>
             <h1 className="text-2xl font-semibold tracking-tight text-foreground">
               Workflows
             </h1>

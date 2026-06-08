@@ -9,7 +9,7 @@ import {
   updateBrainSettingsAction,
   triggerBrainIngestionAction,
   triggerBrainReinforcementAction,
-} from "@/app/workspace/[workspaceId]/brain/actions";
+} from "@/app/org/[ordId]/workspace/[workspaceId]/brain/actions";
 import { BrainEntry, BrainSettings, BrainStats } from "./brain-types";
 import { BrainHeader } from "./brain-header";
 import { BrainStatCard } from "./brain-stat-card";

@@ -5,12 +5,12 @@ import { Eye, Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/basic/buttons/button";
 import { Input } from "@/components/basic/input/input";
 import { Sheet } from "@/components/ui/sheet";
-import type { ActionResult } from "@/app/workspace/[workspaceId]/personal/secrets/actions";
+import type { ActionResult } from "@/app/org/[ordId]/workspace/[workspaceId]/personal/secrets/actions";
 import {
   createSecretAction,
   updateSecretAction,
   deleteSecretAction,
-} from "@/app/workspace/[workspaceId]/personal/secrets/actions";
+} from "@/app/org/[ordId]/workspace/[workspaceId]/personal/secrets/actions";
 import { SecretDeleteModal } from "./secret-delete-modal";
 
 type Secret = {
@@ -135,7 +135,9 @@ export function SecretsPage({ initialSecrets, workspaceId }: SecretsPageProps) {
       <div className="w-full px-4 space-y-8">
         <div className="flex items-center justify-between gap-4">
           <div>
-            <p className="text-[10px] uppercase tracking-[0.2em] text-[var(--secondary)] mb-1.5">Security</p>
+            <p className="text-[10px] uppercase tracking-[0.2em] text-[var(--secondary)] mb-1.5">
+              Security
+            </p>
             <h1 className="text-2xl font-semibold tracking-tight text-foreground">
               Secrets
             </h1>

@@ -12,7 +12,7 @@ import { useState, useEffect, useRef } from "react";
 import { Sheet } from "../ui/sheet";
 import { Modal } from "../ui/modal";
 import { Button } from "@/components/basic/buttons/button";
-import { pullFromHubAction } from "@/app/workspace/[workspaceId]/personal/services/[serviceId]/actions";
+import { pullFromHubAction } from "@/app/org/[ordId]/workspace/[workspaceId]/personal/services/[serviceId]/actions";
 import { checkHubSetup } from "@/lib/services/hub-setup.service";
 
 type HubPiece = {

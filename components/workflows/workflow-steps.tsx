@@ -18,7 +18,7 @@ import {
   addDetailedStepAction,
   updateDetailedStepAction,
   deleteDetailedStepAction,
-} from "@/app/workspace/[workspaceId]/personal/workflows/actions";
+} from "@/app/org/[ordId]/workspace/[workspaceId]/personal/workflows/actions";
 
 interface WorkflowStepsProps {
   workflowId: string;

@@ -1,7 +1,7 @@
 import { Copy } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { forkServiceLocallyAction } from "@/app/workspace/[workspaceId]/personal/services/[serviceId]/actions";
+import { forkServiceLocallyAction } from "@/app/org/[ordId]/workspace/[workspaceId]/personal/services/[serviceId]/actions";
 import { Button } from "@/components/basic/buttons/button";
 
 export function ForkServiceButton({

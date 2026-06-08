@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Modal } from "../ui/modal";
 import { Button } from "@/components/basic/buttons/button";
-import { pushToHubAction } from "@/app/workspace/[workspaceId]/personal/services/[serviceId]/actions";
+import { pushToHubAction } from "@/app/org/[ordId]/workspace/[workspaceId]/personal/services/[serviceId]/actions";
 import { checkHubSetup } from "@/lib/services/hub-setup.service";
 
 export function PushToHubButton({

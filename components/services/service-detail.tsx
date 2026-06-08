@@ -52,8 +52,8 @@ import {
   addRequiredSecretAction,
   removeRequiredSecretAction,
   resetSpawnCountAction,
-} from "@/app/workspace/[workspaceId]/personal/services/[serviceId]/actions";
-import { deleteServiceAction } from "@/app/workspace/[workspaceId]/personal/services/actions";
+} from "@/app/org/[ordId]/workspace/[workspaceId]/personal/services/[serviceId]/actions";
+import { deleteServiceAction } from "@/app/org/[ordId]/workspace/[workspaceId]/personal/services/actions";
 import { ServiceDeleteModal } from "./service-delete-modal";
 import { serviceDirectoryLabel } from "@/lib/utils/service-directory-label";
 

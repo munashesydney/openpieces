@@ -23,7 +23,7 @@ import {
   deleteWorkflowAction,
   linkActionServiceToWorkflowAction,
   unlinkActionServiceFromWorkflowAction,
-} from "@/app/workspace/[workspaceId]/personal/workflows/actions";
+} from "@/app/org/[ordId]/workspace/[workspaceId]/personal/workflows/actions";
 import Link from "next/link";
 import { WorkflowDeleteModal } from "./workflow-delete-modal";
 import { WorkflowSteps } from "./workflow-steps";

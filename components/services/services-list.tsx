@@ -22,7 +22,7 @@ import { ActionMenu } from "@/components/basic/input/action-menu";
 import {
   createServiceAction,
   deleteServiceAction,
-} from "@/app/workspace/[workspaceId]/personal/services/actions";
+} from "@/app/org/[ordId]/workspace/[workspaceId]/personal/services/actions";
 import { type Service, type Workflow } from "@/lib/db/schema";
 import { ServiceDeleteModal } from "./service-delete-modal";
 
