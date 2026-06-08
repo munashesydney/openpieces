@@ -3,6 +3,7 @@
 import { useState, useCallback } from "react";
 import { Building2, Folder, Plus } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Modal } from "@/components/ui/modal";
 import { Button } from "@/components/basic/buttons/button";
@@ -39,6 +40,7 @@ export function OrgPageClient({
     workspaceId: string;
     workspaceName: string;
   } | null>(null);
+  const router = useRouter();
 
   const handleCreateOrg = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -139,7 +141,10 @@ export function OrgPageClient({
                     <div className="h-px bg-[var(--border)]" />
                     <button
                       type="button"
-                      onClick={() => setNewMenuOpen(false)}
+                      onClick={() => {
+                        setNewMenuOpen(false);
+                        router.push("/org/s/workspace/create");
+                      }}
                       className="flex w-full items-center gap-2.5 px-3 py-2.5 text-left text-[13px] font-medium text-[var(--foreground)] hover:bg-[var(--hover-bg)] transition-colors"
                     >
                       <Folder className="h-3.5 w-3.5 text-[var(--muted)]" />

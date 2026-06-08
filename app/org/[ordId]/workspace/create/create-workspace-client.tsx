@@ -9,6 +9,7 @@ import { Button } from "@/components/basic/buttons/button";
 import { Dropdown } from "@/components/basic/input/dropdown";
 import { createWorkspaceAction } from "./actions";
 import { COMMON_TIMEZONES } from "@/lib/utils/timezones";
+import type { Organization } from "@/lib/db/schema";
 
 const timezoneOptions = COMMON_TIMEZONES.map((tz) => ({
   label: tz.replace(/_/g, " "),
@@ -46,15 +47,18 @@ function StepIndicator({ current }: { current: number }) {
 
 type CreateWorkspaceClientProps = {
   userId: string;
+  orgs: Organization[];
 };
 
 export function CreateWorkspaceClient({
   userId: _userId,
+  orgs,
 }: CreateWorkspaceClientProps) {
   const router = useRouter();
   const [step, setStep] = useState(0);
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
+  const [orgId, setOrgId] = useState("");
   const [timezone, setTimezone] = useState(() => {
     if (typeof window !== "undefined") {
       return Intl.DateTimeFormat().resolvedOptions().timeZone;
@@ -72,6 +76,7 @@ export function CreateWorkspaceClient({
     const formData = new FormData();
     formData.set("name", name);
     formData.set("description", description);
+    formData.set("orgId", orgId);
     formData.set("timezone", timezone);
     formData.set("agentName", agentName);
     formData.set("userNickname", userNickname);
@@ -121,6 +126,18 @@ export function CreateWorkspaceClient({
                 className="w-full rounded border border-[var(--border)] bg-[var(--input-bg)] px-4 py-2.5 text-[13px] transition-all focus:border-[var(--accent)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)] placeholder:text-[var(--muted)] resize-none"
               />
             </div>
+            {orgs.length > 0 && (
+              <Dropdown
+                label="Organization"
+                options={[
+                  { label: "None (standalone)", value: "" },
+                  ...orgs.map((o) => ({ label: o.name, value: o.id })),
+                ]}
+                value={orgId}
+                onChange={setOrgId}
+                placeholder="Assign to an organization"
+              />
+            )}
             <Button
               type="button"
               onClick={() => setStep(1)}

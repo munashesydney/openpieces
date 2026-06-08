@@ -7,6 +7,7 @@ export async function createWorkspace(
     description?: string;
     agentName?: string;
     userNickname?: string;
+    orgId?: string | null;
   },
 ): Promise<Workspace> {
   const result = await db
@@ -14,6 +15,7 @@ export async function createWorkspace(
     .values({
       name: data.name.trim(),
       description: data.description?.trim() ?? "",
+      orgId: data.orgId ?? null,
       userId: data.userId,
       agentName: data.agentName?.trim() ?? "Assistant",
       userNickname: data.userNickname?.trim() ?? "User",

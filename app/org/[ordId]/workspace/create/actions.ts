@@ -18,6 +18,7 @@ export async function createWorkspaceAction(
 
   const name = (formData.get("name") as string)?.trim();
   const description = (formData.get("description") as string)?.trim() ?? "";
+  const orgId = (formData.get("orgId") as string)?.trim() || null;
   const timezone = (formData.get("timezone") as string)?.trim() || "UTC";
   const agentName = (formData.get("agentName") as string)?.trim();
   const userNickname = (formData.get("userNickname") as string)?.trim();
@@ -34,6 +35,7 @@ export async function createWorkspaceAction(
     const workspace = await createWorkspace({
       name,
       description,
+      orgId,
       userId: user.id,
       agentName,
       userNickname,
@@ -46,7 +48,10 @@ export async function createWorkspaceAction(
     });
 
     revalidatePath("/");
-    redirect(`/workspace/${workspace.id}/personal`);
+    const redirectTo = orgId
+      ? `/org/${orgId}/workspace/${workspace.id}/personal`
+      : `/org/s/workspace/${workspace.id}/personal`;
+    redirect(redirectTo);
   } catch (err) {
     const err_ = err as { digest?: string };
     if (err_?.digest?.startsWith("NEXT_REDIRECT")) {
