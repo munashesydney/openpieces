@@ -193,7 +193,7 @@ export function OrgPageClient({
 
         {/* Standalone workspaces */}
         {standaloneWorkspaces.length > 0 && (
-          <StandaloneDropZone dragState={dragState} onUnassign={handleUnassign}>
+          <section>
             <div className="mb-3 flex items-center gap-2">
               <Folder className="h-3.5 w-3.5 text-[var(--muted)]" />
               <h2 className="text-[12px] font-medium uppercase tracking-[0.12em] text-[var(--muted)]">
@@ -201,19 +201,24 @@ export function OrgPageClient({
               </h2>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 items-start">
-              {standaloneWorkspaces.map((ws) => (
-                <DraggableStandaloneCard
-                  key={ws.id}
-                  ws={ws}
-                  onDragStart={(id, name) =>
-                    setDragState({ workspaceId: id, workspaceName: name })
-                  }
-                  onDragEnd={() => setDragState(null)}
-                />
-              ))}
-            </div>
-          </StandaloneDropZone>
+            <StandaloneDropZone
+              dragState={dragState}
+              onUnassign={handleUnassign}
+            >
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 items-start">
+                {standaloneWorkspaces.map((ws) => (
+                  <DraggableStandaloneCard
+                    key={ws.id}
+                    ws={ws}
+                    onDragStart={(id, name) =>
+                      setDragState({ workspaceId: id, workspaceName: name })
+                    }
+                    onDragEnd={() => setDragState(null)}
+                  />
+                ))}
+              </div>
+            </StandaloneDropZone>
+          </section>
         )}
       </main>
 

@@ -30,8 +30,12 @@ export function DroppableOrgCard({
   onDragStart: (id: string, name: string) => void;
   onDragEnd: () => void;
 }) {
-  const [expanded, setExpanded] = useState(false);
   const [isOver, setIsOver] = useState(false);
+  const [clickExpanded, setClickExpanded] = useState(false);
+
+  // If the org was manually expanded, keep it open during drag.
+  // Otherwise auto-expand on hover during drag.
+  const expanded = dragState ? clickExpanded || isOver : clickExpanded;
 
   const handleDragOver = useCallback((e: DragEvent) => {
     e.preventDefault();
@@ -73,7 +77,9 @@ export function DroppableOrgCard({
     >
       <button
         type="button"
-        onClick={() => setExpanded((v) => !v)}
+        onClick={() => {
+          if (!dragState) setClickExpanded((v) => !v);
+        }}
         className="flex w-full items-start gap-4 p-6 text-left hover:bg-[var(--hover-bg)] transition-colors"
       >
         <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded border border-[var(--accent)]/15 bg-[var(--accent)]/10 text-[var(--accent)] transition-all group-hover:bg-[var(--accent)] group-hover:text-white group-hover:shadow-[0_0_16px_var(--accent-glow)]">
@@ -101,25 +107,30 @@ export function DroppableOrgCard({
 
       {expanded && (
         <div className="border-t border-[var(--border)] p-3 space-y-1">
-          {workspaces.length === 0 && !isOver && (
-            <p className="px-3 py-2 text-[12px] text-[var(--muted)]">
-              No workspaces yet. Drag one here.
-            </p>
+          {workspaces.length === 0 ? (
+            isOver && dragState ? (
+              <div className="rounded border border-dashed border-[var(--accent)]/40 p-4 flex items-center justify-center gap-3">
+                <Folder className="h-5 w-5 text-[var(--accent)]/60" />
+                <span className="text-sm text-[var(--accent)]/60">
+                  Drop &quot;{dragState.workspaceName}&quot; here
+                </span>
+              </div>
+            ) : (
+              <p className="px-3 py-2 text-[12px] text-[var(--muted)]">
+                No workspaces yet.
+              </p>
+            )
+          ) : (
+            workspaces.map((ws) => (
+              <DraggableWorkspaceRow
+                key={ws.id}
+                ws={ws}
+                orgId={org.id}
+                onDragStart={onDragStart}
+                onDragEnd={onDragEnd}
+              />
+            ))
           )}
-          {isOver && workspaces.length === 0 && (
-            <p className="px-3 py-2 text-[12px] text-[var(--accent)] font-medium">
-              Release to add &quot;{dragState?.workspaceName}&quot;
-            </p>
-          )}
-          {workspaces.map((ws) => (
-            <DraggableWorkspaceRow
-              key={ws.id}
-              ws={ws}
-              orgId={org.id}
-              onDragStart={onDragStart}
-              onDragEnd={onDragEnd}
-            />
-          ))}
         </div>
       )}
     </div>
@@ -265,22 +276,16 @@ export function StandaloneDropZone({
 
   return (
     <section
-      className={`rounded-lg border transition-all ${
-        dragState
-          ? isOver
-            ? "border-[var(--secondary)] bg-[var(--hover-bg-strong)] shadow-[0_0_24px_var(--secondary-glow)]"
-            : "border-dashed border-[var(--secondary)]/30"
-          : "border-transparent"
-      }`}
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
     >
       {dragState && isOver && (
-        <div className="px-3 pt-3 pb-0">
-          <p className="text-[12px] text-[var(--secondary)] font-medium">
-            Drop to make &quot;{dragState.workspaceName}&quot; standalone
-          </p>
+        <div className="rounded border border-dashed border-[var(--secondary)]/40 p-6 flex items-center justify-center gap-3">
+          <Folder className="h-5 w-5 text-[var(--secondary)]/60" />
+          <span className="text-sm text-[var(--secondary)]/60">
+            Drop here to make standalone
+          </span>
         </div>
       )}
       {children}
