@@ -333,7 +333,7 @@ export function ApiKeysClient({
                 variant="outline"
                 size="sm"
                 onClick={() =>
-                  window.open("https://docs.openpieces.com/api", "_blank")
+                  window.open("https://openpieces.com/docs", "_blank")
                 }
               >
                 <ExternalLink size={12} />
