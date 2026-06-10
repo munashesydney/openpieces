@@ -200,6 +200,8 @@ export function OverviewChatArea({
                 <img
                   src="/op-not-moving.png"
                   alt=""
+                  width={80}
+                  height={80}
                   className="w-20 h-20 rounded-xl opacity-70 hover:opacity-100 transition-opacity"
                   style={{}}
                 />

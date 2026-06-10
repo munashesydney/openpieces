@@ -45,6 +45,8 @@ export function AuthLayout({
             <img
               src="/op-not-moving.png"
               alt="OpenPieces"
+              width={112}
+              height={112}
               className="h-28 w-28 object-contain drop-shadow-[0_0_30px_rgba(168,85,247,0.3)]"
             />
           </div>

@@ -227,6 +227,8 @@ export function Header() {
           <img
             src="/op-not-moving.png"
             alt="OpenPieces"
+            width={28}
+            height={28}
             className="h-7 w-7 rounded object-cover"
           />
           <span className="truncate text-sm font-semibold text-[var(--foreground)]">
@@ -312,6 +314,8 @@ export function Header() {
                 <img
                   src="/op-not-moving.png"
                   alt="OpenPieces"
+                  width={28}
+                  height={28}
                   className="h-7 w-7 rounded object-cover"
                 />
                 <span className="text-sm font-semibold text-[var(--foreground)]">

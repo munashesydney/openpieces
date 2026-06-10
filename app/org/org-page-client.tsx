@@ -83,6 +83,8 @@ export function OrgPageClient({
             <img
               src="/op-not-moving.png"
               alt="OpenPieces"
+              width={48}
+              height={48}
               className="h-12 w-12 rounded object-cover"
             />
             <Link
