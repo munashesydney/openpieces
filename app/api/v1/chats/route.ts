@@ -13,20 +13,12 @@ export async function GET(request: Request) {
   if (authResult instanceof NextResponse) return authResult;
 
   const { searchParams } = new URL(request.url);
-  const workspaceId = authResult.workspaceId ?? searchParams.get("workspaceId");
   const page = Number(searchParams.get("page") ?? 1);
   const pageSize = Number(searchParams.get("pageSize") ?? 20);
   const agentType = searchParams.get("agentType") ?? undefined;
 
-  if (!workspaceId) {
-    return NextResponse.json(
-      { error: "workspaceId is required (query param or API key)" },
-      { status: 400 },
-    );
-  }
-
   const result = await getAiChatsForWorkspace(
-    workspaceId,
+    authResult.workspaceId,
     authResult.userId,
     page,
     pageSize,
@@ -40,26 +32,18 @@ export async function POST(request: Request) {
   const authResult = await authenticateV1Request(request);
   if (authResult instanceof NextResponse) return authResult;
 
-  let body: { workspaceId?: string; agentType?: string };
+  let body: { agentType?: string };
   try {
     body = await request.json();
   } catch {
     return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
   }
 
-  const workspaceId = authResult.workspaceId ?? body.workspaceId;
   const agentType = body.agentType ?? "orchestrator";
-
-  if (!workspaceId) {
-    return NextResponse.json(
-      { error: "workspaceId is required (body or API key)" },
-      { status: 400 },
-    );
-  }
 
   try {
     const chat = await createAiChat(
-      { workspaceId, userId: authResult.userId },
+      { workspaceId: authResult.workspaceId, userId: authResult.userId },
       agentType,
     );
     return NextResponse.json({ chat }, { status: 201 });

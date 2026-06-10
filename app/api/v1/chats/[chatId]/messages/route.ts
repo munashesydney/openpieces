@@ -36,20 +36,11 @@ export async function POST(
   const authResult = await authenticateV1Request(request);
   if (authResult instanceof NextResponse) return authResult;
 
-  let body: { content?: string; workspaceId?: string; mode?: "agent" | "chat" };
+  let body: { content?: string; mode?: "agent" | "chat" };
   try {
     body = await request.json();
   } catch {
     return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
-  }
-
-  const workspaceId = authResult.workspaceId ?? body.workspaceId;
-
-  if (!workspaceId) {
-    return NextResponse.json(
-      { error: "workspaceId is required (body or API key)" },
-      { status: 400 },
-    );
   }
 
   const trimmedContent = (body.content ?? "").trim();
@@ -72,7 +63,7 @@ export async function POST(
 
     await enqueueChatExecution({
       chatId,
-      workspaceId,
+      workspaceId: chat.workspaceId,
       userId: authResult.userId,
       mode: body.mode,
     });
