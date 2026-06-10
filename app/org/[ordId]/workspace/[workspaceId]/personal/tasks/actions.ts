@@ -17,7 +17,8 @@ export async function createTaskAction(
   workspaceId: string,
   formData: FormData,
 ): Promise<ActionResult> {
-  await requireWorkspaceOwner(workspaceId);
+  const { workspace } = await requireWorkspaceOwner(workspaceId);
+  const orgId = workspace.orgId || "s";
 
   const title = (formData.get("title") as string)?.trim();
   const description = (formData.get("description") as string) ?? "";
@@ -94,18 +95,20 @@ export async function createTaskAction(
     return { error: "Something went wrong. Please try again." };
   }
 
-  revalidatePath(`/workspace/${workspaceId}/personal/tasks`);
+  revalidatePath(`/org/${orgId}/workspace/${workspaceId}/personal/tasks`);
   return { success: true };
 }
 
 export async function pauseTaskAction(workspaceId: string, taskId: string) {
-  await requireWorkspaceOwner(workspaceId);
+  const { workspace } = await requireWorkspaceOwner(workspaceId);
+  const orgId = workspace.orgId || "s";
   await updateTask(taskId, workspaceId, { status: "paused" });
-  revalidatePath(`/workspace/${workspaceId}/personal/tasks`);
+  revalidatePath(`/org/${orgId}/workspace/${workspaceId}/personal/tasks`);
 }
 
 export async function resumeTaskAction(workspaceId: string, taskId: string) {
-  await requireWorkspaceOwner(workspaceId);
+  const { workspace } = await requireWorkspaceOwner(workspaceId);
+  const orgId = workspace.orgId || "s";
 
   // If resuming a recurring task with no nextRunAt, calculate initial schedule
   const task = await getTaskById(taskId, workspaceId);
@@ -121,13 +124,14 @@ export async function resumeTaskAction(workspaceId: string, taskId: string) {
     await updateTask(taskId, workspaceId, { status: "active" });
   }
 
-  revalidatePath(`/workspace/${workspaceId}/personal/tasks`);
+  revalidatePath(`/org/${orgId}/workspace/${workspaceId}/personal/tasks`);
 }
 
 export async function completeTaskAction(workspaceId: string, taskId: string) {
-  await requireWorkspaceOwner(workspaceId);
+  const { workspace } = await requireWorkspaceOwner(workspaceId);
+  const orgId = workspace.orgId || "s";
   await updateTask(taskId, workspaceId, { status: "completed" });
-  revalidatePath(`/workspace/${workspaceId}/personal/tasks`);
+  revalidatePath(`/org/${orgId}/workspace/${workspaceId}/personal/tasks`);
 }
 
 export async function updateTaskAction(
@@ -135,7 +139,8 @@ export async function updateTaskAction(
   taskId: string,
   formData: FormData,
 ): Promise<ActionResult> {
-  await requireWorkspaceOwner(workspaceId);
+  const { workspace } = await requireWorkspaceOwner(workspaceId);
+  const orgId = workspace.orgId || "s";
 
   const title = (formData.get("title") as string)?.trim();
   const description = (formData.get("description") as string) ?? "";
@@ -220,12 +225,13 @@ export async function updateTaskAction(
     return { error: "Something went wrong. Please try again." };
   }
 
-  revalidatePath(`/workspace/${workspaceId}/personal/tasks`);
+  revalidatePath(`/org/${orgId}/workspace/${workspaceId}/personal/tasks`);
   return { success: true };
 }
 
 export async function deleteTaskAction(workspaceId: string, taskId: string) {
-  await requireWorkspaceOwner(workspaceId);
+  const { workspace } = await requireWorkspaceOwner(workspaceId);
+  const orgId = workspace.orgId || "s";
   await deleteTask(taskId, workspaceId);
-  revalidatePath(`/workspace/${workspaceId}/personal/tasks`);
+  revalidatePath(`/org/${orgId}/workspace/${workspaceId}/personal/tasks`);
 }

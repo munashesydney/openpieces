@@ -13,7 +13,8 @@ export async function updateAgentSettingsAction(
   workspaceId: string,
   formData: FormData,
 ): Promise<ActionResult> {
-  const { user } = await requireWorkspaceOwner(workspaceId);
+  const { user, workspace } = await requireWorkspaceOwner(workspaceId);
+ const orgId = workspace.orgId || "s";
 
   const agentName = (formData.get("agentName") as string)?.trim();
   const userNickname = (formData.get("userNickname") as string)?.trim();
@@ -52,6 +53,6 @@ export async function updateAgentSettingsAction(
     return { error: "Something went wrong. Please try again." };
   }
 
-  revalidatePath(`/workspace/${workspaceId}/settings/agent`);
+  revalidatePath(`/org/${orgId}/workspace/${workspaceId}/settings/agent`);
   return { success: true };
 }

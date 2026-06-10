@@ -19,7 +19,8 @@ export async function getActivityByTypeAction(
   limit: number = 50,
   offset: number = 0
 ): Promise<ActivityLog[]> {
-  await requireWorkspaceOwner(workspaceId);
+  const { workspace } = await requireWorkspaceOwner(workspaceId);
+  const orgId = workspace.orgId || "s";
   return getActivityLogsByType(workspaceId, recordType, limit, offset);
 }
 
@@ -27,7 +28,8 @@ export async function getActivityByIdAction(
   workspaceId: string,
   activityId: string
 ): Promise<ActivityLog | null> {
-  await requireWorkspaceOwner(workspaceId);
+  const { workspace } = await requireWorkspaceOwner(workspaceId);
+  const orgId = workspace.orgId || "s";
   return getActivityLogById(activityId, workspaceId);
 }
 
@@ -36,7 +38,8 @@ export async function getActivityByIdAction(
 export type ActionResult = { error: string } | { success: true };
 
 export async function getBrainSettingsAction(workspaceId: string) {
-  await requireWorkspaceOwner(workspaceId);
+  const { workspace } = await requireWorkspaceOwner(workspaceId);
+  const orgId = workspace.orgId || "s";
   return await getBrainSettings(workspaceId);
 }
 
@@ -49,14 +52,15 @@ export async function updateBrainSettingsAction(
     reinforcementIntervalHours?: number;
   }
 ): Promise<{ error: string } | { success: true; settings: Awaited<ReturnType<typeof updateBrainSettings>> }> {
-  await requireWorkspaceOwner(workspaceId);
+  const { workspace } = await requireWorkspaceOwner(workspaceId);
+  const orgId = workspace.orgId || "s";
 
   try {
     const updated = await updateBrainSettings(workspaceId, settings);
     if (!updated) {
       return { error: "Failed to update settings" };
     }
-    revalidatePath(`/workspace/${workspaceId}/brain`);
+    revalidatePath(`/org/${orgId}/workspace/${workspaceId}/brain`);
     return { success: true, settings: updated };
   } catch (err) {
     console.error("Unexpected error updating brain settings:", err);
@@ -68,19 +72,22 @@ export async function getBrainEntriesAction(
   workspaceId: string,
   page: number = 1
 ) {
-  await requireWorkspaceOwner(workspaceId);
+  const { workspace } = await requireWorkspaceOwner(workspaceId);
+  const orgId = workspace.orgId || "s";
   return await getBrainEntries(workspaceId, page, 20);
 }
 
 export async function getBrainStatsAction(workspaceId: string) {
-  await requireWorkspaceOwner(workspaceId);
+  const { workspace } = await requireWorkspaceOwner(workspaceId);
+  const orgId = workspace.orgId || "s";
   return await getBrainStats(workspaceId);
 }
 
 export async function triggerBrainIngestionAction(workspaceId: string): Promise<
   { error: string } | { processed: number; chatId: string; message: string }
 > {
-  await requireWorkspaceOwner(workspaceId);
+  const { workspace } = await requireWorkspaceOwner(workspaceId);
+  const orgId = workspace.orgId || "s";
   try {
     return await triggerBrainIngestion(workspaceId);
   } catch (err) {
@@ -92,7 +99,8 @@ export async function triggerBrainIngestionAction(workspaceId: string): Promise<
 export async function triggerBrainReinforcementAction(workspaceId: string): Promise<
   { error: string } | { chatId: string; message: string }
 > {
-  await requireWorkspaceOwner(workspaceId);
+  const { workspace } = await requireWorkspaceOwner(workspaceId);
+  const orgId = workspace.orgId || "s";
   try {
     return await triggerBrainReinforcement(workspaceId);
   } catch (err) {

@@ -21,14 +21,15 @@ export async function createWorkflowAction(
   workspaceId: string,
   formData: FormData,
 ) {
-  await requireWorkspaceOwner(workspaceId);
+  const { workspace } = await requireWorkspaceOwner(workspaceId);
+  const orgId = workspace.orgId || "s";
 
   const title = formData.get("title") as string;
   const description = (formData.get("description") as string) ?? "";
   const status = (formData.get("status") as "active" | "archived") ?? "active";
 
   await createWorkflow({ workspaceId, title, description, status });
-  revalidatePath(`/workspace/${workspaceId}/personal/workflows`);
+  revalidatePath(`/org/${orgId}/workspace/${workspaceId}/personal/workflows`);
 }
 
 export async function updateWorkflowAction(
@@ -36,25 +37,27 @@ export async function updateWorkflowAction(
   workflowId: string,
   formData: FormData,
 ) {
-  await requireWorkspaceOwner(workspaceId);
+  const { workspace } = await requireWorkspaceOwner(workspaceId);
+  const orgId = workspace.orgId || "s";
 
   const title = formData.get("title") as string;
   const description = (formData.get("description") as string) ?? "";
   const status = (formData.get("status") as "active" | "archived") ?? "active";
 
   await updateWorkflow(workflowId, workspaceId, { title, description, status });
-  revalidatePath(`/workspace/${workspaceId}/personal/workflows`);
-  revalidatePath(`/workspace/${workspaceId}/personal/workflows/${workflowId}`);
+  revalidatePath(`/org/${orgId}/workspace/${workspaceId}/personal/workflows`);
+  revalidatePath(`/org/${orgId}/workspace/${workspaceId}/personal/workflows/${workflowId}`);
 }
 
 export async function deleteWorkflowAction(
   workspaceId: string,
   workflowId: string,
 ) {
-  await requireWorkspaceOwner(workspaceId);
+  const { workspace } = await requireWorkspaceOwner(workspaceId);
+  const orgId = workspace.orgId || "s";
 
   await deleteWorkflow(workflowId, workspaceId);
-  revalidatePath(`/workspace/${workspaceId}/personal/workflows`);
+  revalidatePath(`/org/${orgId}/workspace/${workspaceId}/personal/workflows`);
 }
 
 export async function linkActionServiceToWorkflowAction(
@@ -62,7 +65,8 @@ export async function linkActionServiceToWorkflowAction(
   workflowId: string,
   actionServiceId: string,
 ): Promise<ActionResult> {
-  await requireWorkspaceOwner(workspaceId);
+  const { workspace } = await requireWorkspaceOwner(workspaceId);
+  const orgId = workspace.orgId || "s";
 
   try {
     await linkActionServiceToWorkflow(workflowId, actionServiceId, workspaceId);
@@ -72,7 +76,7 @@ export async function linkActionServiceToWorkflowAction(
     return { error: "Something went wrong. Please try again." };
   }
 
-  revalidatePath(`/workspace/${workspaceId}/personal/workflows/${workflowId}`);
+  revalidatePath(`/org/${orgId}/workspace/${workspaceId}/personal/workflows/${workflowId}`);
   return { success: true };
 }
 
@@ -80,7 +84,8 @@ export async function getWorkflowExecutionsAction(
   workspaceId: string,
   workflowId: string,
 ) {
-  await requireWorkspaceOwner(workspaceId);
+  const { workspace } = await requireWorkspaceOwner(workspaceId);
+  const orgId = workspace.orgId || "s";
   return getWorkflowExecutions(workflowId, workspaceId);
 }
 
@@ -89,7 +94,8 @@ export async function unlinkActionServiceFromWorkflowAction(
   workflowId: string,
   actionServiceId: string,
 ): Promise<ActionResult> {
-  await requireWorkspaceOwner(workspaceId);
+  const { workspace } = await requireWorkspaceOwner(workspaceId);
+  const orgId = workspace.orgId || "s";
 
   try {
     await unlinkActionServiceFromWorkflow(workflowId, actionServiceId);
@@ -99,7 +105,7 @@ export async function unlinkActionServiceFromWorkflowAction(
     return { error: "Something went wrong. Please try again." };
   }
 
-  revalidatePath(`/workspace/${workspaceId}/personal/workflows/${workflowId}`);
+  revalidatePath(`/org/${orgId}/workspace/${workspaceId}/personal/workflows/${workflowId}`);
   return { success: true };
 }
 
@@ -108,7 +114,8 @@ export async function addDetailedStepAction(
   workflowId: string,
   stepContent: string,
 ): Promise<ActionResult> {
-  await requireWorkspaceOwner(workspaceId);
+  const { workspace } = await requireWorkspaceOwner(workspaceId);
+  const orgId = workspace.orgId || "s";
 
   if (!stepContent?.trim()) {
     return { error: "Step content cannot be empty." };
@@ -134,7 +141,7 @@ export async function addDetailedStepAction(
     return { error: "Something went wrong. Please try again." };
   }
 
-  revalidatePath(`/workspace/${workspaceId}/personal/workflows/${workflowId}`);
+  revalidatePath(`/org/${orgId}/workspace/${workspaceId}/personal/workflows/${workflowId}`);
   return { success: true };
 }
 
@@ -144,7 +151,8 @@ export async function updateDetailedStepAction(
   stepIndex: number,
   stepContent: string,
 ): Promise<ActionResult> {
-  await requireWorkspaceOwner(workspaceId);
+  const { workspace } = await requireWorkspaceOwner(workspaceId);
+  const orgId = workspace.orgId || "s";
 
   if (!stepContent?.trim()) {
     return { error: "Step content cannot be empty." };
@@ -176,7 +184,7 @@ export async function updateDetailedStepAction(
     return { error: "Something went wrong. Please try again." };
   }
 
-  revalidatePath(`/workspace/${workspaceId}/personal/workflows/${workflowId}`);
+  revalidatePath(`/org/${orgId}/workspace/${workspaceId}/personal/workflows/${workflowId}`);
   return { success: true };
 }
 
@@ -202,7 +210,8 @@ export async function pushWorkflowToHubAction(
   workspaceId: string,
   workflowId: string,
 ): Promise<HubWorkflowActionResult> {
-  await requireWorkspaceOwner(workspaceId);
+  const { workspace } = await requireWorkspaceOwner(workspaceId);
+  const orgId = workspace.orgId || "s";
 
   const workflow = await getWorkflowById(workflowId, workspaceId);
   if (!workflow) return { error: "Workflow not found" };
@@ -275,7 +284,7 @@ export async function pushWorkflowToHubAction(
     hubUpdatedAt: new Date(),
   });
 
-  revalidatePath(`/workspace/${workspaceId}/personal/workflows/${workflowId}`);
+  revalidatePath(`/org/${orgId}/workspace/${workspaceId}/personal/workflows/${workflowId}`);
   return { success: true, hubWorkflowId: result.hubWorkflowId };
 }
 
@@ -289,7 +298,8 @@ export async function pullWorkflowFromHubAction(
   existingWorkflowId: string | null,
   hubWorkflowId: string,
 ): Promise<PullWorkflowResult> {
-  await requireWorkspaceOwner(workspaceId);
+  const { workspace } = await requireWorkspaceOwner(workspaceId);
+  const orgId = workspace.orgId || "s";
 
   const token = await getStoredToken();
   if (!token) {
@@ -318,7 +328,7 @@ export async function pullWorkflowFromHubAction(
     return { error: result.error ?? "Failed to pull workflow" };
   }
 
-  revalidatePath(`/workspace/${workspaceId}/personal/workflows`);
+  revalidatePath(`/org/${orgId}/workspace/${workspaceId}/personal/workflows`);
   if (existingWorkflowId) {
     revalidatePath(
       `/workspace/${workspaceId}/personal/workflows/${existingWorkflowId}`,
@@ -333,7 +343,8 @@ export async function deleteDetailedStepAction(
   workflowId: string,
   stepIndex: number,
 ): Promise<ActionResult> {
-  await requireWorkspaceOwner(workspaceId);
+  const { workspace } = await requireWorkspaceOwner(workspaceId);
+  const orgId = workspace.orgId || "s";
 
   try {
     const { getWorkflowById } = await import("@/lib/services/workflow.service");
@@ -361,6 +372,6 @@ export async function deleteDetailedStepAction(
     return { error: "Something went wrong. Please try again." };
   }
 
-  revalidatePath(`/workspace/${workspaceId}/personal/workflows/${workflowId}`);
+  revalidatePath(`/org/${orgId}/workspace/${workspaceId}/personal/workflows/${workflowId}`);
   return { success: true };
 }

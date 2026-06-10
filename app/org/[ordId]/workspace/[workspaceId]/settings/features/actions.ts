@@ -24,5 +24,5 @@ export async function toggleFeatureFlagAction(key: string, enabled: boolean) {
     await db.insert(featureFlags).values({ key, enabled });
   }
 
-  revalidatePath("/workspace/[workspaceId]/settings/features");
+  revalidatePath("/org/[ordId]/workspace/[workspaceId]/settings/features", "page");
 }

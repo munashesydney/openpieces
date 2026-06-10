@@ -15,7 +15,8 @@ export async function createApiKeyAction(
   workspaceId: string,
   formData: FormData,
 ): Promise<ActionResult | { success: true; plaintextKey: string }> {
-  const { user } = await requireWorkspaceOwner(workspaceId);
+  const { user, workspace } = await requireWorkspaceOwner(workspaceId);
+ const orgId = workspace.orgId || "s";
   const name = (formData.get("name") as string)?.trim();
 
   try {
@@ -24,7 +25,7 @@ export async function createApiKeyAction(
       userId: user.id,
       name,
     });
-    revalidatePath(`/org/[ordId]/workspace/${workspaceId}/settings/api`);
+    revalidatePath(`/org/${orgId}/workspace/${workspaceId}/settings/api`);
     return { success: true, plaintextKey: result.plaintextKey };
   } catch (err) {
     if (err instanceof ValidationError) return { error: err.message };
@@ -37,14 +38,15 @@ export async function deleteApiKeyAction(
   workspaceId: string,
   keyId: string,
 ): Promise<ActionResult> {
-  const { user } = await requireWorkspaceOwner(workspaceId);
+  const { user, workspace } = await requireWorkspaceOwner(workspaceId);
+ const orgId = workspace.orgId || "s";
 
   try {
     const deleted = await deleteApiKey(keyId, workspaceId, user.id);
     if (!deleted) {
       return { error: "API key not found." };
     }
-    revalidatePath(`/org/[ordId]/workspace/${workspaceId}/settings/api`);
+    revalidatePath(`/org/${orgId}/workspace/${workspaceId}/settings/api`);
     return { success: true };
   } catch (err) {
     console.error("Unexpected error deleting API key:", err);
@@ -56,7 +58,8 @@ export async function revealApiKeyAction(
   workspaceId: string,
   keyId: string,
 ): Promise<{ error: string } | { success: true; plaintextKey: string }> {
-  const { user } = await requireWorkspaceOwner(workspaceId);
+  const { user, workspace } = await requireWorkspaceOwner(workspaceId);
+ const orgId = workspace.orgId || "s";
 
   const plaintext = await revealApiKey(keyId, workspaceId, user.id);
   if (plaintext === null) {

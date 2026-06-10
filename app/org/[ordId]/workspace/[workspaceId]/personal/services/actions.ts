@@ -11,7 +11,8 @@ export async function createServiceAction(
   workspaceId: string,
   formData: FormData,
 ): Promise<ActionResult> {
-  await requireWorkspaceOwner(workspaceId);
+  const { workspace } = await requireWorkspaceOwner(workspaceId);
+  const orgId = workspace.orgId || "s";
 
   const title = (formData.get("title") as string)?.trim();
   const description = (formData.get("description") as string) ?? "";
@@ -37,7 +38,7 @@ export async function createServiceAction(
     return { error: "Something went wrong. Please try again." };
   }
 
-  revalidatePath(`/workspace/${workspaceId}/personal/services`);
+  revalidatePath(`/org/${orgId}/workspace/${workspaceId}/personal/services`);
   return { success: true };
 }
 
@@ -45,8 +46,9 @@ export async function deleteServiceAction(
   workspaceId: string,
   serviceId: string,
 ) {
-  await requireWorkspaceOwner(workspaceId);
+  const { workspace } = await requireWorkspaceOwner(workspaceId);
+  const orgId = workspace.orgId || "s";
 
   await deleteService(serviceId, workspaceId);
-  revalidatePath(`/workspace/${workspaceId}/personal/services`);
+  revalidatePath(`/org/${orgId}/workspace/${workspaceId}/personal/services`);
 }
