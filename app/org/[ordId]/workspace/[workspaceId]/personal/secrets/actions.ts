@@ -15,7 +15,8 @@ export async function createSecretAction(
   workspaceId: string,
   formData: FormData,
 ): Promise<ActionResult> {
-  const { user } = await requireWorkspaceOwner(workspaceId);
+  const { user, workspace } = await requireWorkspaceOwner(workspaceId);
+ const orgId = workspace.orgId || "s";
 
   const key = (formData.get("key") as string)?.trim();
   const value = (formData.get("value") as string) ?? "";
@@ -35,7 +36,7 @@ export async function createSecretAction(
     return { error: "Something went wrong. Please try again." };
   }
 
-  revalidatePath(`/workspace/${workspaceId}/personal/secrets`);
+  revalidatePath(`/org/${orgId}/workspace/${workspaceId}/personal/secrets`);
   return { success: true };
 }
 
@@ -44,7 +45,8 @@ export async function updateSecretAction(
   secretId: string,
   formData: FormData,
 ): Promise<ActionResult> {
-  const { user } = await requireWorkspaceOwner(workspaceId);
+  const { user, workspace } = await requireWorkspaceOwner(workspaceId);
+ const orgId = workspace.orgId || "s";
 
   const key = (formData.get("key") as string)?.trim();
   const value = (formData.get("value") as string) ?? "";
@@ -65,7 +67,7 @@ export async function updateSecretAction(
     return { error: "Something went wrong. Please try again." };
   }
 
-  revalidatePath(`/workspace/${workspaceId}/personal/secrets`);
+  revalidatePath(`/org/${orgId}/workspace/${workspaceId}/personal/secrets`);
   return { success: true };
 }
 
@@ -73,7 +75,8 @@ export async function deleteSecretAction(
   workspaceId: string,
   secretId: string,
 ): Promise<void> {
-  const { user } = await requireWorkspaceOwner(workspaceId);
+  const { user, workspace } = await requireWorkspaceOwner(workspaceId);
+ const orgId = workspace.orgId || "s";
   await deleteSecret(secretId, workspaceId, user.id);
-  revalidatePath(`/workspace/${workspaceId}/personal/secrets`);
+  revalidatePath(`/org/${orgId}/workspace/${workspaceId}/personal/secrets`);
 }

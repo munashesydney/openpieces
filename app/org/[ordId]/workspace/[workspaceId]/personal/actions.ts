@@ -29,7 +29,8 @@ export async function sendAiMessageAction(
     throw new Error("content is required.");
   }
 
-  const { user } = await requireWorkspaceOwner(workspaceId);
+  const { user, workspace } = await requireWorkspaceOwner(workspaceId);
+ const orgId = workspace.orgId || "s";
 
   try {
     let effectiveChatId = chatId;
@@ -78,7 +79,8 @@ export async function updateWorkspaceModelAction(
   workspaceId: string,
   model: string,
 ) {
-  await requireWorkspaceOwner(workspaceId);
+  const { workspace } = await requireWorkspaceOwner(workspaceId);
+  const orgId = workspace.orgId || "s";
   await updateWorkspaceDefaultModel(workspaceId, model);
 }
 
@@ -87,7 +89,8 @@ export async function updateChatModelAction(
   chatId: string,
   model: string,
 ) {
-  const { user } = await requireWorkspaceOwner(workspaceId);
+  const { user, workspace } = await requireWorkspaceOwner(workspaceId);
+ const orgId = workspace.orgId || "s";
 
   await db
     .update(aiChats)

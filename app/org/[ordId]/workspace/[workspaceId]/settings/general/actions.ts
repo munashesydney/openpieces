@@ -13,7 +13,8 @@ export async function updateGeneralSettingsAction(
   workspaceId: string,
   formData: FormData,
 ): Promise<ActionResult> {
-  const { user } = await requireWorkspaceOwner(workspaceId);
+  const { user, workspace } = await requireWorkspaceOwner(workspaceId);
+ const orgId = workspace.orgId || "s";
 
   const name = (formData.get("name") as string)?.trim();
   const description = (formData.get("description") as string)?.trim() ?? "";
@@ -45,6 +46,6 @@ export async function updateGeneralSettingsAction(
     return { error: "Something went wrong. Please try again." };
   }
 
-  revalidatePath(`/workspace/${workspaceId}/settings/general`);
+  revalidatePath(`/org/${orgId}/workspace/${workspaceId}/settings/general`);
   return { success: true };
 }

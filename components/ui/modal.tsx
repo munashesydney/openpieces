@@ -27,6 +27,7 @@ export function Modal({
   danger = false,
 }: ModalProps) {
   const [mounted, setMounted] = React.useState(false);
+  const [shouldRender, setShouldRender] = React.useState(isOpen);
 
   React.useEffect(() => {
     setMounted(true);
@@ -43,16 +44,19 @@ export function Modal({
 
   React.useEffect(() => {
     if (isOpen) {
+      setShouldRender(true);
       document.body.style.overflow = "hidden";
     } else {
       document.body.style.overflow = "unset";
+      const timer = setTimeout(() => setShouldRender(false), 200);
+      return () => clearTimeout(timer);
     }
     return () => {
       document.body.style.overflow = "unset";
     };
   }, [isOpen]);
 
-  if (!mounted) return null;
+  if (!mounted || !shouldRender) return null;
 
   return createPortal(
     <>

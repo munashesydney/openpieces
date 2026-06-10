@@ -7,7 +7,7 @@ import {
   Settings,
   Shield,
   Monitor,
-  ExternalLink,
+  Network,
   Bot,
   Menu,
   X,
@@ -18,6 +18,7 @@ import {
   Activity,
   User,
   Flag,
+  Code2,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -148,7 +149,7 @@ export function Header() {
     {
       label: "Hub",
       href: prefix ? `${prefix}/settings/hub` : "/settings/hub",
-      icon: ExternalLink,
+      icon: Network,
       activePattern: prefix ? `${prefix}/settings/hub` : "/settings/hub",
     },
     {
@@ -158,6 +159,12 @@ export function Header() {
       activePattern: prefix
         ? `${prefix}/settings/features`
         : "/settings/features",
+    },
+    {
+      label: "API",
+      href: prefix ? `${prefix}/settings/api` : "/settings/api",
+      icon: Code2,
+      activePattern: prefix ? `${prefix}/settings/api` : "/settings/api",
     },
   ];
 
@@ -220,6 +227,8 @@ export function Header() {
           <img
             src="/op-not-moving.png"
             alt="OpenPieces"
+            width={28}
+            height={28}
             className="h-7 w-7 rounded object-cover"
           />
           <span className="truncate text-sm font-semibold text-[var(--foreground)]">
@@ -305,6 +314,8 @@ export function Header() {
                 <img
                   src="/op-not-moving.png"
                   alt="OpenPieces"
+                  width={28}
+                  height={28}
                   className="h-7 w-7 rounded object-cover"
                 />
                 <span className="text-sm font-semibold text-[var(--foreground)]">

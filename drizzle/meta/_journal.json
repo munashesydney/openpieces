@@ -78,6 +78,13 @@
       "when": 1780873814431,
       "tag": "0010_closed_psynapse",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1780986877022,
+      "tag": "0011_gifted_kitty_pryde",
+      "breakpoints": true
     }
   ]
 }

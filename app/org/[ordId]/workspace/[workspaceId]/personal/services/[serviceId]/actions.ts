@@ -31,7 +31,8 @@ export async function spawnServiceAction(
   workspaceId: string,
   serviceId: string,
 ): Promise<ActionResult> {
-  await requireWorkspaceOwner(workspaceId);
+  const { workspace } = await requireWorkspaceOwner(workspaceId);
+  const orgId = workspace.orgId || "s";
 
   const validation = await validateServiceForSpawn(serviceId, workspaceId);
   if (!validation.valid) return { error: validation.error };
@@ -41,7 +42,7 @@ export async function spawnServiceAction(
   // Decrement qa_spawn_count — user-triggered deploy frees one QA slot
   await decrementQaSpawnCount(serviceId);
 
-  revalidatePath(`/workspace/${workspaceId}/personal/services/${serviceId}`);
+  revalidatePath(`/org/${orgId}/workspace/${workspaceId}/personal/services/${serviceId}`);
   return { success: true };
 }
 
@@ -49,14 +50,15 @@ export async function stopServiceAction(
   workspaceId: string,
   serviceId: string,
 ): Promise<ActionResult> {
-  await requireWorkspaceOwner(workspaceId);
+  const { workspace } = await requireWorkspaceOwner(workspaceId);
+  const orgId = workspace.orgId || "s";
 
   const service = await getServiceById(serviceId, workspaceId);
   if (!service) return { error: "Service not found" };
   if (service.status !== "running") return { error: "Service is not running" };
 
   await enqueueServiceStop({ serviceId, workspaceId });
-  revalidatePath(`/workspace/${workspaceId}/personal/services/${serviceId}`);
+  revalidatePath(`/org/${orgId}/workspace/${workspaceId}/personal/services/${serviceId}`);
   return { success: true };
 }
 
@@ -65,7 +67,8 @@ export async function createEndpointAction(
   serviceId: string,
   formData: FormData,
 ) {
-  await requireWorkspaceOwner(workspaceId);
+  const { workspace } = await requireWorkspaceOwner(workspaceId);
+  const orgId = workspace.orgId || "s";
   const service = await getServiceById(serviceId, workspaceId);
   if (!service) throw new Error("Service not found");
 
@@ -85,7 +88,7 @@ export async function createEndpointAction(
     description,
   });
 
-  revalidatePath(`/workspace/${workspaceId}/personal/services/${serviceId}`);
+  revalidatePath(`/org/${orgId}/workspace/${workspaceId}/personal/services/${serviceId}`);
 }
 
 export async function updateEndpointAction(
@@ -94,7 +97,8 @@ export async function updateEndpointAction(
   endpointId: string,
   formData: FormData,
 ) {
-  await requireWorkspaceOwner(workspaceId);
+  const { workspace } = await requireWorkspaceOwner(workspaceId);
+  const orgId = workspace.orgId || "s";
   const service = await getServiceById(serviceId, workspaceId);
   if (!service) throw new Error("Service not found");
 
@@ -115,7 +119,7 @@ export async function updateEndpointAction(
 
   if (!endpoint) throw new Error("Endpoint not found");
 
-  revalidatePath(`/workspace/${workspaceId}/personal/services/${serviceId}`);
+  revalidatePath(`/org/${orgId}/workspace/${workspaceId}/personal/services/${serviceId}`);
 }
 
 export async function deleteEndpointAction(
@@ -123,13 +127,14 @@ export async function deleteEndpointAction(
   serviceId: string,
   endpointId: string,
 ) {
-  await requireWorkspaceOwner(workspaceId);
+  const { workspace } = await requireWorkspaceOwner(workspaceId);
+  const orgId = workspace.orgId || "s";
   const service = await getServiceById(serviceId, workspaceId);
   if (!service) throw new Error("Service not found");
 
   const deleted = await deleteEndpoint(endpointId, serviceId, workspaceId);
   if (!deleted) throw new Error("Endpoint not found");
-  revalidatePath(`/workspace/${workspaceId}/personal/services/${serviceId}`);
+  revalidatePath(`/org/${orgId}/workspace/${workspaceId}/personal/services/${serviceId}`);
 }
 
 export async function addRequiredSecretAction(
@@ -137,12 +142,13 @@ export async function addRequiredSecretAction(
   serviceId: string,
   secretKey: string,
 ) {
-  await requireWorkspaceOwner(workspaceId);
+  const { workspace } = await requireWorkspaceOwner(workspaceId);
+  const orgId = workspace.orgId || "s";
   const service = await getServiceById(serviceId, workspaceId);
   if (!service) throw new Error("Service not found");
 
   await addRequiredSecret(serviceId, secretKey);
-  revalidatePath(`/workspace/${workspaceId}/personal/services/${serviceId}`);
+  revalidatePath(`/org/${orgId}/workspace/${workspaceId}/personal/services/${serviceId}`);
 }
 
 export async function removeRequiredSecretAction(
@@ -150,19 +156,21 @@ export async function removeRequiredSecretAction(
   serviceId: string,
   id: string,
 ) {
-  await requireWorkspaceOwner(workspaceId);
+  const { workspace } = await requireWorkspaceOwner(workspaceId);
+  const orgId = workspace.orgId || "s";
   const service = await getServiceById(serviceId, workspaceId);
   if (!service) throw new Error("Service not found");
 
   await removeRequiredSecret(id);
-  revalidatePath(`/workspace/${workspaceId}/personal/services/${serviceId}`);
+  revalidatePath(`/org/${orgId}/workspace/${workspaceId}/personal/services/${serviceId}`);
 }
 
 export async function getRequiredSecretsAction(
   workspaceId: string,
   serviceId: string,
 ) {
-  await requireWorkspaceOwner(workspaceId);
+  const { workspace } = await requireWorkspaceOwner(workspaceId);
+  const orgId = workspace.orgId || "s";
   const service = await getServiceById(serviceId, workspaceId);
   if (!service) throw new Error("Service not found");
 
@@ -173,13 +181,14 @@ export async function resetSpawnCountAction(
   workspaceId: string,
   serviceId: string,
 ): Promise<ActionResult> {
-  await requireWorkspaceOwner(workspaceId);
+  const { workspace } = await requireWorkspaceOwner(workspaceId);
+  const orgId = workspace.orgId || "s";
 
   const service = await getServiceById(serviceId, workspaceId);
   if (!service) return { error: "Service not found" };
 
   await resetSpawnFailCount(serviceId, workspaceId);
-  revalidatePath(`/workspace/${workspaceId}/personal/services/${serviceId}`);
+  revalidatePath(`/org/${orgId}/workspace/${workspaceId}/personal/services/${serviceId}`);
   return { success: true };
 }
 
@@ -207,7 +216,8 @@ export async function pushToHubAction(
   serviceId: string,
   asFork?: boolean,
 ): Promise<HubActionResult> {
-  await requireWorkspaceOwner(workspaceId);
+  const { workspace } = await requireWorkspaceOwner(workspaceId);
+  const orgId = workspace.orgId || "s";
 
   const service = await getServiceById(serviceId, workspaceId);
   if (!service) return { error: "Service not found" };
@@ -280,7 +290,7 @@ export async function pushToHubAction(
       : undefined,
   });
 
-  revalidatePath(`/workspace/${workspaceId}/personal/services/${serviceId}`);
+  revalidatePath(`/org/${orgId}/workspace/${workspaceId}/personal/services/${serviceId}`);
   return { success: true };
 }
 
@@ -301,7 +311,8 @@ export async function pullFromHubAction(
   serviceId: string,
   pieceId: string,
 ): Promise<PullFromHubResult> {
-  await requireWorkspaceOwner(workspaceId);
+  const { workspace } = await requireWorkspaceOwner(workspaceId);
+  const orgId = workspace.orgId || "s";
 
   const service = await getServiceById(serviceId, workspaceId);
   if (!service) return { error: "Service not found" };
@@ -345,7 +356,7 @@ export async function pullFromHubAction(
     return { error: (err as Error).message };
   }
 
-  revalidatePath(`/workspace/${workspaceId}/personal/services/${serviceId}`);
+  revalidatePath(`/org/${orgId}/workspace/${workspaceId}/personal/services/${serviceId}`);
   return { success: true };
 }
 
@@ -353,7 +364,8 @@ export async function forkServiceLocallyAction(
   workspaceId: string,
   serviceId: string,
 ): Promise<ActionResult> {
-  await requireWorkspaceOwner(workspaceId);
+  const { workspace } = await requireWorkspaceOwner(workspaceId);
+  const orgId = workspace.orgId || "s";
 
   const service = await getServiceById(serviceId, workspaceId);
   if (!service) return { error: "Service not found" };
@@ -408,7 +420,7 @@ export async function forkServiceLocallyAction(
     ),
   );
 
-  revalidatePath(`/workspace/${workspaceId}/personal/services`);
-  revalidatePath(`/workspace/${workspaceId}/personal/services/${serviceId}`);
+  revalidatePath(`/org/${orgId}/workspace/${workspaceId}/personal/services`);
+  revalidatePath(`/org/${orgId}/workspace/${workspaceId}/personal/services/${serviceId}`);
   return { success: true };
 }

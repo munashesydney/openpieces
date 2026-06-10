@@ -68,6 +68,8 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
         <img
           src="/op-not-moving.png"
           alt="OpenPieces"
+          width={28}
+          height={28}
           className="mt-3 h-7 w-7 rounded object-cover"
         />
 
@@ -140,6 +142,8 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
           <img
             src="/op-not-moving.png"
             alt="OpenPieces"
+            width={28}
+            height={28}
             className="h-7 w-7 rounded object-cover"
           />
           <span className="text-sm font-semibold text-[var(--foreground)]">
