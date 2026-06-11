@@ -9,12 +9,14 @@ export function ServiceDeleteModal({
   onConfirm,
   serviceTitle,
   isPending,
+  isRunning,
 }: {
   isOpen: boolean;
   onClose: () => void;
   onConfirm: () => void;
   serviceTitle: string;
   isPending?: boolean;
+  isRunning?: boolean;
 }) {
   return (
     <Modal
@@ -36,8 +38,17 @@ export function ServiceDeleteModal({
     >
       <div className="space-y-4">
         <p className="text-sm leading-relaxed text-[var(--foreground)]">
-          You are about to permanently delete <span className="font-semibold">&quot;{serviceTitle}&quot;</span>.
+          You are about to permanently delete{" "}
+          <span className="font-semibold">&quot;{serviceTitle}&quot;</span>.
         </p>
+        {isRunning && (
+          <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-3">
+            <p className="text-sm text-amber-500">
+              This service is currently running. It will be stopped before
+              deletion.
+            </p>
+          </div>
+        )}
         <div className="rounded-lg border border-[var(--border)] bg-[var(--sidebar-bg)]/60 p-3">
           <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-[var(--muted)]">
             What will be deleted

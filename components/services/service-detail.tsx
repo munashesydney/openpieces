@@ -103,6 +103,8 @@ export function ServiceDetail({
   const [isWaitingForSpawn, setIsWaitingForSpawn] = useState(false);
   const [isWaitingForStop, setIsWaitingForStop] = useState(false);
   const [isWaitingForArchiveStop, setIsWaitingForArchiveStop] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [isWaitingForDeleteStop, setIsWaitingForDeleteStop] = useState(false);
 
   const [method, setMethod] = useState("GET");
   const [path, setPath] = useState("");
@@ -160,6 +162,25 @@ export function ServiceDetail({
       });
     }
   }, [health, isWaitingForArchiveStop, workspaceId, service.id]);
+
+  // Confirm delete stop: once service is down, proceed with the actual delete
+  useEffect(() => {
+    if (isWaitingForDeleteStop && health && !health.healthy) {
+      setIsWaitingForDeleteStop(false);
+      startTransition(async () => {
+        try {
+          await deleteServiceAction(workspaceId, service.id);
+        } catch (err: any) {
+          console.error("Failed to delete service", err);
+        } finally {
+          setIsDeleting(false);
+          router.push(
+            `/org/${orgId}/workspace/${workspaceId}/personal/services`,
+          );
+        }
+      });
+    }
+  }, [health, isWaitingForDeleteStop, workspaceId, service.id, orgId, router]);
 
   // Determine actual running state: trust health check once available, fall back to prop
   const isServiceRunning = health?.healthy ?? service.status === "running";
@@ -296,11 +317,29 @@ export function ServiceDetail({
   };
 
   const handleDeleteService = () => {
-    startTransition(async () => {
-      await deleteServiceAction(workspaceId, service.id);
-      setIsDeleteModalOpen(false);
-      router.push(`/org/${orgId}/workspace/${workspaceId}/personal/services`);
-    });
+    setIsDeleteModalOpen(false);
+
+    if (isServiceRunning) {
+      // Running — stop first, then delete once health confirms it's down
+      setIsDeleting(true);
+      setIsWaitingForDeleteStop(true);
+      stopServiceAction(workspaceId, service.id).catch(() => {});
+    } else {
+      // Already stopped — delete directly
+      setIsDeleting(true);
+      startTransition(async () => {
+        try {
+          await deleteServiceAction(workspaceId, service.id);
+        } catch (err: any) {
+          console.error("Failed to delete service", err);
+        } finally {
+          setIsDeleting(false);
+          router.push(
+            `/org/${orgId}/workspace/${workspaceId}/personal/services`,
+          );
+        }
+      });
+    }
   };
 
   const handleArchive = () => {
@@ -447,7 +486,8 @@ export function ServiceDetail({
           onClose={() => setIsDeleteModalOpen(false)}
           onConfirm={handleDeleteService}
           serviceTitle={service.title}
-          isPending={isPending}
+          isPending={isDeleting}
+          isRunning={isServiceRunning}
         />
 
         <ServiceArchiveModal
@@ -548,7 +588,7 @@ export function ServiceDetail({
                   )}
                 </div>
               </div>
-              {isArchiving ? (
+              {isArchiving || isDeleting ? (
                 <div className="flex h-9 w-9 items-center justify-center">
                   <Loader2 className="h-4 w-4 animate-spin text-[var(--muted)]" />
                 </div>

@@ -431,6 +431,7 @@ function ServiceCard({
         onConfirm={handleDelete}
         serviceTitle={service.title}
         isPending={isPending}
+        isRunning={service.status === "running"}
       />
     </>
   );
