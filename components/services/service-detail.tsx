@@ -59,6 +59,7 @@ import {
 } from "@/app/org/[ordId]/workspace/[workspaceId]/personal/services/[serviceId]/actions";
 import { deleteServiceAction } from "@/app/org/[ordId]/workspace/[workspaceId]/personal/services/actions";
 import { ServiceDeleteModal } from "./service-delete-modal";
+import { ServiceArchiveModal } from "./service-archive-modal";
 import { serviceDirectoryLabel } from "@/lib/utils/service-directory-label";
 
 interface ServiceDetailProps {
@@ -96,10 +97,12 @@ export function ServiceDetail({
   const [localRequiredSecrets, setLocalRequiredSecrets] =
     useState(requiredSecrets);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [isArchiveModalOpen, setIsArchiveModalOpen] = useState(false);
   const [isResettingSpawn, setIsResettingSpawn] = useState(false);
   const [isArchiving, setIsArchiving] = useState(false);
   const [isWaitingForSpawn, setIsWaitingForSpawn] = useState(false);
   const [isWaitingForStop, setIsWaitingForStop] = useState(false);
+  const [isWaitingForArchiveStop, setIsWaitingForArchiveStop] = useState(false);
 
   const [method, setMethod] = useState("GET");
   const [path, setPath] = useState("");
@@ -141,6 +144,22 @@ export function ServiceDetail({
       setIsWaitingForStop(false);
     }
   }, [health, isWaitingForStop]);
+
+  // Confirm archive stop: once service is down, proceed with the actual archive call
+  useEffect(() => {
+    if (isWaitingForArchiveStop && health && !health.healthy) {
+      setIsWaitingForArchiveStop(false);
+      startTransition(async () => {
+        try {
+          await archiveServiceAction(workspaceId, service.id);
+        } catch (err: any) {
+          console.error("Failed to archive service", err);
+        } finally {
+          setIsArchiving(false);
+        }
+      });
+    }
+  }, [health, isWaitingForArchiveStop, workspaceId, service.id]);
 
   // Determine actual running state: trust health check once available, fall back to prop
   const isServiceRunning = health?.healthy ?? service.status === "running";
@@ -285,16 +304,29 @@ export function ServiceDetail({
   };
 
   const handleArchive = () => {
+    setIsArchiveModalOpen(true);
+  };
+
+  const handleConfirmArchive = () => {
+    setIsArchiveModalOpen(false);
     setIsArchiving(true);
-    startTransition(async () => {
-      try {
-        await archiveServiceAction(workspaceId, service.id);
-      } catch (err: any) {
-        console.error("Failed to archive service", err);
-      } finally {
-        setIsArchiving(false);
-      }
-    });
+
+    if (isServiceRunning) {
+      // Running — stop first, then archive once health confirms it's down
+      setIsWaitingForArchiveStop(true);
+      stopServiceAction(workspaceId, service.id).catch(() => {});
+    } else {
+      // Already stopped — archive directly
+      startTransition(async () => {
+        try {
+          await archiveServiceAction(workspaceId, service.id);
+        } catch (err: any) {
+          console.error("Failed to archive service", err);
+        } finally {
+          setIsArchiving(false);
+        }
+      });
+    }
   };
 
   const handleUnarchive = () => {
@@ -418,6 +450,18 @@ export function ServiceDetail({
           isPending={isPending}
         />
 
+        <ServiceArchiveModal
+          isOpen={isArchiveModalOpen}
+          onClose={() => {
+            setIsArchiveModalOpen(false);
+            setIsArchiving(false);
+          }}
+          onConfirm={handleConfirmArchive}
+          serviceTitle={service.title}
+          isRunning={isServiceRunning}
+          isPending={isArchiving}
+        />
+
         {service.spawnFailCount > 0 && (
           <div className="flex items-center justify-between rounded-lg border border-amber-500/30 bg-amber-500/10 px-5 py-3">
             <div className="flex items-center gap-3">
@@ -504,7 +548,11 @@ export function ServiceDetail({
                   )}
                 </div>
               </div>
-              {isServiceRunning ? (
+              {isArchiving ? (
+                <div className="flex h-9 w-9 items-center justify-center">
+                  <Loader2 className="h-4 w-4 animate-spin text-[var(--muted)]" />
+                </div>
+              ) : isServiceRunning ? (
                 <Button
                   size="sm"
                   variant="ghost"

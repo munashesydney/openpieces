@@ -141,6 +141,9 @@ async function executeServiceSpawnJob(job: ServiceSpawnJob) {
   if (!service.directory?.trim()) {
     throw new Error(`Service ${serviceId} has no directory set`);
   }
+  if (service.status === "archived") {
+    throw new Error(`Service ${serviceId} is archived, skipping spawn`);
+  }
 
   // Prevent concurrent spawns of the same service via in-memory lock.
   // (The DB "deploying" status alone is not reliable because enqueueServiceSpawn
@@ -829,14 +832,16 @@ async function executeServiceStopJob(job: ServiceStopJob) {
 async function recoverAndStartAllServices() {
   console.log("[service-worker] Recovering services...");
 
-  // Enqueue ALL services regardless of status.
+  // Enqueue all non-archived services on startup.
   // executeServiceSpawnJob handles:
   //   - killing stale/alive PIDs
   //   - validating directory, secrets, and index.ts
   //   - spawning the service
+  //   - skipping archived services
   const allServices = await db.select().from(services);
 
   for (const svc of allServices) {
+    if (svc.status === "archived") continue;
     await enqueueServiceSpawn({
       serviceId: svc.id,
       workspaceId: svc.workspaceId,
