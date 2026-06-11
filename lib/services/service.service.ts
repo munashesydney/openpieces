@@ -454,6 +454,34 @@ export async function updateService(
   return result[0];
 }
 
+export async function archiveService(
+  serviceId: string,
+  workspaceId: string,
+): Promise<Service> {
+  const [updated] = await db
+    .update(services)
+    .set({ status: "archived", updatedAt: new Date() })
+    .where(
+      and(eq(services.id, serviceId), eq(services.workspaceId, workspaceId)),
+    )
+    .returning();
+  return updated;
+}
+
+export async function unarchiveService(
+  serviceId: string,
+  workspaceId: string,
+): Promise<Service> {
+  const [updated] = await db
+    .update(services)
+    .set({ status: "stopped", updatedAt: new Date() })
+    .where(
+      and(eq(services.id, serviceId), eq(services.workspaceId, workspaceId)),
+    )
+    .returning();
+  return updated;
+}
+
 export async function deleteService(
   serviceId: string,
   workspaceId: string,
@@ -489,6 +517,8 @@ export async function validateServiceForSpawn(
 ): Promise<{ valid: true } | { valid: false; error: string }> {
   const service = await getServiceById(serviceId, workspaceId);
   if (!service) return { valid: false, error: "Service not found" };
+  if (service.status === "archived")
+    return { valid: false, error: "Archived services cannot be spawned" };
   if (!service.directory?.trim())
     return { valid: false, error: "Service has no directory set" };
 

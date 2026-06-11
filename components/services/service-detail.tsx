@@ -19,6 +19,8 @@ import {
   RotateCcw,
   RefreshCw,
   Download,
+  Archive,
+  ArchiveRestore,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import {
@@ -52,6 +54,8 @@ import {
   addRequiredSecretAction,
   removeRequiredSecretAction,
   resetSpawnCountAction,
+  archiveServiceAction,
+  unarchiveServiceAction,
 } from "@/app/org/[ordId]/workspace/[workspaceId]/personal/services/[serviceId]/actions";
 import { deleteServiceAction } from "@/app/org/[ordId]/workspace/[workspaceId]/personal/services/actions";
 import { ServiceDeleteModal } from "./service-delete-modal";
@@ -93,6 +97,9 @@ export function ServiceDetail({
     useState(requiredSecrets);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [isResettingSpawn, setIsResettingSpawn] = useState(false);
+  const [isArchiving, setIsArchiving] = useState(false);
+  const [isWaitingForSpawn, setIsWaitingForSpawn] = useState(false);
+  const [isWaitingForStop, setIsWaitingForStop] = useState(false);
 
   const [method, setMethod] = useState("GET");
   const [path, setPath] = useState("");
@@ -119,6 +126,25 @@ export function ServiceDetail({
     return () => clearInterval(interval);
   }, [checkHealth]);
 
+  // Confirm spawn when health check reports the service is reachable
+  useEffect(() => {
+    if (isWaitingForSpawn && health?.healthy) {
+      setIsSpawning(false);
+      setIsWaitingForSpawn(false);
+    }
+  }, [health, isWaitingForSpawn]);
+
+  // Confirm stop when health check reports the service is unreachable
+  useEffect(() => {
+    if (isWaitingForStop && health && !health.healthy) {
+      setIsStopping(false);
+      setIsWaitingForStop(false);
+    }
+  }, [health, isWaitingForStop]);
+
+  // Determine actual running state: trust health check once available, fall back to prop
+  const isServiceRunning = health?.healthy ?? service.status === "running";
+
   const handleSpawn = () => {
     // Local check: ensure all required secrets are set before calling the server
     const missingSecrets = localRequiredSecrets
@@ -134,16 +160,20 @@ export function ServiceDetail({
     }
 
     setIsSpawning(true);
+    setIsWaitingForSpawn(false);
     setSpawnError(null);
     startTransition(async () => {
       try {
         const result = await spawnServiceAction(workspaceId, service.id);
         if ("error" in result) {
           setSpawnError(result.error);
+          setIsSpawning(false);
+        } else {
+          // Keep spinner until health check confirms the service is up
+          setIsWaitingForSpawn(true);
         }
       } catch (err: any) {
         setSpawnError(err?.message ?? "Failed to launch service");
-      } finally {
         setIsSpawning(false);
       }
     });
@@ -151,16 +181,20 @@ export function ServiceDetail({
 
   const handleStop = () => {
     setIsStopping(true);
+    setIsWaitingForStop(false);
     setStopError(null);
     startTransition(async () => {
       try {
         const result = await stopServiceAction(workspaceId, service.id);
         if ("error" in result) {
           setStopError(result.error);
+          setIsStopping(false);
+        } else {
+          // Keep spinner until health check confirms the service is down
+          setIsWaitingForStop(true);
         }
       } catch (err: any) {
         setStopError(err?.message ?? "Failed to stop service");
-      } finally {
         setIsStopping(false);
       }
     });
@@ -250,6 +284,32 @@ export function ServiceDetail({
     });
   };
 
+  const handleArchive = () => {
+    setIsArchiving(true);
+    startTransition(async () => {
+      try {
+        await archiveServiceAction(workspaceId, service.id);
+      } catch (err: any) {
+        console.error("Failed to archive service", err);
+      } finally {
+        setIsArchiving(false);
+      }
+    });
+  };
+
+  const handleUnarchive = () => {
+    setIsArchiving(true);
+    startTransition(async () => {
+      try {
+        await unarchiveServiceAction(workspaceId, service.id);
+      } catch (err: any) {
+        console.error("Failed to unarchive service", err);
+      } finally {
+        setIsArchiving(false);
+      }
+    });
+  };
+
   return (
     <div className="flex w-full justify-center px-6 pb-20 pt-10 font-Inter">
       <div className="w-full px-4 space-y-10">
@@ -308,6 +368,10 @@ export function ServiceDetail({
                     document.body.appendChild(a);
                     a.click();
                     document.body.removeChild(a);
+                  } else if (val === "archive") {
+                    handleArchive();
+                  } else if (val === "unarchive") {
+                    handleUnarchive();
                   }
                 }}
                 options={[
@@ -317,6 +381,23 @@ export function ServiceDetail({
                     icon: <Download className="h-4 w-4" />,
                     destructive: false,
                   },
+                  ...(service.status === "archived"
+                    ? [
+                        {
+                          label: "Unarchive Service",
+                          value: "unarchive",
+                          icon: <ArchiveRestore className="h-4 w-4" />,
+                          destructive: false,
+                        },
+                      ]
+                    : [
+                        {
+                          label: "Archive Service",
+                          value: "archive",
+                          icon: <Archive className="h-4 w-4" />,
+                          destructive: false,
+                        },
+                      ]),
                   {
                     label: "Delete Service",
                     value: "delete",
@@ -397,6 +478,8 @@ export function ServiceDetail({
                         <div className="h-2 w-2 rounded-full bg-emerald-500" />
                       ) : service.status === "crashed" ? (
                         <div className="h-2 w-2 rounded-full bg-red-500" />
+                      ) : service.status === "archived" ? (
+                        <div className="h-2 w-2 rounded-full bg-slate-500" />
                       ) : (
                         <div className="h-2 w-2 rounded-full bg-[var(--muted)]" />
                       )}
@@ -407,7 +490,9 @@ export function ServiceDetail({
                             ? "Running"
                             : service.status === "crashed"
                               ? "Crashed"
-                              : "Stopped"}
+                              : service.status === "archived"
+                                ? "Archived"
+                                : "Stopped"}
                       </span>
                     </div>
                   )}
@@ -419,7 +504,7 @@ export function ServiceDetail({
                   )}
                 </div>
               </div>
-              {service.status === "running" ? (
+              {isServiceRunning ? (
                 <Button
                   size="sm"
                   variant="ghost"
@@ -442,12 +527,15 @@ export function ServiceDetail({
                     isSpawning ||
                     isPending ||
                     !service.directory ||
-                    service.status === "deploying"
+                    service.status === "deploying" ||
+                    service.status === "archived"
                   }
                   title={
                     !service.directory
                       ? "No directory set"
-                      : "Launch service process"
+                      : service.status === "archived"
+                        ? "Archived services cannot be launched"
+                        : "Launch service process"
                   }
                 >
                   {isSpawning || isPending || service.status === "deploying" ? (

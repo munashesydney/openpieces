@@ -143,7 +143,7 @@ export const services = pgTable("services", {
   port: integer("port"),
   pid: integer("pid"),
   status: text("status", {
-    enum: ["stopped", "running", "crashed", "deploying"],
+    enum: ["stopped", "running", "crashed", "deploying", "archived"],
   })
     .notNull()
     .default("stopped"),

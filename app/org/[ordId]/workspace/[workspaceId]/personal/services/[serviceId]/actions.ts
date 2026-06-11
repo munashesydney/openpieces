@@ -16,6 +16,8 @@ import {
   validateServiceForSpawn,
   resetSpawnFailCount,
   decrementQaSpawnCount,
+  archiveService,
+  unarchiveService,
 } from "@/lib/services/service.service";
 import { enqueueServiceSpawn, enqueueServiceStop } from "@/lib/queues/pg-boss";
 import { ValidationError } from "@/lib/errors/validation-error";
@@ -42,7 +44,9 @@ export async function spawnServiceAction(
   // Decrement qa_spawn_count — user-triggered deploy frees one QA slot
   await decrementQaSpawnCount(serviceId);
 
-  revalidatePath(`/org/${orgId}/workspace/${workspaceId}/personal/services/${serviceId}`);
+  revalidatePath(
+    `/org/${orgId}/workspace/${workspaceId}/personal/services/${serviceId}`,
+  );
   return { success: true };
 }
 
@@ -58,7 +62,9 @@ export async function stopServiceAction(
   if (service.status !== "running") return { error: "Service is not running" };
 
   await enqueueServiceStop({ serviceId, workspaceId });
-  revalidatePath(`/org/${orgId}/workspace/${workspaceId}/personal/services/${serviceId}`);
+  revalidatePath(
+    `/org/${orgId}/workspace/${workspaceId}/personal/services/${serviceId}`,
+  );
   return { success: true };
 }
 
@@ -88,7 +94,9 @@ export async function createEndpointAction(
     description,
   });
 
-  revalidatePath(`/org/${orgId}/workspace/${workspaceId}/personal/services/${serviceId}`);
+  revalidatePath(
+    `/org/${orgId}/workspace/${workspaceId}/personal/services/${serviceId}`,
+  );
 }
 
 export async function updateEndpointAction(
@@ -119,7 +127,9 @@ export async function updateEndpointAction(
 
   if (!endpoint) throw new Error("Endpoint not found");
 
-  revalidatePath(`/org/${orgId}/workspace/${workspaceId}/personal/services/${serviceId}`);
+  revalidatePath(
+    `/org/${orgId}/workspace/${workspaceId}/personal/services/${serviceId}`,
+  );
 }
 
 export async function deleteEndpointAction(
@@ -134,7 +144,9 @@ export async function deleteEndpointAction(
 
   const deleted = await deleteEndpoint(endpointId, serviceId, workspaceId);
   if (!deleted) throw new Error("Endpoint not found");
-  revalidatePath(`/org/${orgId}/workspace/${workspaceId}/personal/services/${serviceId}`);
+  revalidatePath(
+    `/org/${orgId}/workspace/${workspaceId}/personal/services/${serviceId}`,
+  );
 }
 
 export async function addRequiredSecretAction(
@@ -148,7 +160,9 @@ export async function addRequiredSecretAction(
   if (!service) throw new Error("Service not found");
 
   await addRequiredSecret(serviceId, secretKey);
-  revalidatePath(`/org/${orgId}/workspace/${workspaceId}/personal/services/${serviceId}`);
+  revalidatePath(
+    `/org/${orgId}/workspace/${workspaceId}/personal/services/${serviceId}`,
+  );
 }
 
 export async function removeRequiredSecretAction(
@@ -162,7 +176,9 @@ export async function removeRequiredSecretAction(
   if (!service) throw new Error("Service not found");
 
   await removeRequiredSecret(id);
-  revalidatePath(`/org/${orgId}/workspace/${workspaceId}/personal/services/${serviceId}`);
+  revalidatePath(
+    `/org/${orgId}/workspace/${workspaceId}/personal/services/${serviceId}`,
+  );
 }
 
 export async function getRequiredSecretsAction(
@@ -177,6 +193,47 @@ export async function getRequiredSecretsAction(
   return getRequiredSecrets(serviceId);
 }
 
+export async function archiveServiceAction(
+  workspaceId: string,
+  serviceId: string,
+): Promise<ActionResult> {
+  const { workspace } = await requireWorkspaceOwner(workspaceId);
+  const orgId = workspace.orgId || "s";
+
+  const service = await getServiceById(serviceId, workspaceId);
+  if (!service) return { error: "Service not found" };
+
+  // Stop the service process first if it's running
+  if (service.status === "running") {
+    await enqueueServiceStop({ serviceId, workspaceId });
+  }
+
+  await archiveService(serviceId, workspaceId);
+  revalidatePath(`/org/${orgId}/workspace/${workspaceId}/personal/services`);
+  revalidatePath(
+    `/org/${orgId}/workspace/${workspaceId}/personal/services/${serviceId}`,
+  );
+  return { success: true };
+}
+
+export async function unarchiveServiceAction(
+  workspaceId: string,
+  serviceId: string,
+): Promise<ActionResult> {
+  const { workspace } = await requireWorkspaceOwner(workspaceId);
+  const orgId = workspace.orgId || "s";
+
+  const service = await getServiceById(serviceId, workspaceId);
+  if (!service) return { error: "Service not found" };
+
+  await unarchiveService(serviceId, workspaceId);
+  revalidatePath(`/org/${orgId}/workspace/${workspaceId}/personal/services`);
+  revalidatePath(
+    `/org/${orgId}/workspace/${workspaceId}/personal/services/${serviceId}`,
+  );
+  return { success: true };
+}
+
 export async function resetSpawnCountAction(
   workspaceId: string,
   serviceId: string,
@@ -188,7 +245,9 @@ export async function resetSpawnCountAction(
   if (!service) return { error: "Service not found" };
 
   await resetSpawnFailCount(serviceId, workspaceId);
-  revalidatePath(`/org/${orgId}/workspace/${workspaceId}/personal/services/${serviceId}`);
+  revalidatePath(
+    `/org/${orgId}/workspace/${workspaceId}/personal/services/${serviceId}`,
+  );
   return { success: true };
 }
 
@@ -290,7 +349,9 @@ export async function pushToHubAction(
       : undefined,
   });
 
-  revalidatePath(`/org/${orgId}/workspace/${workspaceId}/personal/services/${serviceId}`);
+  revalidatePath(
+    `/org/${orgId}/workspace/${workspaceId}/personal/services/${serviceId}`,
+  );
   return { success: true };
 }
 
@@ -356,7 +417,9 @@ export async function pullFromHubAction(
     return { error: (err as Error).message };
   }
 
-  revalidatePath(`/org/${orgId}/workspace/${workspaceId}/personal/services/${serviceId}`);
+  revalidatePath(
+    `/org/${orgId}/workspace/${workspaceId}/personal/services/${serviceId}`,
+  );
   return { success: true };
 }
 
@@ -421,6 +484,8 @@ export async function forkServiceLocallyAction(
   );
 
   revalidatePath(`/org/${orgId}/workspace/${workspaceId}/personal/services`);
-  revalidatePath(`/org/${orgId}/workspace/${workspaceId}/personal/services/${serviceId}`);
+  revalidatePath(
+    `/org/${orgId}/workspace/${workspaceId}/personal/services/${serviceId}`,
+  );
   return { success: true };
 }
