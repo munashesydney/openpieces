@@ -29,6 +29,7 @@ function formatDate(date: string | Date | null): string {
     month: "short",
     day: "numeric",
     year: "numeric",
+    timeZone: "UTC",
   });
 }
 
@@ -136,11 +137,11 @@ export function ApiKeysClient({
         return;
       }
 
-      if ("plaintextKey" in result) {
+      if ("plaintextKey" in result && "apiKey" in result) {
         setCreatedKey(result.plaintextKey);
+        setKeys((prev) => [...prev, result.apiKey]);
       }
       setShowCreateForm(false);
-      window.location.reload();
     });
   };
 

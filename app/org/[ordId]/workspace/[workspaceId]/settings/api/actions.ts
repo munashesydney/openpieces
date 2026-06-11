@@ -7,6 +7,7 @@ import {
   deleteApiKey,
   revealApiKey,
 } from "@/lib/services/api-key.service";
+import type { ApiKey } from "@/lib/services/api-key.service";
 import { ValidationError } from "@/lib/errors/validation-error";
 
 export type ActionResult = { error: string } | { success: true };
@@ -14,9 +15,11 @@ export type ActionResult = { error: string } | { success: true };
 export async function createApiKeyAction(
   workspaceId: string,
   formData: FormData,
-): Promise<ActionResult | { success: true; plaintextKey: string }> {
+): Promise<
+  ActionResult | { success: true; plaintextKey: string; apiKey: ApiKey }
+> {
   const { user, workspace } = await requireWorkspaceOwner(workspaceId);
- const orgId = workspace.orgId || "s";
+  const orgId = workspace.orgId || "s";
   const name = (formData.get("name") as string)?.trim();
 
   try {
@@ -26,7 +29,11 @@ export async function createApiKeyAction(
       name,
     });
     revalidatePath(`/org/${orgId}/workspace/${workspaceId}/settings/api`);
-    return { success: true, plaintextKey: result.plaintextKey };
+    return {
+      success: true,
+      plaintextKey: result.plaintextKey,
+      apiKey: result.apiKey,
+    };
   } catch (err) {
     if (err instanceof ValidationError) return { error: err.message };
     console.error("Unexpected error creating API key:", err);
@@ -39,7 +46,7 @@ export async function deleteApiKeyAction(
   keyId: string,
 ): Promise<ActionResult> {
   const { user, workspace } = await requireWorkspaceOwner(workspaceId);
- const orgId = workspace.orgId || "s";
+  const orgId = workspace.orgId || "s";
 
   try {
     const deleted = await deleteApiKey(keyId, workspaceId, user.id);
@@ -59,7 +66,7 @@ export async function revealApiKeyAction(
   keyId: string,
 ): Promise<{ error: string } | { success: true; plaintextKey: string }> {
   const { user, workspace } = await requireWorkspaceOwner(workspaceId);
- const orgId = workspace.orgId || "s";
+  const orgId = workspace.orgId || "s";
 
   const plaintext = await revealApiKey(keyId, workspaceId, user.id);
   if (plaintext === null) {
