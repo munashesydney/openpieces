@@ -19,6 +19,8 @@ import {
   RotateCcw,
   RefreshCw,
   Download,
+  Archive,
+  ArchiveRestore,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import {
@@ -52,9 +54,12 @@ import {
   addRequiredSecretAction,
   removeRequiredSecretAction,
   resetSpawnCountAction,
+  archiveServiceAction,
+  unarchiveServiceAction,
 } from "@/app/org/[ordId]/workspace/[workspaceId]/personal/services/[serviceId]/actions";
 import { deleteServiceAction } from "@/app/org/[ordId]/workspace/[workspaceId]/personal/services/actions";
 import { ServiceDeleteModal } from "./service-delete-modal";
+import { ServiceArchiveModal } from "./service-archive-modal";
 import { serviceDirectoryLabel } from "@/lib/utils/service-directory-label";
 
 interface ServiceDetailProps {
@@ -92,7 +97,14 @@ export function ServiceDetail({
   const [localRequiredSecrets, setLocalRequiredSecrets] =
     useState(requiredSecrets);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [isArchiveModalOpen, setIsArchiveModalOpen] = useState(false);
   const [isResettingSpawn, setIsResettingSpawn] = useState(false);
+  const [isArchiving, setIsArchiving] = useState(false);
+  const [isWaitingForSpawn, setIsWaitingForSpawn] = useState(false);
+  const [isWaitingForStop, setIsWaitingForStop] = useState(false);
+  const [isWaitingForArchiveStop, setIsWaitingForArchiveStop] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [isWaitingForDeleteStop, setIsWaitingForDeleteStop] = useState(false);
 
   const [method, setMethod] = useState("GET");
   const [path, setPath] = useState("");
@@ -119,6 +131,60 @@ export function ServiceDetail({
     return () => clearInterval(interval);
   }, [checkHealth]);
 
+  // Confirm spawn when health check reports the service is reachable
+  useEffect(() => {
+    if (isWaitingForSpawn && health?.healthy) {
+      setIsSpawning(false);
+      setIsWaitingForSpawn(false);
+    }
+  }, [health, isWaitingForSpawn]);
+
+  // Confirm stop when health check reports the service is unreachable
+  useEffect(() => {
+    if (isWaitingForStop && health && !health.healthy) {
+      setIsStopping(false);
+      setIsWaitingForStop(false);
+    }
+  }, [health, isWaitingForStop]);
+
+  // Confirm archive stop: once service is down, proceed with the actual archive call
+  useEffect(() => {
+    if (isWaitingForArchiveStop && health && !health.healthy) {
+      setIsWaitingForArchiveStop(false);
+      startTransition(async () => {
+        try {
+          await archiveServiceAction(workspaceId, service.id);
+        } catch (err: any) {
+          console.error("Failed to archive service", err);
+        } finally {
+          setIsArchiving(false);
+        }
+      });
+    }
+  }, [health, isWaitingForArchiveStop, workspaceId, service.id]);
+
+  // Confirm delete stop: once service is down, proceed with the actual delete
+  useEffect(() => {
+    if (isWaitingForDeleteStop && health && !health.healthy) {
+      setIsWaitingForDeleteStop(false);
+      startTransition(async () => {
+        try {
+          await deleteServiceAction(workspaceId, service.id);
+        } catch (err: any) {
+          console.error("Failed to delete service", err);
+        } finally {
+          setIsDeleting(false);
+          router.push(
+            `/org/${orgId}/workspace/${workspaceId}/personal/services`,
+          );
+        }
+      });
+    }
+  }, [health, isWaitingForDeleteStop, workspaceId, service.id, orgId, router]);
+
+  // Determine actual running state: trust health check once available, fall back to prop
+  const isServiceRunning = health?.healthy ?? service.status === "running";
+
   const handleSpawn = () => {
     // Local check: ensure all required secrets are set before calling the server
     const missingSecrets = localRequiredSecrets
@@ -134,16 +200,20 @@ export function ServiceDetail({
     }
 
     setIsSpawning(true);
+    setIsWaitingForSpawn(false);
     setSpawnError(null);
     startTransition(async () => {
       try {
         const result = await spawnServiceAction(workspaceId, service.id);
         if ("error" in result) {
           setSpawnError(result.error);
+          setIsSpawning(false);
+        } else {
+          // Keep spinner until health check confirms the service is up
+          setIsWaitingForSpawn(true);
         }
       } catch (err: any) {
         setSpawnError(err?.message ?? "Failed to launch service");
-      } finally {
         setIsSpawning(false);
       }
     });
@@ -151,16 +221,20 @@ export function ServiceDetail({
 
   const handleStop = () => {
     setIsStopping(true);
+    setIsWaitingForStop(false);
     setStopError(null);
     startTransition(async () => {
       try {
         const result = await stopServiceAction(workspaceId, service.id);
         if ("error" in result) {
           setStopError(result.error);
+          setIsStopping(false);
+        } else {
+          // Keep spinner until health check confirms the service is down
+          setIsWaitingForStop(true);
         }
       } catch (err: any) {
         setStopError(err?.message ?? "Failed to stop service");
-      } finally {
         setIsStopping(false);
       }
     });
@@ -243,10 +317,67 @@ export function ServiceDetail({
   };
 
   const handleDeleteService = () => {
+    setIsDeleteModalOpen(false);
+
+    if (isServiceRunning) {
+      // Running — stop first, then delete once health confirms it's down
+      setIsDeleting(true);
+      setIsWaitingForDeleteStop(true);
+      stopServiceAction(workspaceId, service.id).catch(() => {});
+    } else {
+      // Already stopped — delete directly
+      setIsDeleting(true);
+      startTransition(async () => {
+        try {
+          await deleteServiceAction(workspaceId, service.id);
+        } catch (err: any) {
+          console.error("Failed to delete service", err);
+        } finally {
+          setIsDeleting(false);
+          router.push(
+            `/org/${orgId}/workspace/${workspaceId}/personal/services`,
+          );
+        }
+      });
+    }
+  };
+
+  const handleArchive = () => {
+    setIsArchiveModalOpen(true);
+  };
+
+  const handleConfirmArchive = () => {
+    setIsArchiveModalOpen(false);
+    setIsArchiving(true);
+
+    if (isServiceRunning) {
+      // Running — stop first, then archive once health confirms it's down
+      setIsWaitingForArchiveStop(true);
+      stopServiceAction(workspaceId, service.id).catch(() => {});
+    } else {
+      // Already stopped — archive directly
+      startTransition(async () => {
+        try {
+          await archiveServiceAction(workspaceId, service.id);
+        } catch (err: any) {
+          console.error("Failed to archive service", err);
+        } finally {
+          setIsArchiving(false);
+        }
+      });
+    }
+  };
+
+  const handleUnarchive = () => {
+    setIsArchiving(true);
     startTransition(async () => {
-      await deleteServiceAction(workspaceId, service.id);
-      setIsDeleteModalOpen(false);
-      router.push(`/org/${orgId}/workspace/${workspaceId}/personal/services`);
+      try {
+        await unarchiveServiceAction(workspaceId, service.id);
+      } catch (err: any) {
+        console.error("Failed to unarchive service", err);
+      } finally {
+        setIsArchiving(false);
+      }
     });
   };
 
@@ -308,6 +439,10 @@ export function ServiceDetail({
                     document.body.appendChild(a);
                     a.click();
                     document.body.removeChild(a);
+                  } else if (val === "archive") {
+                    handleArchive();
+                  } else if (val === "unarchive") {
+                    handleUnarchive();
                   }
                 }}
                 options={[
@@ -317,6 +452,23 @@ export function ServiceDetail({
                     icon: <Download className="h-4 w-4" />,
                     destructive: false,
                   },
+                  ...(service.status === "archived"
+                    ? [
+                        {
+                          label: "Unarchive Service",
+                          value: "unarchive",
+                          icon: <ArchiveRestore className="h-4 w-4" />,
+                          destructive: false,
+                        },
+                      ]
+                    : [
+                        {
+                          label: "Archive Service",
+                          value: "archive",
+                          icon: <Archive className="h-4 w-4" />,
+                          destructive: false,
+                        },
+                      ]),
                   {
                     label: "Delete Service",
                     value: "delete",
@@ -334,7 +486,20 @@ export function ServiceDetail({
           onClose={() => setIsDeleteModalOpen(false)}
           onConfirm={handleDeleteService}
           serviceTitle={service.title}
-          isPending={isPending}
+          isPending={isDeleting}
+          isRunning={isServiceRunning}
+        />
+
+        <ServiceArchiveModal
+          isOpen={isArchiveModalOpen}
+          onClose={() => {
+            setIsArchiveModalOpen(false);
+            setIsArchiving(false);
+          }}
+          onConfirm={handleConfirmArchive}
+          serviceTitle={service.title}
+          isRunning={isServiceRunning}
+          isPending={isArchiving}
         />
 
         {service.spawnFailCount > 0 && (
@@ -397,6 +562,8 @@ export function ServiceDetail({
                         <div className="h-2 w-2 rounded-full bg-emerald-500" />
                       ) : service.status === "crashed" ? (
                         <div className="h-2 w-2 rounded-full bg-red-500" />
+                      ) : service.status === "archived" ? (
+                        <div className="h-2 w-2 rounded-full bg-slate-500" />
                       ) : (
                         <div className="h-2 w-2 rounded-full bg-[var(--muted)]" />
                       )}
@@ -407,7 +574,9 @@ export function ServiceDetail({
                             ? "Running"
                             : service.status === "crashed"
                               ? "Crashed"
-                              : "Stopped"}
+                              : service.status === "archived"
+                                ? "Archived"
+                                : "Stopped"}
                       </span>
                     </div>
                   )}
@@ -419,7 +588,11 @@ export function ServiceDetail({
                   )}
                 </div>
               </div>
-              {service.status === "running" ? (
+              {isArchiving || isDeleting ? (
+                <div className="flex h-9 w-9 items-center justify-center">
+                  <Loader2 className="h-4 w-4 animate-spin text-[var(--muted)]" />
+                </div>
+              ) : isServiceRunning ? (
                 <Button
                   size="sm"
                   variant="ghost"
@@ -442,12 +615,15 @@ export function ServiceDetail({
                     isSpawning ||
                     isPending ||
                     !service.directory ||
-                    service.status === "deploying"
+                    service.status === "deploying" ||
+                    service.status === "archived"
                   }
                   title={
                     !service.directory
                       ? "No directory set"
-                      : "Launch service process"
+                      : service.status === "archived"
+                        ? "Archived services cannot be launched"
+                        : "Launch service process"
                   }
                 >
                   {isSpawning || isPending || service.status === "deploying" ? (

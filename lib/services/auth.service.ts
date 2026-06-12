@@ -40,5 +40,9 @@ export async function requireWorkspaceOwner(workspaceId: string) {
     notFound();
   }
 
+  if (workspace.deactivatedAt) {
+    redirect("/org");
+  }
+
   return { user, workspace };
 }

@@ -141,6 +141,9 @@ async function executeServiceSpawnJob(job: ServiceSpawnJob) {
   if (!service.directory?.trim()) {
     throw new Error(`Service ${serviceId} has no directory set`);
   }
+  if (service.status === "archived") {
+    throw new Error(`Service ${serviceId} is archived, skipping spawn`);
+  }
 
   // Prevent concurrent spawns of the same service via in-memory lock.
   // (The DB "deploying" status alone is not reliable because enqueueServiceSpawn
@@ -749,10 +752,12 @@ async function executeServiceStopJob(job: ServiceStopJob) {
     );
     await stopContainer(containerName);
     _containerIds.delete(serviceId);
+    // If the service was archived while stopping, don't overwrite the status
+    const current = await getServiceById(serviceId, workspaceId);
     await updateService(serviceId, workspaceId, {
       port: null,
       pid: null,
-      status: "stopped",
+      status: current?.status === "archived" ? "archived" : "stopped",
     });
     await appendServiceLog(directory, "info", "Service stopped successfully");
     return;
@@ -800,10 +805,12 @@ async function executeServiceStopJob(job: ServiceStopJob) {
       }, 5000);
     });
 
+    // If the service was archived while stopping, don't overwrite the status
+    const current = await getServiceById(serviceId, workspaceId);
     await updateService(serviceId, workspaceId, {
       port: null,
       pid: null,
-      status: "stopped",
+      status: current?.status === "archived" ? "archived" : "stopped",
     });
     await appendServiceLog(directory, "info", "Service stopped successfully");
   } catch (err) {
@@ -817,11 +824,12 @@ async function executeServiceStopJob(job: ServiceStopJob) {
       `[service-worker] Failed to stop service ${serviceId}:`,
       errorMessage,
     );
-    // Still mark as stopped in DB even if kill failed
+    // Still clear pid/port even if kill failed — respect archived status
+    const current = await getServiceById(serviceId, workspaceId);
     await updateService(serviceId, workspaceId, {
       port: null,
       pid: null,
-      status: "stopped",
+      status: current?.status === "archived" ? "archived" : "stopped",
     });
   }
 }
@@ -829,14 +837,16 @@ async function executeServiceStopJob(job: ServiceStopJob) {
 async function recoverAndStartAllServices() {
   console.log("[service-worker] Recovering services...");
 
-  // Enqueue ALL services regardless of status.
+  // Enqueue all non-archived services on startup.
   // executeServiceSpawnJob handles:
   //   - killing stale/alive PIDs
   //   - validating directory, secrets, and index.ts
   //   - spawning the service
+  //   - skipping archived services
   const allServices = await db.select().from(services);
 
   for (const svc of allServices) {
+    if (svc.status === "archived") continue;
     await enqueueServiceSpawn({
       serviceId: svc.id,
       workspaceId: svc.workspaceId,

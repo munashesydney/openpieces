@@ -385,7 +385,16 @@ function ServiceCard({
                 </p>
                 <div className="mt-3 flex items-center gap-3">
                   <span
-                    className={`text-[10px] font-bold uppercase ${service.status === "deploying" ? "text-amber-500" : service.status === "stopped" || service.status === "crashed" ? "text-red-500" : "text-emerald-500"}`}
+                    className={`text-[10px] font-bold uppercase ${
+                      service.status === "archived"
+                        ? "text-slate-500"
+                        : service.status === "deploying"
+                          ? "text-amber-500"
+                          : service.status === "stopped" ||
+                              service.status === "crashed"
+                            ? "text-red-500"
+                            : "text-emerald-500"
+                    }`}
                   >
                     {service.status}
                   </span>
@@ -422,6 +431,7 @@ function ServiceCard({
         onConfirm={handleDelete}
         serviceTitle={service.title}
         isPending={isPending}
+        isRunning={service.status === "running"}
       />
     </>
   );

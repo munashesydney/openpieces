@@ -1,4 +1,4 @@
-import { asc, eq, and, isNull } from "drizzle-orm";
+import { asc, eq, and } from "drizzle-orm";
 import { db } from "../db";
 import { workspaces, type NewWorkspace, type Workspace } from "../db/schema";
 
@@ -84,4 +84,89 @@ export async function unassignWorkspaceFromOrg(
     .update(workspaces)
     .set({ orgId: null })
     .where(eq(workspaces.id, workspaceId));
+}
+
+export async function deactivateWorkspace(
+  workspaceId: string,
+): Promise<{ archivedServices: number; pausedTasks: number }> {
+  const now = new Date();
+
+  // Stop all running services first so processes aren't orphaned
+  const { enqueueServiceStop } = await import("@/lib/queues/pg-boss");
+
+  // Query running services to enqueue stops
+  const { services } = await import("../db/schema");
+  const runningServices = await db
+    .select({ id: services.id })
+    .from(services)
+    .where(
+      and(
+        eq(services.workspaceId, workspaceId),
+        eq(services.status, "running"),
+      ),
+    );
+  await Promise.all(
+    runningServices.map((svc) =>
+      enqueueServiceStop({ serviceId: svc.id, workspaceId }),
+    ),
+  );
+
+  // Archive all services in the workspace
+  const archived = await db
+    .update(services)
+    .set({ status: "archived", updatedAt: now })
+    .where(eq(services.workspaceId, workspaceId))
+    .returning({ id: services.id });
+
+  // Pause all active tasks
+  const { pauseWorkspaceTasks } = await import("./task.service");
+  const paused = await pauseWorkspaceTasks(workspaceId);
+
+  // Mark workspace as deactivated
+  await db
+    .update(workspaces)
+    .set({ deactivatedAt: now, updatedAt: now })
+    .where(eq(workspaces.id, workspaceId));
+
+  return {
+    archivedServices: archived.length,
+    pausedTasks: paused,
+  };
+}
+
+export async function reactivateWorkspace(
+  workspaceId: string,
+): Promise<{ unarchivedServices: number; resumedTasks: number }> {
+  const now = new Date();
+
+  const { services } = await import("../db/schema");
+
+  // Unarchive all services (set back to stopped) and enqueue spawn for each
+  const unarchived = await db
+    .update(services)
+    .set({ status: "stopped", updatedAt: now })
+    .where(eq(services.workspaceId, workspaceId))
+    .returning({ id: services.id });
+
+  const { enqueueServiceSpawn } = await import("@/lib/queues/pg-boss");
+  await Promise.all(
+    unarchived.map((svc) =>
+      enqueueServiceSpawn({ serviceId: svc.id, workspaceId }),
+    ),
+  );
+
+  // Resume all paused tasks
+  const { resumeWorkspaceTasks } = await import("./task.service");
+  const resumed = await resumeWorkspaceTasks(workspaceId);
+
+  // Clear deactivatedAt
+  await db
+    .update(workspaces)
+    .set({ deactivatedAt: null, updatedAt: now })
+    .where(eq(workspaces.id, workspaceId));
+
+  return {
+    unarchivedServices: unarchived.length,
+    resumedTasks: resumed,
+  };
 }

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { LocateFixed } from "lucide-react";
+import { LocateFixed, AlertTriangle } from "lucide-react";
 import {
   Card,
   CardHeader,
@@ -13,8 +13,12 @@ import { Button } from "@/components/basic/buttons/button";
 import { Input } from "@/components/basic/input/input";
 import { Textarea } from "@/components/basic/input/textarea";
 import { Dropdown } from "@/components/basic/input/dropdown";
+import { Modal } from "../ui/modal";
 import type { DropdownOption } from "@/components/basic/input/dropdown";
-import { updateGeneralSettingsAction } from "@/app/org/[ordId]/workspace/[workspaceId]/settings/general/actions";
+import {
+  updateGeneralSettingsAction,
+  deactivateWorkspaceAction,
+} from "@/app/org/[ordId]/workspace/[workspaceId]/settings/general/actions";
 import { COMMON_TIMEZONES } from "@/lib/utils/timezones";
 
 type GeneralSettingsProps = {
@@ -22,6 +26,7 @@ type GeneralSettingsProps = {
   initialName: string;
   initialDescription: string;
   initialTimezone: string;
+  isDeactivated: boolean;
 };
 
 const timezoneOptions: DropdownOption[] = COMMON_TIMEZONES.map((tz) => ({
@@ -34,12 +39,16 @@ export function GeneralSettings({
   initialName,
   initialDescription,
   initialTimezone,
+  isDeactivated,
 }: GeneralSettingsProps) {
   const [name, setName] = useState(initialName);
   const [description, setDescription] = useState(initialDescription);
   const [timezone, setTimezone] = useState(initialTimezone);
   const [formError, setFormError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+  const [isDeactivateModalOpen, setIsDeactivateModalOpen] = useState(false);
+  const [isDeactivating, setIsDeactivating] = useState(false);
+  const [deactivateError, setDeactivateError] = useState<string | null>(null);
 
   const detectTimezone = () => {
     if (typeof window !== "undefined") {
@@ -61,6 +70,19 @@ export function GeneralSettings({
       const result = await updateGeneralSettingsAction(workspaceId, formData);
       if ("error" in result) {
         setFormError(result.error);
+      }
+    });
+  };
+
+  const handleDeactivate = () => {
+    setIsDeactivateModalOpen(false);
+    setIsDeactivating(true);
+    setDeactivateError(null);
+    startTransition(async () => {
+      const result = await deactivateWorkspaceAction(workspaceId);
+      if ("error" in result) {
+        setDeactivateError(result.error);
+        setIsDeactivating(false);
       }
     });
   };
@@ -151,10 +173,75 @@ export function GeneralSettings({
                 Irreversible and destructive actions for this workspace.
               </CardDescription>
             </CardHeader>
-            <CardContent>
-              <Button variant="danger">Delete Workspace</Button>
+            <CardContent className="space-y-4">
+              {isDeactivated ? (
+                <div className="rounded-lg border border-slate-500/30 bg-slate-500/10 px-4 py-3">
+                  <p className="text-sm text-slate-500">
+                    This workspace is deactivated. All services have been
+                    archived and tasks paused.
+                  </p>
+                </div>
+              ) : (
+                <>
+                  {deactivateError && (
+                    <div className="rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-500">
+                      {deactivateError}
+                    </div>
+                  )}
+                  <Button
+                    variant="danger"
+                    onClick={() => setIsDeactivateModalOpen(true)}
+                    disabled={isDeactivating}
+                  >
+                    {isDeactivating
+                      ? "Deactivating..."
+                      : "Deactivate Workspace"}
+                  </Button>
+                </>
+              )}
             </CardContent>
           </Card>
+
+          <Modal
+            isOpen={isDeactivateModalOpen}
+            onClose={() => setIsDeactivateModalOpen(false)}
+            danger
+            title="Deactivate workspace?"
+            description="This will archive all services and pause all tasks."
+            footer={
+              <div className="flex justify-end gap-3">
+                <Button
+                  variant="ghost"
+                  onClick={() => setIsDeactivateModalOpen(false)}
+                >
+                  Cancel
+                </Button>
+                <Button variant="danger" onClick={handleDeactivate}>
+                  Deactivate
+                </Button>
+              </div>
+            }
+          >
+            <div className="space-y-4">
+              <div className="flex items-start gap-3 rounded-lg border border-amber-500/30 bg-amber-500/10 p-3">
+                <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-amber-500" />
+                <div>
+                  <p className="text-sm font-medium text-amber-500">
+                    This action will affect all resources
+                  </p>
+                  <ul className="mt-2 space-y-1 text-sm text-[var(--foreground)]">
+                    <li>
+                      - All services will be archived and stopped if running
+                    </li>
+                    <li>- All active tasks will be paused</li>
+                  </ul>
+                </div>
+              </div>
+              <p className="text-xs text-[var(--muted)]">
+                You can reactivate the workspace at any time to restore access.
+              </p>
+            </div>
+          </Modal>
         </div>
       </div>
     </div>

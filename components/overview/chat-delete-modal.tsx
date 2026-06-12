@@ -3,27 +3,25 @@
 import { Button } from "@/components/basic/buttons/button";
 import { Modal } from "../ui/modal";
 
-export function ServiceDeleteModal({
+export function ChatDeleteModal({
   isOpen,
   onClose,
   onConfirm,
-  serviceTitle,
+  chatTitle,
   isPending,
-  isRunning,
 }: {
   isOpen: boolean;
   onClose: () => void;
   onConfirm: () => void;
-  serviceTitle: string;
+  chatTitle: string;
   isPending?: boolean;
-  isRunning?: boolean;
 }) {
   return (
     <Modal
       isOpen={isOpen}
       onClose={onClose}
       danger
-      title="Delete piece?"
+      title="Delete chat?"
       description="Review the impact before continuing."
       footer={
         <div className="flex justify-end gap-3">
@@ -31,7 +29,7 @@ export function ServiceDeleteModal({
             Cancel
           </Button>
           <Button variant="danger" onClick={onConfirm} disabled={isPending}>
-            {isPending ? "Deleting..." : "Delete piece"}
+            {isPending ? "Deleting..." : "Delete chat"}
           </Button>
         </div>
       }
@@ -39,24 +37,16 @@ export function ServiceDeleteModal({
       <div className="space-y-4">
         <p className="text-sm leading-relaxed text-[var(--foreground)]">
           You are about to permanently delete{" "}
-          <span className="font-semibold">&quot;{serviceTitle}&quot;</span>.
+          <span className="font-semibold">&quot;{chatTitle}&quot;</span>.
         </p>
-        {isRunning && (
-          <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-3">
-            <p className="text-sm text-amber-500">
-              This service is currently running. It will be stopped before
-              deletion.
-            </p>
-          </div>
-        )}
         <div className="rounded-lg border border-[var(--border)] bg-[var(--sidebar-bg)]/60 p-3">
           <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-[var(--muted)]">
             What will be deleted
           </p>
           <ul className="space-y-1 text-sm text-[var(--foreground)]">
-            <li>- The service configuration and metadata</li>
-            <li>- All endpoints linked to this service</li>
-            <li>- Service runtime association for this workspace</li>
+            <li>- The entire chat conversation and messages</li>
+            <li>- All AI-generated responses in this chat</li>
+            <li>- Tool call results associated with this chat</li>
           </ul>
         </div>
         <p className="text-xs text-[var(--muted)]">
