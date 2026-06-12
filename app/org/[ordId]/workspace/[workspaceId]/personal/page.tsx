@@ -11,6 +11,8 @@ import {
   sendAiMessageAction,
   updateWorkspaceModelAction,
   updateChatModelAction,
+  deleteChatAction,
+  renameChatAction,
 } from "./actions";
 
 export default async function Home(props: {
@@ -43,6 +45,8 @@ export default async function Home(props: {
     workspaceId,
   );
   const updateChatModel = updateChatModelAction.bind(null, workspaceId);
+  const deleteChat = deleteChatAction.bind(null, workspaceId);
+  const renameChat = renameChatAction.bind(null, workspaceId);
 
   return (
     <DashboardLayout>
@@ -60,6 +64,8 @@ export default async function Home(props: {
             sendMessageAction={sendMessage}
             updateWorkspaceModelAction={updateWorkspaceModel}
             updateChatModelAction={updateChatModel}
+            deleteChatAction={deleteChat}
+            renameChatAction={renameChat}
           />
         </div>
       </MainArea>

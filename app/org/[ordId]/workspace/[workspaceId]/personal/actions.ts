@@ -9,7 +9,9 @@ import {
   getAiChatById,
   getAiChatRecordById,
 } from "@/lib/services/chat.service";
+import { deleteAiChat, renameAiChat } from "@/lib/services/chat.service";
 import { updateWorkspaceDefaultModel } from "@/lib/services/workspace-settings.service";
+import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
 import { aiChats } from "@/lib/db/schema";
 import { eq, and } from "drizzle-orm";
@@ -30,7 +32,7 @@ export async function sendAiMessageAction(
   }
 
   const { user, workspace } = await requireWorkspaceOwner(workspaceId);
- const orgId = workspace.orgId || "s";
+  const orgId = workspace.orgId || "s";
 
   try {
     let effectiveChatId = chatId;
@@ -90,10 +92,59 @@ export async function updateChatModelAction(
   model: string,
 ) {
   const { user, workspace } = await requireWorkspaceOwner(workspaceId);
- const orgId = workspace.orgId || "s";
+  const orgId = workspace.orgId || "s";
 
   await db
     .update(aiChats)
     .set({ model, updatedAt: new Date() })
     .where(and(eq(aiChats.id, chatId), eq(aiChats.userId, user.id)));
+}
+
+export type DeleteChatActionResult = { success: true } | { error: string };
+
+export async function deleteChatAction(
+  workspaceId: string,
+  chatId: string,
+): Promise<DeleteChatActionResult> {
+  const { user, workspace } = await requireWorkspaceOwner(workspaceId);
+  const orgId = workspace.orgId || "s";
+
+  try {
+    const result = await deleteAiChat(chatId, user.id);
+    if (!result) {
+      return { error: "Chat not found." };
+    }
+
+    revalidatePath(`/org/${orgId}/workspace/${workspaceId}/personal`);
+    return { success: true };
+  } catch (err) {
+    const message =
+      err instanceof Error ? err.message : "Something went wrong.";
+    return { error: message };
+  }
+}
+
+export type RenameChatActionResult = { success: true } | { error: string };
+
+export async function renameChatAction(
+  workspaceId: string,
+  chatId: string,
+  title: string,
+): Promise<RenameChatActionResult> {
+  const { user, workspace } = await requireWorkspaceOwner(workspaceId);
+  const orgId = workspace.orgId || "s";
+
+  try {
+    const result = await renameAiChat(chatId, user.id, title);
+    if (!result) {
+      return { error: "Chat not found." };
+    }
+
+    revalidatePath(`/org/${orgId}/workspace/${workspaceId}/personal`);
+    return { success: true };
+  } catch (err) {
+    const message =
+      err instanceof Error ? err.message : "Something went wrong.";
+    return { error: message };
+  }
 }

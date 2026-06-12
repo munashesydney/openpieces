@@ -5,7 +5,11 @@ import { useMediaQuery } from "@/lib/hooks/use-media-query";
 import { PanelLeftOpen } from "lucide-react";
 import { Button } from "@/components/basic/buttons/button";
 import type { AiChatListItem, AiChatMessage } from "@/lib/ai-chat/types";
-import type { SendAiMessageActionResult } from "@/app/org/[ordId]/workspace/[workspaceId]/personal/actions";
+import type {
+  DeleteChatActionResult,
+  RenameChatActionResult,
+  SendAiMessageActionResult,
+} from "@/app/org/[ordId]/workspace/[workspaceId]/personal/actions";
 import {
   OverviewAiChatsSidebar,
   type AgentType,
@@ -41,6 +45,11 @@ type OverviewPersonalViewProps = {
   ) => Promise<SendAiMessageActionResult>;
   updateWorkspaceModelAction: (model: string) => Promise<void>;
   updateChatModelAction: (chatId: string, model: string) => Promise<void>;
+  deleteChatAction: (chatId: string) => Promise<DeleteChatActionResult>;
+  renameChatAction: (
+    chatId: string,
+    title: string,
+  ) => Promise<RenameChatActionResult>;
 };
 
 function mapMessage(message: AiChatMessage): ChatMessage {
@@ -82,6 +91,8 @@ export function OverviewPersonalView({
   sendMessageAction,
   updateWorkspaceModelAction,
   updateChatModelAction,
+  deleteChatAction,
+  renameChatAction,
 }: OverviewPersonalViewProps) {
   const isLg = useMediaQuery("(min-width: 1024px)");
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -482,6 +493,40 @@ export function OverviewPersonalView({
     [isLg],
   );
 
+  const handleDeleteChat = useCallback(
+    async (chatId: string) => {
+      const result = await deleteChatAction(chatId);
+      if ("error" in result) {
+        console.error(result.error);
+        return;
+      }
+      setChats((currentChats) =>
+        currentChats.filter((chat) => chat.id !== chatId),
+      );
+      if (selectedChatId === chatId) {
+        setSelectedChatId(null);
+        stopPolling();
+      }
+    },
+    [deleteChatAction, selectedChatId, stopPolling],
+  );
+
+  const handleRenameChat = useCallback(
+    async (chatId: string, title: string) => {
+      const result = await renameChatAction(chatId, title);
+      if ("error" in result) {
+        console.error(result.error);
+        return;
+      }
+      setChats((currentChats) =>
+        currentChats.map((chat) =>
+          chat.id === chatId ? { ...chat, title } : chat,
+        ),
+      );
+    },
+    [renameChatAction],
+  );
+
   const chatsSidebarProps = {
     chats: chats.map(({ id, title, status }) => ({ id, title, status })),
     selectedChatId,
@@ -496,6 +541,8 @@ export function OverviewPersonalView({
     selectedAgentType,
     hasMore,
     isLoadingMore,
+    onDeleteChat: handleDeleteChat,
+    onRenameChat: handleRenameChat,
   };
 
   return (

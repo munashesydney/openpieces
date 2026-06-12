@@ -455,6 +455,40 @@ export async function isChatStopped(chatId: string): Promise<boolean> {
   return chat?.stopped ?? false;
 }
 
+export async function deleteAiChat(chatId: string, userId: string) {
+  if (!isValidUuid(chatId) || !isValidUuid(userId)) {
+    return null;
+  }
+
+  const [deleted] = await db
+    .delete(aiChats)
+    .where(and(eq(aiChats.id, chatId), eq(aiChats.userId, userId)))
+    .returning({ id: aiChats.id });
+
+  return deleted ?? null;
+}
+
+export async function renameAiChat(
+  chatId: string,
+  userId: string,
+  title: string,
+) {
+  if (!isValidUuid(chatId) || !isValidUuid(userId)) {
+    return null;
+  }
+
+  const trimmed = title.trim();
+  if (!trimmed) return null;
+
+  const [updated] = await db
+    .update(aiChats)
+    .set({ title: trimmed, updatedAt: new Date() })
+    .where(and(eq(aiChats.id, chatId), eq(aiChats.userId, userId)))
+    .returning({ id: aiChats.id, title: aiChats.title });
+
+  return updated ?? null;
+}
+
 export async function updateAiMessage(
   messageId: string,
   data: {
