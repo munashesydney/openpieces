@@ -380,3 +380,27 @@ export async function deleteTask(
     .returning({ id: tasks.id });
   return result.length > 0;
 }
+
+export async function pauseWorkspaceTasks(
+  workspaceId: string,
+): Promise<number> {
+  const now = new Date();
+  const paused = await db
+    .update(tasks)
+    .set({ status: "paused", nextRunAt: null, updatedAt: now })
+    .where(and(eq(tasks.workspaceId, workspaceId), eq(tasks.status, "active")))
+    .returning({ id: tasks.id });
+  return paused.length;
+}
+
+export async function resumeWorkspaceTasks(
+  workspaceId: string,
+): Promise<number> {
+  const now = new Date();
+  const resumed = await db
+    .update(tasks)
+    .set({ status: "active", updatedAt: now })
+    .where(and(eq(tasks.workspaceId, workspaceId), eq(tasks.status, "paused")))
+    .returning({ id: tasks.id });
+  return resumed.length;
+}

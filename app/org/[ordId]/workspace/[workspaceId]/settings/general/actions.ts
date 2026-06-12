@@ -6,6 +6,7 @@ import { eq, and } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { workspaces } from "@/lib/db/schema";
 import { updateWorkspaceTimezone } from "@/lib/services/workspace-settings.service";
+import { deactivateWorkspace } from "@/lib/services/workspace.service";
 
 export type ActionResult = { error: string } | { success: true };
 
@@ -14,7 +15,7 @@ export async function updateGeneralSettingsAction(
   formData: FormData,
 ): Promise<ActionResult> {
   const { user, workspace } = await requireWorkspaceOwner(workspaceId);
- const orgId = workspace.orgId || "s";
+  const orgId = workspace.orgId || "s";
 
   const name = (formData.get("name") as string)?.trim();
   const description = (formData.get("description") as string)?.trim() ?? "";
@@ -48,4 +49,31 @@ export async function updateGeneralSettingsAction(
 
   revalidatePath(`/org/${orgId}/workspace/${workspaceId}/settings/general`);
   return { success: true };
+}
+
+export async function deactivateWorkspaceAction(
+  workspaceId: string,
+): Promise<ActionResult> {
+  const { workspace } = await requireWorkspaceOwner(workspaceId);
+  const orgId = workspace.orgId || "s";
+
+  if (workspace.deactivatedAt) {
+    return { error: "Workspace is already deactivated." };
+  }
+
+  const { archivedServices, pausedTasks } =
+    await deactivateWorkspace(workspaceId);
+
+  revalidatePath(`/org/${orgId}/workspace/${workspaceId}/settings/general`);
+  revalidatePath(`/org/${orgId}/workspace/${workspaceId}/personal/services`);
+  revalidatePath(`/org/${orgId}/workspace/${workspaceId}/personal/tasks`);
+
+  return {
+    success: true,
+    archivedServices,
+    pausedTasks,
+  } as ActionResult & {
+    archivedServices: number;
+    pausedTasks: number;
+  };
 }

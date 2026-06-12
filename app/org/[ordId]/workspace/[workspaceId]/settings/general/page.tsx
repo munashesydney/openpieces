@@ -15,6 +15,7 @@ export default async function GeneralSettingsPage(props: {
       initialName={workspace.name}
       initialDescription={workspace.description ?? ""}
       initialTimezone={settings?.timezone ?? "UTC"}
+      isDeactivated={!!workspace.deactivatedAt}
     />
   );
 }

@@ -85,6 +85,13 @@
       "when": 1780986877022,
       "tag": "0011_gifted_kitty_pryde",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1781239548431,
+      "tag": "0012_huge_the_fury",
+      "breakpoints": true
     }
   ]
 }

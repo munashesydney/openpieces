@@ -6,6 +6,7 @@ import { createOrganisation } from "@/lib/services/organisation.service";
 import {
   assignWorkspaceToOrg,
   unassignWorkspaceFromOrg,
+  reactivateWorkspace,
 } from "@/lib/services/workspace.service";
 
 export async function createOrganisationAction(formData: FormData) {
@@ -53,6 +54,13 @@ export async function unassignFromOrganisationAction(workspaceId: string) {
     return { error: "Failed to unassign workspace." };
   }
 
+  revalidatePath("/org");
+  return { success: true };
+}
+
+export async function reactivateWorkspaceAction(workspaceId: string) {
+  await requireUser();
+  await reactivateWorkspace(workspaceId);
   revalidatePath("/org");
   return { success: true };
 }

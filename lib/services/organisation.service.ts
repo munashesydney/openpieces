@@ -58,21 +58,33 @@ export async function getOrganisationWithWorkspaces(orgId: string) {
   return { ...org, workspaces: orgWorkspaces };
 }
 
-export async function getStandaloneWorkspaces(userId: string) {
+export async function getStandaloneWorkspaces(
+  userId: string,
+  includeDeactivated = false,
+) {
+  const conditions = [eq(workspaces.userId, userId), isNull(workspaces.orgId)];
+  if (!includeDeactivated) {
+    conditions.push(isNull(workspaces.deactivatedAt));
+  }
   return db
     .select()
     .from(workspaces)
-    .where(and(eq(workspaces.userId, userId), isNull(workspaces.orgId)))
+    .where(and(...conditions))
     .orderBy(asc(workspaces.createdAt));
 }
 
 export async function getWorkspacesByOrgIds(
   orgIds: string[],
+  includeDeactivated = false,
 ): Promise<Map<string, (typeof workspaces.$inferSelect)[]>> {
+  const conditions = [inArray(workspaces.orgId, orgIds)];
+  if (!includeDeactivated) {
+    conditions.push(isNull(workspaces.deactivatedAt));
+  }
   const rows = await db
     .select()
     .from(workspaces)
-    .where(inArray(workspaces.orgId, orgIds))
+    .where(and(...conditions))
     .orderBy(asc(workspaces.createdAt));
 
   const map = new Map<string, (typeof workspaces.$inferSelect)[]>();

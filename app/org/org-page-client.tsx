@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useCallback } from "react";
-import { Building2, Folder, Plus } from "lucide-react";
+import { useState, useCallback, useTransition } from "react";
+import { Building2, Folder, Plus, Archive } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ThemeToggle } from "@/components/theme-toggle";
@@ -13,6 +13,7 @@ import {
   createOrganisationAction,
   assignToOrganisationAction,
   unassignFromOrganisationAction,
+  reactivateWorkspaceAction,
 } from "./actions";
 import {
   DroppableOrgCard,
@@ -25,22 +26,44 @@ type Props = {
   organisations: Organization[];
   standaloneWorkspaces: Workspace[];
   workspaceMap: Map<string, Workspace[]>;
+  showDeactivated: boolean;
 };
 
 export function OrgPageClient({
   organisations,
   standaloneWorkspaces,
   workspaceMap,
+  showDeactivated,
 }: Props) {
-  const [newMenuOpen, setNewMenuOpen] = useState(false);
+  const router = useRouter();
+  const [isPending, startTransition] = useTransition();
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [createPending, setCreatePending] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
+  const [newMenuOpen, setNewMenuOpen] = useState(false);
+  const [reactivatingId, setReactivatingId] = useState<string | null>(null);
   const [dragState, setDragState] = useState<{
     workspaceId: string;
     workspaceName: string;
   } | null>(null);
-  const router = useRouter();
+
+  const handleReactivate = (workspaceId: string) => {
+    setReactivatingId(workspaceId);
+    startTransition(async () => {
+      await reactivateWorkspaceAction(workspaceId);
+      setReactivatingId(null);
+    });
+  };
+
+  const toggleDeactivated = () => {
+    const url = new URL(window.location.href);
+    if (showDeactivated) {
+      url.searchParams.delete("deactivated");
+    } else {
+      url.searchParams.set("deactivated", "1");
+    }
+    router.push(url.pathname + url.search);
+  };
 
   const handleCreateOrg = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -111,6 +134,15 @@ export function OrgPageClient({
             </p>
           </div>
           <div className="flex items-center gap-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={toggleDeactivated}
+              disabled={isPending}
+            >
+              <Archive className="h-3.5 w-3.5 mr-1.5" />
+              {showDeactivated ? "Hide deactivated" : "Show deactivated"}
+            </Button>
             <div className="relative">
               <button
                 type="button"
@@ -188,6 +220,8 @@ export function OrgPageClient({
                   workspaces={workspaceMap.get(org.id) ?? []}
                   dragState={dragState}
                   onAssign={handleAssign}
+                  onReactivate={handleReactivate}
+                  reactivatingId={reactivatingId}
                   onDragStart={(id, name) =>
                     setDragState({ workspaceId: id, workspaceName: name })
                   }
@@ -214,6 +248,8 @@ export function OrgPageClient({
                   <DraggableStandaloneCard
                     key={ws.id}
                     ws={ws}
+                    onReactivate={handleReactivate}
+                    reactivatingId={reactivatingId}
                     onDragStart={(id, name) =>
                       setDragState({ workspaceId: id, workspaceName: name })
                     }

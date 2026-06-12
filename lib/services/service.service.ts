@@ -482,6 +482,18 @@ export async function unarchiveService(
   return updated;
 }
 
+export async function unarchiveWorkspaceServices(
+  workspaceId: string,
+): Promise<number> {
+  const now = new Date();
+  const unarchived = await db
+    .update(services)
+    .set({ status: "stopped", updatedAt: now })
+    .where(eq(services.workspaceId, workspaceId))
+    .returning({ id: services.id });
+  return unarchived.length;
+}
+
 export async function deleteService(
   serviceId: string,
   workspaceId: string,

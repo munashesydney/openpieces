@@ -2,8 +2,15 @@
 
 import { useState, useCallback, type DragEvent } from "react";
 import Link from "next/link";
-import { ChevronDown, Building2, Folder } from "lucide-react";
+import {
+  ChevronDown,
+  Building2,
+  Folder,
+  RotateCcw,
+  Loader2,
+} from "lucide-react";
 import { Card } from "@/components/ui/card";
+import { Button } from "@/components/basic/buttons/button";
 import type { Organization, Workspace } from "@/lib/db/schema";
 
 // ─── Types ───────────────────────────────────────────────────────────────
@@ -20,6 +27,8 @@ export function DroppableOrgCard({
   workspaces,
   dragState,
   onAssign,
+  onReactivate,
+  reactivatingId,
   onDragStart,
   onDragEnd,
 }: {
@@ -27,6 +36,8 @@ export function DroppableOrgCard({
   workspaces: Workspace[];
   dragState: DragState;
   onAssign: (workspaceId: string, orgId: string) => void;
+  onReactivate?: (workspaceId: string) => void;
+  reactivatingId?: string | null;
   onDragStart: (id: string, name: string) => void;
   onDragEnd: () => void;
 }) {
@@ -139,6 +150,8 @@ export function DroppableOrgCard({
               key={ws.id}
               ws={ws}
               orgId={org.id}
+              onReactivate={onReactivate}
+              reactivatingId={reactivatingId}
               onDragStart={onDragStart}
               onDragEnd={onDragEnd}
             />
@@ -154,11 +167,15 @@ export function DroppableOrgCard({
 function DraggableWorkspaceRow({
   ws,
   orgId,
+  onReactivate,
+  reactivatingId,
   onDragStart,
   onDragEnd,
 }: {
   ws: Workspace;
   orgId: string;
+  onReactivate?: (workspaceId: string) => void;
+  reactivatingId?: string | null;
   onDragStart: (id: string, name: string) => void;
   onDragEnd: () => void;
 }) {
@@ -171,25 +188,64 @@ function DraggableWorkspaceRow({
     [ws.id, ws.name, onDragStart],
   );
 
-  return (
-    <div draggable onDragStart={handleDragStart} onDragEnd={onDragEnd}>
-      <Link
-        href={`/org/${orgId}/workspace/${ws.id}/personal`}
-        className="group/ws flex items-center gap-3 rounded border border-transparent px-3 py-2.5 hover:border-[var(--border)] transition-colors"
-        draggable={false}
-      >
-        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded border border-[var(--border)] bg-[var(--hover-bg)] text-[var(--muted)] transition-all group-hover/ws:border-[var(--secondary)]/20 group-hover/ws:bg-[var(--secondary)]/10 group-hover/ws:text-[var(--secondary)] group-hover/ws:shadow-[0_0_16px_var(--secondary-glow)]">
-          <Folder className="h-4 w-4" />
-        </div>
-        <div className="min-w-0 flex-1">
+  const inner = (
+    <>
+      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded border border-[var(--border)] bg-[var(--hover-bg)] text-[var(--muted)] transition-all group-hover/ws:border-[var(--secondary)]/20 group-hover/ws:bg-[var(--secondary)]/10 group-hover/ws:text-[var(--secondary)] group-hover/ws:shadow-[0_0_16px_var(--secondary-glow)]">
+        <Folder className="h-4 w-4" />
+      </div>
+      <div className="min-w-0 flex-1">
+        <div className="flex items-center gap-2">
           <p className="text-[13px] font-medium text-[var(--foreground)]">
             {ws.name}
           </p>
-          <p className="text-[12px] text-[var(--muted)] truncate">
-            {ws.description}
-          </p>
+          {ws.deactivatedAt && (
+            <span className="rounded border border-slate-500/30 bg-slate-500/10 px-1.5 py-0.5 text-[10px] font-medium text-slate-500">
+              Deactivated
+            </span>
+          )}
         </div>
-      </Link>
+        <p className="text-[12px] text-[var(--muted)] truncate">
+          {ws.description}
+        </p>
+      </div>
+      {ws.deactivatedAt && onReactivate && (
+        <Button
+          size="sm"
+          variant="ghost"
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            onReactivate(ws.id);
+          }}
+          disabled={reactivatingId === ws.id}
+          className="shrink-0"
+        >
+          {reactivatingId === ws.id ? (
+            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+          ) : (
+            <RotateCcw className="h-3.5 w-3.5" />
+          )}
+        </Button>
+      )}
+    </>
+  );
+
+  const wrapperClassName =
+    "group/ws flex items-center gap-3 rounded border border-transparent px-3 py-2.5 hover:border-[var(--border)] transition-colors";
+
+  return (
+    <div draggable onDragStart={handleDragStart} onDragEnd={onDragEnd}>
+      {ws.deactivatedAt ? (
+        <div className={`${wrapperClassName} opacity-60`}>{inner}</div>
+      ) : (
+        <Link
+          href={`/org/${orgId}/workspace/${ws.id}/personal`}
+          className={wrapperClassName}
+          draggable={false}
+        >
+          {inner}
+        </Link>
+      )}
     </div>
   );
 }
@@ -198,10 +254,14 @@ function DraggableWorkspaceRow({
 
 export function DraggableStandaloneCard({
   ws,
+  onReactivate,
+  reactivatingId,
   onDragStart,
   onDragEnd,
 }: {
   ws: Workspace;
+  onReactivate?: (workspaceId: string) => void;
+  reactivatingId?: string | null;
   onDragStart: (id: string, name: string) => void;
   onDragEnd: () => void;
 }) {
@@ -221,27 +281,73 @@ export function DraggableStandaloneCard({
       onDragStart={handleDragStart}
       onDragEnd={onDragEnd}
     >
-      <Link
-        href={`/org/s/workspace/${ws.id}/personal`}
-        className="block"
-        draggable={false}
-      >
-        <Card hoverable className="group cursor-pointer p-6 h-full">
-          <div className="flex items-start gap-4">
-            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded border border-[var(--border)] bg-[var(--hover-bg)] text-[var(--muted)] transition-all group-hover:border-[var(--secondary)]/20 group-hover:bg-[var(--secondary)]/10 group-hover:text-[var(--secondary)] group-hover:shadow-[0_0_16px_var(--secondary-glow)]">
-              <Folder className="h-6 w-6" />
+      {ws.deactivatedAt ? (
+        <div className="block opacity-60">
+          <Card className="group p-6 h-full">
+            <div className="flex items-start gap-4">
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded border border-[var(--border)] bg-[var(--hover-bg)] text-[var(--muted)]">
+                <Folder className="h-6 w-6" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-2">
+                  <h3 className="text-lg font-medium text-[var(--foreground)]">
+                    {ws.name}
+                  </h3>
+                  <span className="rounded border border-slate-500/30 bg-slate-500/10 px-1.5 py-0.5 text-[10px] font-medium text-slate-500">
+                    Deactivated
+                  </span>
+                </div>
+                <p className="mt-1 text-sm text-[var(--muted)] truncate">
+                  {ws.description || "No description"}
+                </p>
+              </div>
+              {onReactivate && (
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    onReactivate(ws.id);
+                  }}
+                  disabled={reactivatingId === ws.id}
+                  className="shrink-0 self-start"
+                >
+                  {reactivatingId === ws.id ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <RotateCcw className="h-3.5 w-3.5" />
+                  )}
+                </Button>
+              )}
             </div>
-            <div className="min-w-0 flex-1">
-              <h3 className="text-lg font-medium text-[var(--foreground)]">
-                {ws.name}
-              </h3>
-              <p className="mt-1 text-sm text-[var(--muted)] truncate">
-                {ws.description || "No description"}
-              </p>
+          </Card>
+        </div>
+      ) : (
+        <Link
+          href={`/org/s/workspace/${ws.id}/personal`}
+          className="block"
+          draggable={false}
+        >
+          <Card hoverable className="group cursor-pointer p-6 h-full">
+            <div className="flex items-start gap-4">
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded border border-[var(--border)] bg-[var(--hover-bg)] text-[var(--muted)] transition-all group-hover:border-[var(--secondary)]/20 group-hover:bg-[var(--secondary)]/10 group-hover:text-[var(--secondary)] group-hover:shadow-[0_0_16px_var(--secondary-glow)]">
+                <Folder className="h-6 w-6" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-2">
+                  <h3 className="text-lg font-medium text-[var(--foreground)]">
+                    {ws.name}
+                  </h3>
+                </div>
+                <p className="mt-1 text-sm text-[var(--muted)] truncate">
+                  {ws.description || "No description"}
+                </p>
+              </div>
             </div>
-          </div>
-        </Card>
-      </Link>
+          </Card>
+        </Link>
+      )}
     </div>
   );
 }

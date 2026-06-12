@@ -752,10 +752,12 @@ async function executeServiceStopJob(job: ServiceStopJob) {
     );
     await stopContainer(containerName);
     _containerIds.delete(serviceId);
+    // If the service was archived while stopping, don't overwrite the status
+    const current = await getServiceById(serviceId, workspaceId);
     await updateService(serviceId, workspaceId, {
       port: null,
       pid: null,
-      status: "stopped",
+      status: current?.status === "archived" ? "archived" : "stopped",
     });
     await appendServiceLog(directory, "info", "Service stopped successfully");
     return;
@@ -803,10 +805,12 @@ async function executeServiceStopJob(job: ServiceStopJob) {
       }, 5000);
     });
 
+    // If the service was archived while stopping, don't overwrite the status
+    const current = await getServiceById(serviceId, workspaceId);
     await updateService(serviceId, workspaceId, {
       port: null,
       pid: null,
-      status: "stopped",
+      status: current?.status === "archived" ? "archived" : "stopped",
     });
     await appendServiceLog(directory, "info", "Service stopped successfully");
   } catch (err) {
@@ -820,11 +824,12 @@ async function executeServiceStopJob(job: ServiceStopJob) {
       `[service-worker] Failed to stop service ${serviceId}:`,
       errorMessage,
     );
-    // Still mark as stopped in DB even if kill failed
+    // Still clear pid/port even if kill failed — respect archived status
+    const current = await getServiceById(serviceId, workspaceId);
     await updateService(serviceId, workspaceId, {
       port: null,
       pid: null,
-      status: "stopped",
+      status: current?.status === "archived" ? "archived" : "stopped",
     });
   }
 }
