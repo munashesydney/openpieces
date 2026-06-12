@@ -135,14 +135,47 @@ export function OverviewChatArea({
               return (
                 <div
                   key={msg.id}
-                  className={`flex w-full animate-[messageIn_0.3s_ease-out_both] ${
+                  className={`flex flex-col w-full animate-[messageIn_0.3s_ease-out_both] ${
                     msg.status === "compacted"
-                      ? "justify-center"
+                      ? "items-center"
                       : msg.role === "user"
-                        ? "justify-end"
-                        : "justify-start"
+                        ? "items-end"
+                        : "items-start"
                   }`}
                 >
+                  {/* Attachments rendered above the message card */}
+                  {msg.role === "user" && msg.attachments?.length > 0 && (
+                    <div className="flex flex-wrap gap-2 mb-2 max-w-[min(85%,520px)]">
+                      {msg.attachments.map((att, i) => {
+                        const isImage = att.mediaType?.startsWith("image/");
+                        return isImage ? (
+                          <img
+                            key={`${att.name}-${i}`}
+                            src={att.url}
+                            alt={att.name}
+                            className="max-h-48 max-w-full rounded-lg object-contain"
+                          />
+                        ) : (
+                          <div
+                            key={`${att.name}-${i}`}
+                            className="flex items-center gap-2 rounded-md bg-[var(--hover-bg)] px-3 py-1.5 text-xs text-[var(--muted)]"
+                          >
+                            <svg
+                              className="h-4 w-4 shrink-0"
+                              viewBox="0 0 16 16"
+                              fill="currentColor"
+                            >
+                              <path d="M3 2a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V2Zm2-1a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V2a1 1 0 0 0-1-1H5Zm1 3h4v1H6V4Zm0 3h4v1H6V7Zm0 3h3v1H6v-1Z" />
+                            </svg>
+                            <span className="max-w-[160px] truncate">
+                              {att.name}
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+
                   {msg.status === "compacted" ? (
                     <div className="flex items-center gap-3 py-2 w-full max-w-[600px]">
                       <div className="flex-1 h-px bg-[var(--border)]" />
@@ -167,7 +200,6 @@ export function OverviewChatArea({
                       role={msg.role}
                       toolCalls={msg.toolCalls}
                       toolResults={msg.toolResults}
-                      attachments={msg.attachments}
                       isStreaming={isStreaming}
                       onQuestionSubmit={onQuestionSubmit}
                       isFollowedByUserMessage={isFollowedByUserMessage}

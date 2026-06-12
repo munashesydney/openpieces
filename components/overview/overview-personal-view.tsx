@@ -162,6 +162,13 @@ export function OverviewPersonalView({
       const current = prev[selectedChatId] ?? [];
       const fetched = streamMessages;
 
+      // If the fetched list is empty but we already have local messages,
+      // keep them — the fetch is still in-flight and hasn't returned yet.
+      // Otherwise the optimistic messages flash away and the skeleton shows.
+      if (fetched.length === 0 && current.length > 0) {
+        return prev;
+      }
+
       // If the fetched list already ends with an assistant message (any status),
       // the backend has created the real response — no need to keep the optimistic one.
       const lastFetched = fetched[fetched.length - 1];
@@ -239,6 +246,10 @@ export function OverviewPersonalView({
 
   const handleSend = async (text: string, attachments?: FileAttachment[]) => {
     const currentChatId = selectedChatId;
+    // Pre-generate a temp ID for new chats so we can optimistically append
+    // the user message before the API call resolves.
+    const tempChatId = currentChatId ?? crypto.randomUUID();
+
     const optimisticMessage: ChatMessage = {
       id: crypto.randomUUID(),
       content: text,
@@ -263,16 +274,17 @@ export function OverviewPersonalView({
 
     setIsSending(true);
 
-    if (currentChatId) {
-      setMessages((currentMessages) => ({
-        ...currentMessages,
-        [currentChatId]: [
-          ...(currentMessages[currentChatId] ?? []),
-          optimisticMessage,
-          optimisticAssistant,
-        ],
-      }));
+    // Append optimistic messages instantly — before any async work
+    setMessages((currentMessages) => ({
+      ...currentMessages,
+      [tempChatId]: [
+        ...(currentMessages[tempChatId] ?? []),
+        optimisticMessage,
+        optimisticAssistant,
+      ],
+    }));
 
+    if (currentChatId) {
       setChats((currentChats) =>
         currentChats.map((chat) =>
           chat.id === currentChatId
@@ -288,6 +300,17 @@ export function OverviewPersonalView({
             : chat,
         ),
       );
+    } else {
+      // New chat — add optimistically to the sidebar immediately
+      setSelectedChatId(tempChatId);
+      const tempChat: Chat = {
+        id: tempChatId,
+        title: text.slice(0, 48) || "New chat",
+        status: "pending",
+        error: null,
+        model: workspaceModel,
+      };
+      setChats((currentChats) => [tempChat, ...currentChats]);
     }
 
     try {
@@ -316,20 +339,17 @@ export function OverviewPersonalView({
             ),
           }));
         } else {
-          // New chat that failed — create a placeholder so the error banner renders
-          const failedId = crypto.randomUUID();
-          const failedChat: Chat = {
-            id: failedId,
-            title: text.slice(0, 48) || "New chat",
-            status: "failed" as const,
-            error: result.error,
-            model: null,
-          };
-          setChats((currentChats) => [failedChat, ...currentChats]);
-          setSelectedChatId(failedId);
+          // New chat that failed — keep the temp chat, mark it failed
+          setChats((currentChats) =>
+            currentChats.map((c) =>
+              c.id === tempChatId
+                ? { ...c, status: "failed" as const, error: result.error }
+                : c,
+            ),
+          );
           setMessages((currentMessages) => ({
             ...currentMessages,
-            [failedId]: [optimisticMessage],
+            [tempChatId]: (currentMessages[tempChatId] ?? []).slice(0, -1),
           }));
         }
         return;
@@ -338,14 +358,26 @@ export function OverviewPersonalView({
       const { chat } = result;
       const mappedChat = mapChat(chat);
 
-      setChats((currentChats) => upsertChat(currentChats, mappedChat));
-      setSelectedChatId(chat.id);
-
       if (!currentChatId) {
-        setMessages((currentMessages) => ({
-          ...currentMessages,
-          [chat.id]: [optimisticMessage, optimisticAssistant],
-        }));
+        // Transition from temp chat → real chat
+        const tempMessages = messages[tempChatId] ?? [];
+        setMessages((currentMessages) => {
+          const next = { ...currentMessages };
+          delete next[tempChatId];
+          next[chat.id] = tempMessages;
+          return next;
+        });
+        setChats((currentChats) => {
+          // Remove temp chat, add real one
+          return upsertChat(
+            currentChats.filter((c) => c.id !== tempChatId),
+            mappedChat,
+          );
+        });
+        setSelectedChatId(chat.id);
+      } else {
+        setChats((currentChats) => upsertChat(currentChats, mappedChat));
+        setSelectedChatId(chat.id);
       }
 
       await refetch();
