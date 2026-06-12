@@ -1,6 +1,6 @@
 "use server";
 
-import type { AiChatListItem } from "@/lib/ai-chat/types";
+import type { AiChatListItem, FileAttachment } from "@/lib/ai-chat/types";
 import { enqueueChatExecution } from "@/lib/queues/pg-boss";
 import { requireWorkspaceOwner } from "@/lib/services/auth.service";
 import {
@@ -25,6 +25,7 @@ export async function sendAiMessageAction(
   chatId: string | null,
   content: string,
   mode?: "agent" | "chat",
+  attachments?: FileAttachment[],
 ): Promise<SendAiMessageActionResult> {
   const trimmedContent = content.trim();
   if (!trimmedContent) {
@@ -55,6 +56,7 @@ export async function sendAiMessageAction(
     await appendUserMessageAndMarkPending({
       chatId: effectiveChatId,
       content: trimmedContent,
+      attachments,
     });
 
     await enqueueChatExecution({

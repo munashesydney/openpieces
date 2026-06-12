@@ -36,7 +36,11 @@ export async function POST(
   const authResult = await authenticateV1Request(request);
   if (authResult instanceof NextResponse) return authResult;
 
-  let body: { content?: string; mode?: "agent" | "chat" };
+  let body: {
+    content?: string;
+    mode?: "agent" | "chat";
+    attachments?: import("@/lib/ai-chat/types").FileAttachment[];
+  };
   try {
     body = await request.json();
   } catch {
@@ -59,6 +63,7 @@ export async function POST(
     await appendUserMessageAndMarkPending({
       chatId,
       content: trimmedContent,
+      attachments: body.attachments,
     });
 
     await enqueueChatExecution({

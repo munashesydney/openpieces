@@ -3,117 +3,26 @@
 import { Check, ChevronLeft, ChevronRight } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useMediaQuery } from "@/lib/hooks/use-media-query";
+import {
+  type ModelCapabilities,
+  type ModelInfo,
+  PROVIDERS,
+  getModelCapabilities,
+} from "@/lib/ai-chat/models";
 
-type Model = {
-  id: string; // Full model ID with provider prefix, e.g. "openai/gpt-4o"
-  label: string;
-  badge?: string;
-};
-
-type Provider = {
-  id: string;
-  label: string;
-  models: Model[];
-};
-
-const PROVIDERS: Provider[] = [
-  {
-    id: "deepseek",
-    label: "DeepSeek",
-    models: [
-      {
-        id: "deepseek/deepseek-v4-pro",
-        label: "DeepSeek V4 Pro",
-        badge: "NEW",
-      },
-      {
-        id: "deepseek/deepseek-v4-flash",
-        label: "DeepSeek V4 Flash",
-        badge: "NEW",
-      },
-      { id: "deepseek/deepseek-v3.2", label: "DeepSeek V3.2" },
-      {
-        id: "deepseek/deepseek-v3.2-thinking",
-        label: "DeepSeek V3.2 Thinking",
-        badge: "NEW",
-      },
-    ],
-  },
-  {
-    id: "openai",
-    label: "OpenAI",
-    models: [
-      { id: "openai/gpt-4o", label: "GPT-4o" },
-      {
-        id: "openai/gpt-5.4-thinking",
-        label: "GPT-5.4 Thinking",
-        badge: "NEW",
-      },
-      { id: "openai/gpt-5.4-pro", label: "GPT-5.4 Pro", badge: "NEW" },
-      { id: "openai/gpt-5.4-mini", label: "GPT-5.4 Mini", badge: "NEW" },
-    ],
-  },
-  {
-    id: "anthropic",
-    label: "Anthropic",
-    models: [
-      { id: "anthropic/claude-3-5-sonnet", label: "Claude 3.5 Sonnet" },
-      {
-        id: "anthropic/claude-sonnet-4.6",
-        label: "Claude Sonnet 4.6",
-        badge: "NEW",
-      },
-      {
-        id: "anthropic/claude-opus-4.7",
-        label: "Claude Opus 4.7",
-        badge: "NEW",
-      },
-    ],
-  },
-  {
-    id: "google",
-    label: "Google",
-    models: [
-      { id: "google/gemini-1-5-pro", label: "Gemini 1.5 Pro" },
-      {
-        id: "google/gemini-3.1-pro-preview",
-        label: "Gemini 3.1 Pro",
-        badge: "NEW",
-      },
-      {
-        id: "google/gemini-3.1-flash-lite",
-        label: "Gemini 3.1 Flash-Lite",
-        badge: "NEW",
-      },
-    ],
-  },
-  {
-    id: "mistral",
-    label: "Mistral",
-    models: [
-      { id: "mistral/mistral-small-4", label: "Mistral Small 4", badge: "NEW" },
-      { id: "mistral/mistral-large-3", label: "Mistral Large 3" },
-    ],
-  },
-  {
-    id: "minimax",
-    label: "Minimax",
-    models: [
-      { id: "minimax/minimax-m2.1-lightning", label: "Minimax M2.1 Lightning" },
-      { id: "minimax/minimax-m2", label: "Minimax M2" },
-      { id: "minimax/minimax-m2.1", label: "Minimax M2.1" },
-      { id: "minimax/minimax-m2.5-highspeed", label: "Minimax M2.5 Highspeed" },
-      { id: "minimax/minimax-m2.5", label: "Minimax M2.5" },
-      { id: "minimax/minimax-m2.7-highspeed", label: "Minimax M2.7 Highspeed" },
-      { id: "minimax/minimax-m2.7", label: "Minimax M2.7" },
-    ],
-  },
-];
+export type { ModelCapabilities };
 
 type ModelPickerProps = {
   initialModel?: string;
   onModelChange?: (model: string) => void;
 };
+
+/** Derive the active capabilities for the currently selected model (React hook). */
+export function useModelCapabilities(
+  modelId: string | null | undefined,
+): ModelCapabilities {
+  return useMemo(() => getModelCapabilities(modelId), [modelId]);
+}
 
 export function ModelPicker({ initialModel, onModelChange }: ModelPickerProps) {
   const isWide = useMediaQuery("(min-width: 640px)");
@@ -139,7 +48,6 @@ export function ModelPicker({ initialModel, onModelChange }: ModelPickerProps) {
     if (open && rootRef.current) {
       const rect = rootRef.current.getBoundingClientRect();
       const spaceBelow = window.innerHeight - rect.bottom;
-      // If there's less than 380px below and more space above, drop up (position bottom)
       if (spaceBelow < 380 && rect.top > spaceBelow) {
         setDropdownPosition("bottom");
       } else {
@@ -148,7 +56,6 @@ export function ModelPicker({ initialModel, onModelChange }: ModelPickerProps) {
     }
   }, [open]);
 
-  // Sync with initialModel changes
   useEffect(() => {
     if (
       initialModel &&
@@ -158,7 +65,7 @@ export function ModelPicker({ initialModel, onModelChange }: ModelPickerProps) {
     }
   }, [initialModel]);
 
-  const activeModel = useMemo(() => {
+  const activeModel = useMemo((): ModelInfo => {
     for (const p of PROVIDERS) {
       const model = p.models.find((m) => m.id === activeModelId);
       if (model) return model;

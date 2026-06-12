@@ -2,7 +2,11 @@
 
 import { useEffect, useMemo, useRef } from "react";
 import { ChatMessageCard } from "./chat-message-card";
-import type { AiToolCall, AiToolResult } from "@/lib/ai-chat/types";
+import type {
+  AiToolCall,
+  AiToolResult,
+  FileAttachment,
+} from "@/lib/ai-chat/types";
 
 export type ChatMessage = {
   id: string;
@@ -12,6 +16,7 @@ export type ChatMessage = {
   status: "pending" | "streaming" | "complete" | "error" | "compacted";
   toolCalls: AiToolCall[];
   toolResults: AiToolResult[];
+  attachments: FileAttachment[];
 };
 
 export type ContextInfo = {
@@ -162,6 +167,7 @@ export function OverviewChatArea({
                       role={msg.role}
                       toolCalls={msg.toolCalls}
                       toolResults={msg.toolResults}
+                      attachments={msg.attachments}
                       isStreaming={isStreaming}
                       onQuestionSubmit={onQuestionSubmit}
                       isFollowedByUserMessage={isFollowedByUserMessage}

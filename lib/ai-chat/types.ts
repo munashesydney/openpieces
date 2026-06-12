@@ -40,6 +40,13 @@ export type AiChatListItem = {
   updatedAt: string;
 };
 
+export type FileAttachment = {
+  name: string;
+  mediaType: string;
+  url: string;
+  size: number;
+};
+
 export type AiChatMessage = {
   id: string;
   chatId: string;
@@ -49,6 +56,7 @@ export type AiChatMessage = {
   reasoning: string | null;
   toolCalls: AiToolCall[];
   toolResults: AiToolResult[];
+  attachments: FileAttachment[];
   createdAt: string;
   updatedAt: string;
 };

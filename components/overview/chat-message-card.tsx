@@ -2,7 +2,11 @@
 
 import { useEffect, useRef, useState } from "react";
 import { ChevronDown, ChevronRight } from "lucide-react";
-import type { AiToolCall, AiToolResult } from "@/lib/ai-chat/types";
+import type {
+  AiToolCall,
+  AiToolResult,
+  FileAttachment,
+} from "@/lib/ai-chat/types";
 import { ChatToolCalls } from "./chat-tool-calls";
 import { QuestionInputCard } from "./question-input-card";
 import { SleepCard } from "./sleep-card";
@@ -31,6 +35,7 @@ type ChatMessageCardProps = {
   reasoning?: string | null;
   toolCalls?: AiToolCall[];
   toolResults?: AiToolResult[];
+  attachments?: FileAttachment[];
   /** Whether the model is still streaming this message. */
   isStreaming?: boolean;
   onQuestionSubmit?: (answers: Record<string, string>) => void;
@@ -46,19 +51,52 @@ export function ChatMessageCard({
   reasoning,
   toolCalls = [],
   toolResults = [],
+  attachments = [],
   isStreaming = false,
   onQuestionSubmit,
   isFollowedByUserMessage,
 }: ChatMessageCardProps) {
   if (role === "user") {
+    const hasAttachments = attachments.length > 0;
     return (
       <div
         className="max-w-[min(85%,520px)] rounded-[1.35rem] border border-[var(--border)] bg-[var(--sidebar-bg)] px-4 py-2.5 shadow-sm"
         data-role="user"
       >
-        <p className="text-[15px] leading-relaxed text-[var(--foreground)] whitespace-pre-wrap break-words">
-          {content}
-        </p>
+        {content && (
+          <p className="text-[15px] leading-relaxed text-[var(--foreground)] whitespace-pre-wrap break-words">
+            {content}
+          </p>
+        )}
+        {hasAttachments && (
+          <div className={`flex flex-wrap gap-2 ${content ? "mt-2.5" : ""}`}>
+            {attachments.map((att, i) => {
+              const isImage = att.mediaType?.startsWith("image/");
+              return isImage ? (
+                <img
+                  key={`${att.name}-${i}`}
+                  src={att.url}
+                  alt={att.name}
+                  className="max-h-48 max-w-full rounded-lg object-contain"
+                />
+              ) : (
+                <div
+                  key={`${att.name}-${i}`}
+                  className="flex items-center gap-2 rounded-md bg-[var(--hover-bg)] px-3 py-1.5 text-xs text-[var(--muted)]"
+                >
+                  <svg
+                    className="h-4 w-4 shrink-0"
+                    viewBox="0 0 16 16"
+                    fill="currentColor"
+                  >
+                    <path d="M3 2a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V2Zm2-1a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V2a1 1 0 0 0-1-1H5Zm1 3h4v1H6V4Zm0 3h4v1H6V7Zm0 3h3v1H6v-1Z" />
+                  </svg>
+                  <span className="max-w-[160px] truncate">{att.name}</span>
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
     );
   }

@@ -1,16 +1,21 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import { Paperclip, Plus, Send, Square, Minimize2 } from "lucide-react";
+import { useEffect, useRef, useState, useCallback } from "react";
+import { Paperclip, Plus, Send, Square, X } from "lucide-react";
 import { ContextProgressRing } from "./context-progress-ring";
 import { ModelPicker } from "./model-picker";
 import { ModeToggle, type ComposerMode } from "./mode-toggle";
 import { Card } from "../ui/card";
 import { Button } from "@/components/basic/buttons/button";
 import type { ContextInfo } from "./overview-chat-area";
+import type { FileAttachment } from "@/lib/ai-chat/types";
+import type { ModelCapabilities } from "@/lib/ai-chat/models";
+
+const MAX_FILE_SIZE_MB = 10;
+const MAX_FILE_SIZE = MAX_FILE_SIZE_MB * 1024 * 1024;
 
 type OverviewComposerProps = {
-  onSend?: (value: string) => void;
+  onSend?: (value: string, attachments?: FileAttachment[]) => void;
   onStop?: () => void;
   onCompact?: () => void;
   disabled?: boolean;
@@ -22,7 +27,33 @@ type OverviewComposerProps = {
   onModelChange?: (model: string) => void;
   mode?: ComposerMode;
   onModeChange?: (mode: ComposerMode) => void;
+  /** Capabilities of the currently selected model, for gating uploads. */
+  modelCapabilities?: ModelCapabilities;
 };
+
+/** Read a File as a base64 data URL + produce a FileAttachment object. */
+function readFileAsAttachment(file: File): Promise<FileAttachment> {
+  return new Promise((resolve, reject) => {
+    if (file.size > MAX_FILE_SIZE) {
+      reject(
+        new Error(`File "${file.name}" exceeds ${MAX_FILE_SIZE_MB}MB limit.`),
+      );
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      resolve({
+        name: file.name,
+        mediaType: file.type || "application/octet-stream",
+        url: reader.result as string,
+        size: file.size,
+      });
+    };
+    reader.onerror = () =>
+      reject(new Error(`Failed to read file "${file.name}".`));
+    reader.readAsDataURL(file);
+  });
+}
 
 export function OverviewComposer({
   onSend,
@@ -37,22 +68,37 @@ export function OverviewComposer({
   onModelChange,
   mode: externalMode,
   onModeChange,
+  modelCapabilities,
 }: OverviewComposerProps) {
   const [internalMode, setInternalMode] = useState<ComposerMode>("agent");
   const mode = externalMode ?? internalMode;
   const setMode = onModeChange ?? setInternalMode;
   const [value, setValue] = useState("");
+  const [attachments, setAttachments] = useState<FileAttachment[]>([]);
+  const [uploadError, setUploadError] = useState<string | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const canAttach =
+    modelCapabilities && (modelCapabilities.vision || modelCapabilities.files);
 
   const canCompact =
     contextInfo && contextInfo.percentage >= 50 && onCompact && !isCompacting;
 
-  const handleSend = () => {
+  const handleSend = useCallback(() => {
     const trimmed = value.trim();
-    if (!trimmed || !onSend || disabled || isSending) return;
-    onSend(trimmed);
+    if (
+      (!trimmed && attachments.length === 0) ||
+      !onSend ||
+      disabled ||
+      isSending
+    )
+      return;
+    onSend(trimmed, attachments.length > 0 ? attachments : undefined);
     setValue("");
-  };
+    setAttachments([]);
+    setUploadError(null);
+  }, [value, attachments, onSend, disabled, isSending]);
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === "Enter" && !e.shiftKey) {
@@ -61,11 +107,38 @@ export function OverviewComposer({
     }
   };
 
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    setUploadError(null);
+    const newAttachments: FileAttachment[] = [];
+
+    for (let i = 0; i < files.length; i++) {
+      try {
+        const att = await readFileAsAttachment(files[i]!);
+        newAttachments.push(att);
+      } catch (err) {
+        setUploadError(
+          err instanceof Error ? err.message : "Failed to add file.",
+        );
+        break;
+      }
+    }
+
+    setAttachments((prev) => [...prev, ...newAttachments]);
+
+    // Reset input so the same file can be re-selected
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
+  const removeAttachment = (index: number) => {
+    setAttachments((prev) => prev.filter((_, i) => i !== index));
+  };
+
   useEffect(() => {
     if (textareaRef.current) {
-      // Reset height to shrink if text is deleted
       textareaRef.current.style.height = "auto";
-      // Set to scrollHeight but capped at 300px
       const newHeight = Math.min(textareaRef.current.scrollHeight, 300);
       textareaRef.current.style.height = `${newHeight}px`;
     }
@@ -108,11 +181,72 @@ export function OverviewComposer({
                 />
               </div>
             </div>
+
+            {/* Attachment previews */}
+            {attachments.length > 0 && (
+              <div className="mt-3 flex flex-wrap gap-2 px-2">
+                {attachments.map((att, i) => {
+                  const isImage = att.mediaType?.startsWith("image/");
+                  return (
+                    <div
+                      key={`${att.name}-${i}`}
+                      className="group relative flex items-center gap-2 rounded-lg border border-[var(--border)] bg-[var(--hover-bg)] px-3 py-1.5 text-xs"
+                    >
+                      {isImage ? (
+                        <img
+                          src={att.url}
+                          alt={att.name}
+                          className="h-8 w-8 rounded object-cover"
+                        />
+                      ) : (
+                        <Paperclip className="h-4 w-4 text-[var(--muted)]" />
+                      )}
+                      <span className="max-w-[120px] truncate text-[var(--foreground)]">
+                        {att.name}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => removeAttachment(i)}
+                        className="ml-1 rounded p-0.5 text-[var(--muted)] hover:bg-[var(--hover-bg-strong)] hover:text-[var(--foreground)]"
+                        aria-label={`Remove ${att.name}`}
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            {uploadError && (
+              <p className="mt-2 px-2 text-xs text-red-500">{uploadError}</p>
+            )}
           </div>
 
           <div className="flex flex-wrap items-center justify-between gap-2 gap-y-3 px-3 pb-3 sm:gap-3 sm:px-4 sm:pb-4">
             <div className="flex min-w-0 flex-wrap items-center gap-2">
-              <Button variant="secondary" size="icon" aria-label="Attach">
+              {/* File upload button — gated by model capabilities */}
+              <input
+                ref={fileInputRef}
+                type="file"
+                multiple
+                accept="image/*,application/pdf,.txt,.csv,.json,.md,.js,.ts,.tsx,.py,.html,.css"
+                onChange={handleFileChange}
+                className="hidden"
+                aria-hidden
+              />
+              <Button
+                variant="secondary"
+                size="icon"
+                aria-label="Attach file or image"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={!canAttach || disabled}
+                title={
+                  !canAttach
+                    ? "Current model does not support file uploads"
+                    : "Attach file or image"
+                }
+              >
                 <Paperclip className="h-4 w-4" />
               </Button>
 

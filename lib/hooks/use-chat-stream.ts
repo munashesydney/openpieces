@@ -32,6 +32,7 @@ function toChatMessage(msg: AiChatMessage): ChatMessage {
     status: msg.status,
     toolCalls: msg.toolCalls,
     toolResults: msg.toolResults,
+    attachments: msg.attachments ?? [],
   };
 }
 

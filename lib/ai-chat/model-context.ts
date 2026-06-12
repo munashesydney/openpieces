@@ -9,7 +9,7 @@ const CONTEXT_CACHE_TTL_MS = 60 * 60 * 1000; // 1 hour
 
 interface ModelLimits {
   context: number; // context window in tokens
-  output: number;  // max output tokens
+  output: number; // max output tokens
 }
 
 interface CacheEntry {
@@ -24,15 +24,15 @@ const limitsCache = new Map<string, CacheEntry>();
 // Context and output are in TOKENS (not chars)
 const KNOWN_MODEL_LIMITS: Record<string, ModelLimits> = {
   "deepseek/deepseek-v3.2": { context: 128000, output: 65536 },
-  "deepseek/deepseek-chat":  { context: 128000, output: 4096 },
+  "deepseek/deepseek-chat": { context: 128000, output: 4096 },
   "deepseek/deepseek-coder": { context: 128000, output: 16384 },
   "anthropic/claude-3-5-sonnet": { context: 200000, output: 8192 },
   "anthropic/claude-3-5-haiku": { context: 200000, output: 8192 },
-  "openai/gpt-4o":            { context: 128000, output: 16384 },
-  "openai/gpt-4o-mini":        { context: 128000, output: 16384 },
-  "openai/gpt-4-turbo":        { context: 128000, output: 4096 },
-  "google/gemini-1.5-pro":     { context: 128000, output: 8192 },
-  "google/gemini-1.5-flash":    { context: 128000, output: 8192 },
+  "openai/gpt-4o": { context: 128000, output: 16384 },
+  "openai/gpt-4o-mini": { context: 128000, output: 16384 },
+  "openai/gpt-4-turbo": { context: 128000, output: 4096 },
+  "google/gemini-1.5-pro": { context: 128000, output: 8192 },
+  "google/gemini-1.5-flash": { context: 128000, output: 8192 },
 };
 
 /**
@@ -75,7 +75,7 @@ async function fetchFromGateway(model: string): Promise<ModelLimits | null> {
         headers: {
           Authorization: `Bearer ${process.env.AI_GATEWAY_API_KEY}`,
         },
-      }
+      },
     );
 
     if (!response.ok) return null;

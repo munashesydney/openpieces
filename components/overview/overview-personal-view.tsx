@@ -4,7 +4,11 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useMediaQuery } from "@/lib/hooks/use-media-query";
 import { PanelLeftOpen } from "lucide-react";
 import { Button } from "@/components/basic/buttons/button";
-import type { AiChatListItem, AiChatMessage } from "@/lib/ai-chat/types";
+import type {
+  AiChatListItem,
+  AiChatMessage,
+  FileAttachment,
+} from "@/lib/ai-chat/types";
 import type {
   DeleteChatActionResult,
   RenameChatActionResult,
@@ -21,6 +25,7 @@ import {
 } from "./overview-chat-area";
 import { useChatStream } from "@/lib/hooks/use-chat-stream";
 import { OverviewComposer } from "./overview-composer";
+import { useModelCapabilities } from "./model-picker";
 import { OverviewTitle } from "./overview-title";
 
 type Chat = {
@@ -42,6 +47,7 @@ type OverviewPersonalViewProps = {
     chatId: string | null,
     content: string,
     mode?: "agent" | "chat",
+    attachments?: FileAttachment[],
   ) => Promise<SendAiMessageActionResult>;
   updateWorkspaceModelAction: (model: string) => Promise<void>;
   updateChatModelAction: (chatId: string, model: string) => Promise<void>;
@@ -61,6 +67,7 @@ function mapMessage(message: AiChatMessage): ChatMessage {
     status: message.status,
     toolCalls: message.toolCalls,
     toolResults: message.toolResults,
+    attachments: message.attachments ?? [],
   };
 }
 
@@ -128,6 +135,9 @@ export function OverviewPersonalView({
   const selectedChatStatus = selectedChat?.status;
   const selectedChatIsRunning =
     selectedChatStatus === "pending" || selectedChatStatus === "processing";
+
+  const activeModel = selectedChat?.model ?? workspaceModel;
+  const modelCapabilities = useModelCapabilities(activeModel);
 
   const selectedMessages = selectedChatId
     ? (messages[selectedChatId] ?? [])
@@ -227,7 +237,7 @@ export function OverviewPersonalView({
     }
   }, [selectedChatId, isCompacting, refetch, fetchContextInfo]);
 
-  const handleSend = async (text: string) => {
+  const handleSend = async (text: string, attachments?: FileAttachment[]) => {
     const currentChatId = selectedChatId;
     const optimisticMessage: ChatMessage = {
       id: crypto.randomUUID(),
@@ -237,6 +247,7 @@ export function OverviewPersonalView({
       status: "complete",
       toolCalls: [],
       toolResults: [],
+      attachments: attachments ?? [],
     };
 
     const optimisticAssistant: ChatMessage = {
@@ -247,6 +258,7 @@ export function OverviewPersonalView({
       status: "pending",
       toolCalls: [],
       toolResults: [],
+      attachments: [],
     };
 
     setIsSending(true);
@@ -279,7 +291,12 @@ export function OverviewPersonalView({
     }
 
     try {
-      const result = await sendMessageAction(currentChatId, text, mode);
+      const result = await sendMessageAction(
+        currentChatId,
+        text,
+        mode,
+        attachments,
+      );
 
       if ("error" in result) {
         if (currentChatId) {
@@ -617,6 +634,7 @@ export function OverviewPersonalView({
                 onModelChange={handleModelChange}
                 mode={mode}
                 onModeChange={setMode}
+                modelCapabilities={modelCapabilities}
               />
             </div>
           </>
@@ -633,6 +651,7 @@ export function OverviewPersonalView({
               onModelChange={handleModelChange}
               mode={mode}
               onModeChange={setMode}
+              modelCapabilities={modelCapabilities}
             />
           </div>
         )}
