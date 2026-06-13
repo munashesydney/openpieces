@@ -46,10 +46,15 @@ export function Header() {
     orgId && workspaceId
       ? pathname.startsWith(`/org/${orgId}/workspace/${workspaceId}/brain`)
       : false;
+  const isDevelopersPage =
+    orgId && workspaceId
+      ? pathname.startsWith(`/org/${orgId}/workspace/${workspaceId}/developers`)
+      : pathname.startsWith("/developers");
 
   const personalHref = prefix ? `${prefix}/personal` : "/org";
   const brainHref = prefix ? `${prefix}/brain` : "/brain";
   const settingsHref = prefix ? `${prefix}/settings/general` : "/settings";
+  const developersHref = prefix ? `${prefix}/developers/api` : "/developers";
 
   const personalActive = prefix
     ? pathname.startsWith(`${prefix}/personal`)
@@ -61,6 +66,9 @@ export function Header() {
   const settingsActive = prefix
     ? pathname.includes(`${prefix}/settings`)
     : pathname.startsWith("/settings");
+  const developersActive = prefix
+    ? pathname.includes(`${prefix}/developers`)
+    : pathname.startsWith("/developers");
 
   const brainNavItems = [
     {
@@ -161,17 +169,20 @@ export function Header() {
         ? `${prefix}/settings/features`
         : "/settings/features",
     },
+  ];
+
+  const developersNavItems = [
     {
       label: "API",
-      href: prefix ? `${prefix}/settings/api` : "/settings/api",
+      href: prefix ? `${prefix}/developers/api` : "/developers/api",
       icon: Code2,
-      activePattern: prefix ? `${prefix}/settings/api` : "/settings/api",
+      activePattern: prefix ? `${prefix}/developers/api` : "/developers/api",
     },
     {
       label: "Webhooks",
-      href: prefix ? `${prefix}/settings/webhooks` : "/settings/webhooks",
+      href: prefix ? `${prefix}/developers/webhooks` : "/developers/webhooks",
       icon: Webhook,
-      activePattern: prefix ? `${prefix}/settings/webhooks` : "/settings/webhooks",
+      activePattern: prefix ? `${prefix}/developers/webhooks` : "/developers/webhooks",
     },
   ];
 
@@ -179,14 +190,16 @@ export function Header() {
     ? settingsNavItems
     : isBrainPage
       ? brainNavItems
-      : personalNavItems;
+      : isDevelopersPage
+        ? developersNavItems
+        : personalNavItems;
 
   const appNavItems = [
     {
       label: "Personal",
       href: personalHref,
       icon: User,
-      active: personalActive && !brainActive && !settingsActive,
+      active: personalActive && !brainActive && !settingsActive && !developersActive,
     },
     {
       label: "Brain",
@@ -200,13 +213,21 @@ export function Header() {
       icon: Settings,
       active: settingsActive,
     },
+    {
+      label: "Developers",
+      href: developersHref,
+      icon: Code2,
+      active: developersActive,
+    },
   ];
 
   const pageSectionTitle = isSettingsPage
     ? "Settings"
     : isBrainPage
       ? "Brain"
-      : "Personal";
+      : isDevelopersPage
+        ? "Developers"
+        : "Personal";
 
   useEffect(() => {
     startTransition(() => setMobileMenuOpen(false));

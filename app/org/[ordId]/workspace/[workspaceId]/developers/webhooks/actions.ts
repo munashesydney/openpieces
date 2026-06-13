@@ -32,7 +32,7 @@ export async function createWebhookAction(
 
     const { webhook, secret } = await createWebhook(workspaceId, url, events);
     
-    revalidatePath(`/org/${orgId}/workspace/${workspaceId}/settings/webhooks`);
+    revalidatePath(`/org/${orgId}/workspace/${workspaceId}/developers/webhooks`);
     return { webhook, secret };
   } catch (error: any) {
     return { error: error.message };
@@ -48,7 +48,7 @@ export async function deleteWebhookAction(
     const orgId = workspace.orgId || "s";
     
     await deleteWebhook(workspaceId, webhookId);
-    revalidatePath(`/org/${orgId}/workspace/${workspaceId}/settings/webhooks`);
+    revalidatePath(`/org/${orgId}/workspace/${workspaceId}/developers/webhooks`);
     return { success: true };
   } catch (error: any) {
     return { error: error.message };
@@ -65,7 +65,7 @@ export async function toggleWebhookAction(
     const orgId = workspace.orgId || "s";
     
     await toggleWebhook(workspaceId, webhookId, isActive);
-    revalidatePath(`/org/${orgId}/workspace/${workspaceId}/settings/webhooks`);
+    revalidatePath(`/org/${orgId}/workspace/${workspaceId}/developers/webhooks`);
     return { success: true };
   } catch (error: any) {
     return { error: error.message };

@@ -28,7 +28,7 @@ export async function createApiKeyAction(
       userId: user.id,
       name,
     });
-    revalidatePath(`/org/${orgId}/workspace/${workspaceId}/settings/api`);
+    revalidatePath(`/org/${orgId}/workspace/${workspaceId}/developers/api`);
     return {
       success: true,
       plaintextKey: result.plaintextKey,
@@ -53,7 +53,7 @@ export async function deleteApiKeyAction(
     if (!deleted) {
       return { error: "API key not found." };
     }
-    revalidatePath(`/org/${orgId}/workspace/${workspaceId}/settings/api`);
+    revalidatePath(`/org/${orgId}/workspace/${workspaceId}/developers/api`);
     return { success: true };
   } catch (err) {
     console.error("Unexpected error deleting API key:", err);
