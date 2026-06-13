@@ -536,6 +536,16 @@ export async function updateAiMessage(
     reasoning?: string | null;
   },
 ) {
+  const [existingMsg] = await db
+    .select({ toolCalls: aiMessages.toolCalls })
+    .from(aiMessages)
+    .where(eq(aiMessages.id, messageId))
+    .limit(1);
+
+  const existingToolCallIds = new Set(
+    (existingMsg?.toolCalls as AiToolCall[] | undefined)?.map(t => t.toolCallId) ?? []
+  );
+
   const [updated] = await db
     .update(aiMessages)
     .set({
@@ -575,14 +585,16 @@ export async function updateAiMessage(
 
       if (data.toolCalls && data.toolCalls.length > 0) {
         for (const tc of data.toolCalls) {
-          dispatchWebhookEvent(chat.workspaceId, "tool.called", {
-            messageId,
-            chatId: updated.chatId,
-            toolCallId: tc.toolCallId,
-            toolName: tc.toolName,
-            input: tc.input,
-            executedAt: new Date().toISOString(),
-          }).catch(console.error);
+          if (!existingToolCallIds.has(tc.toolCallId)) {
+            dispatchWebhookEvent(chat.workspaceId, "tool.called", {
+              messageId,
+              chatId: updated.chatId,
+              toolCallId: tc.toolCallId,
+              toolName: tc.toolName,
+              input: tc.input,
+              executedAt: new Date().toISOString(),
+            }).catch(console.error);
+          }
         }
       }
     }
