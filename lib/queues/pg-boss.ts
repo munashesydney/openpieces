@@ -175,9 +175,13 @@ export type WebhookDeliveryJob = {
   workspaceId: string;
   eventName: string;
   payload: any;
+  attempt?: number;
 };
 
-export async function enqueueWebhookDelivery(job: WebhookDeliveryJob) {
+export async function enqueueWebhookDelivery(
+  job: WebhookDeliveryJob,
+  options?: { startAfter?: number | string | Date }
+) {
   const boss = await getPgBoss();
-  return boss.send(WEBHOOK_DELIVERY_QUEUE, job);
+  return boss.send(WEBHOOK_DELIVERY_QUEUE, job, options);
 }

@@ -184,6 +184,12 @@ export function Header() {
       icon: Webhook,
       activePattern: prefix ? `${prefix}/developers/webhooks` : "/developers/webhooks",
     },
+    {
+      label: "Workbench",
+      href: prefix ? `${prefix}/developers/workbench` : "/developers/workbench",
+      icon: Activity,
+      activePattern: prefix ? `${prefix}/developers/workbench` : "/developers/workbench",
+    },
   ];
 
   const navItems = isSettingsPage

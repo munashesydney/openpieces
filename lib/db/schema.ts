@@ -570,6 +570,9 @@ export const webhookDeliveries = pgTable(
     success: boolean("success").notNull(),
     startedAt: timestamp("started_at").notNull(),
     completedAt: timestamp("completed_at").notNull(),
+    attempt: integer("attempt").notNull().default(1),
+    status: text("status").notNull().default("success"),
+    retryAt: timestamp("retry_at"),
   },
   (table) => [
     index("webhook_deliveries_webhook_id_idx").on(table.webhookId),

@@ -1,4 +1,4 @@
-import { eq, and } from "drizzle-orm";
+import { eq, and, desc } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { webhooks, webhookDeliveries } from "@/lib/db/schema";
 import { encryptSecret } from "@/lib/security/encryption";
@@ -89,4 +89,62 @@ export async function dispatchWebhookEvent(
       payload,
     });
   }
+}
+
+export async function getWebhookDeliveries(
+  workspaceId: string,
+  limit: number = 50
+) {
+  if (!isValidUuid(workspaceId)) return [];
+
+  return await db
+    .select({
+      id: webhookDeliveries.id,
+      webhookId: webhookDeliveries.webhookId,
+      workspaceId: webhookDeliveries.workspaceId,
+      eventName: webhookDeliveries.eventName,
+      payload: webhookDeliveries.payload,
+      responseStatus: webhookDeliveries.responseStatus,
+      responseBody: webhookDeliveries.responseBody,
+      success: webhookDeliveries.success,
+      startedAt: webhookDeliveries.startedAt,
+      completedAt: webhookDeliveries.completedAt,
+      attempt: webhookDeliveries.attempt,
+      status: webhookDeliveries.status,
+      retryAt: webhookDeliveries.retryAt,
+      webhookUrl: webhooks.url,
+    })
+    .from(webhookDeliveries)
+    .innerJoin(webhooks, eq(webhookDeliveries.webhookId, webhooks.id))
+    .where(eq(webhookDeliveries.workspaceId, workspaceId))
+    .orderBy(desc(webhookDeliveries.startedAt))
+    .limit(limit);
+}
+
+export async function retryWebhookDelivery(workspaceId: string, deliveryId: string) {
+  if (!isValidUuid(workspaceId) || !isValidUuid(deliveryId)) return null;
+
+  const [delivery] = await db
+    .select()
+    .from(webhookDeliveries)
+    .where(
+      and(
+        eq(webhookDeliveries.id, deliveryId),
+        eq(webhookDeliveries.workspaceId, workspaceId)
+      )
+    )
+    .limit(1);
+
+  if (!delivery) {
+    throw new Error("Delivery attempt not found");
+  }
+
+  await enqueueWebhookDelivery({
+    webhookId: delivery.webhookId,
+    workspaceId: delivery.workspaceId,
+    eventName: delivery.eventName,
+    payload: delivery.payload,
+  });
+
+  return { success: true };
 }

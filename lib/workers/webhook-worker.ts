@@ -1,4 +1,4 @@
-import { getPgBoss, WEBHOOK_DELIVERY_QUEUE, PG_BOSS_CONCURRENCY, type WebhookDeliveryJob } from "@/lib/queues/pg-boss";
+import { getPgBoss, WEBHOOK_DELIVERY_QUEUE, PG_BOSS_CONCURRENCY, type WebhookDeliveryJob, enqueueWebhookDelivery } from "@/lib/queues/pg-boss";
 import { db } from "@/lib/db";
 import { webhooks, webhookDeliveries } from "@/lib/db/schema";
 import { eq, and } from "drizzle-orm";
@@ -25,6 +25,7 @@ export async function startWebhookWorker() {
       for (const job of jobs) {
         const startedAt = new Date();
         const data = job.data as WebhookDeliveryJob;
+        const attempt = data.attempt || 1;
 
         const [webhook] = await db
           .select()
@@ -54,6 +55,8 @@ export async function startWebhookWorker() {
         let success = false;
         let responseStatus: number | null = null;
         let responseBody: string | null = null;
+        let status = "success";
+        let retryAt: Date | null = null;
 
         try {
           const res = await fetch(webhook.url, {
@@ -81,13 +84,38 @@ export async function startWebhookWorker() {
           if (!res.ok) {
             throw new Error(`HTTP ${res.status}: ${responseBody}`);
           }
+          status = "success";
         } catch (error: any) {
           success = false;
-          responseBody = error.message;
-          throw error; // Let pg-boss handle retries
+          responseBody = error.message || "Unknown error";
+          
+          // Custom backoff intervals in seconds: 5m, 30m, 2h, 5h, 10h
+          const RETRY_DELAYS_SEC = [5 * 60, 30 * 60, 2 * 60 * 60, 5 * 60 * 60, 10 * 60 * 60];
+          
+          if (attempt <= RETRY_DELAYS_SEC.length) {
+            const delaySec = RETRY_DELAYS_SEC[attempt - 1];
+            retryAt = new Date(Date.now() + delaySec * 1000);
+            status = "retrying";
+
+            // Enqueue retry job
+            await enqueueWebhookDelivery(
+              {
+                webhookId: data.webhookId,
+                workspaceId: data.workspaceId,
+                eventName: data.eventName,
+                payload: data.payload,
+                attempt: attempt + 1,
+              },
+              { startAfter: delaySec }
+            );
+            console.log(`[webhook-worker] Webhook ${data.webhookId} failed. Scheduled attempt ${attempt + 1} in ${delaySec}s.`);
+          } else {
+            status = "failed";
+            console.log(`[webhook-worker] Webhook ${data.webhookId} failed after max attempts.`);
+          }
         } finally {
           const completedAt = new Date();
-          // Record delivery attempt for future observability feature
+          // Record delivery attempt for observablity feature
           await db.insert(webhookDeliveries).values({
             webhookId: webhook.id,
             workspaceId: webhook.workspaceId,
@@ -98,6 +126,9 @@ export async function startWebhookWorker() {
             success,
             startedAt,
             completedAt,
+            attempt,
+            status,
+            retryAt,
           });
         }
       }
