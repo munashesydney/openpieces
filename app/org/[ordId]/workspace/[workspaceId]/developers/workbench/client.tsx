@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition, useMemo, useEffect } from "react";
+import { useState, useTransition, useMemo, useEffect, useRef } from "react";
 import {
   Activity,
   Search,
@@ -40,28 +40,22 @@ interface WebhookDelivery {
   retryAt: string | null;
 }
 
+
 function RetryBadge({
   retryAt,
-  onElapsed,
 }: {
   retryAt: string;
-  onElapsed?: () => void;
 }) {
   const [timeLeft, setTimeLeft] = useState("");
   const [isPast, setIsPast] = useState(false);
 
   useEffect(() => {
-    let hasElapsed = false;
     const calculateTimeLeft = () => {
       const target = new Date(retryAt).getTime();
       const now = Date.now();
       const diffMs = target - now;
 
       if (diffMs <= 0) {
-        if (!hasElapsed) {
-          hasElapsed = true;
-          onElapsed?.();
-        }
         setIsPast(true);
         return "";
       }
@@ -81,7 +75,7 @@ function RetryBadge({
     }, 1000);
 
     return () => clearInterval(timer);
-  }, [retryAt, onElapsed]);
+  }, [retryAt]);
 
   if (isPast) {
     return (
@@ -102,11 +96,22 @@ function RetryBadge({
 export function WorkbenchClient({
   initialDeliveries,
   workspaceId,
+  limit = 50,
 }: {
   initialDeliveries: WebhookDelivery[];
   workspaceId: string;
+  limit?: number;
 }) {
   const [deliveries, setDeliveries] = useState<WebhookDelivery[]>(initialDeliveries);
+  const [offset, setOffset] = useState(0);
+  const [hasMore, setHasMore] = useState(initialDeliveries.length === limit);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedEvent, setSelectedEvent] = useState("all");
   const [selectedStatus, setSelectedStatus] = useState("all");
@@ -130,7 +135,8 @@ export function WorkbenchClient({
   const handleRefresh = async () => {
     setIsRefreshing(true);
     try {
-      const result = await getWebhookDeliveriesAction(workspaceId);
+      const currentLimit = offset + limit;
+      const result = await getWebhookDeliveriesAction(workspaceId, currentLimit, 0);
       if (result.error) {
         triggerToast(result.error, "error");
       } else if (result.deliveries) {
@@ -158,7 +164,27 @@ export function WorkbenchClient({
       }
     }, 15000);
     return () => clearInterval(timer);
-  }, [deliveries]);
+  }, [deliveries, offset]);
+
+  // Load More logs
+  const handleLoadMore = async () => {
+    setIsLoadingMore(true);
+    try {
+      const nextOffset = offset + limit;
+      const result = await getWebhookDeliveriesAction(workspaceId, limit, nextOffset);
+      if (result.error) {
+        triggerToast(result.error, "error");
+      } else if (result.deliveries) {
+        setDeliveries((prev) => [...prev, ...result.deliveries] as any);
+        setOffset(nextOffset);
+        setHasMore(result.deliveries.length === limit);
+      }
+    } catch (err: any) {
+      triggerToast(err.message || "Failed to load more logs", "error");
+    } finally {
+      setIsLoadingMore(false);
+    }
+  };
 
   // Manual Retry / Resend Webhook Event
   const handleResend = (deliveryId: string) => {
@@ -233,9 +259,9 @@ export function WorkbenchClient({
         d.eventName.toLowerCase().includes(searchQuery.toLowerCase()) ||
         d.webhookUrl.toLowerCase().includes(searchQuery.toLowerCase()) ||
         JSON.stringify(d.payload).toLowerCase().includes(searchQuery.toLowerCase());
-      
+
       const matchesEvent = selectedEvent === "all" || d.eventName === selectedEvent;
-      
+
       const matchesStatus =
         selectedStatus === "all" ||
         (selectedStatus === "success" && d.success) ||
@@ -269,7 +295,7 @@ export function WorkbenchClient({
 
   const getStatusBadge = (delivery: WebhookDelivery) => {
     if (delivery.status === "retrying" && delivery.retryAt) {
-      return <RetryBadge retryAt={delivery.retryAt} onElapsed={handleRefresh} />;
+      return <RetryBadge retryAt={delivery.retryAt} />;
     }
     if (delivery.success) {
       return (
@@ -318,11 +344,10 @@ Connection: keep-alive`;
     <div className="flex w-full px-6 pb-20 pt-8 relative">
       {/* Toast Alert */}
       {toastMessage && (
-        <div className={`fixed bottom-5 right-5 z-50 flex items-center gap-2 rounded border px-4 py-3 shadow-lg transition-all duration-300 ${
-          toastMessage.type === "success"
-            ? "border-emerald-500/30 bg-black/90 text-emerald-400"
-            : "border-red-500/30 bg-black/90 text-red-400"
-        }`}>
+        <div className={`fixed bottom-5 right-5 z-50 flex items-center gap-2 rounded border px-4 py-3 shadow-lg transition-all duration-300 ${toastMessage.type === "success"
+          ? "border-emerald-500/30 bg-black/90 text-emerald-400"
+          : "border-red-500/30 bg-black/90 text-red-400"
+          }`}>
           <AlertCircle size={16} />
           <span className="text-[13px] font-medium">{toastMessage.text}</span>
         </div>
@@ -522,7 +547,7 @@ Connection: keep-alive`;
                         <Clock size={12} className="opacity-60" />
                         {latency}ms
                       </span>
-                      <span>{formatDateTime(delivery.startedAt)}</span>
+                      <span>{mounted ? formatDateTime(delivery.startedAt) : ""}</span>
                       <Button
                         variant="ghost"
                         size="icon"
@@ -544,6 +569,26 @@ Connection: keep-alive`;
                   </div>
                 );
               })}
+            </div>
+          )}
+
+          {hasMore && filteredDeliveries.length > 0 && searchQuery === "" && selectedEvent === "all" && selectedStatus === "all" && selectedUrl === "all" && (
+            <div className="flex justify-center pt-4">
+              <Button
+                variant="outline"
+                onClick={handleLoadMore}
+                disabled={isLoadingMore}
+                className="w-full max-w-sm flex items-center gap-2"
+              >
+                {isLoadingMore ? (
+                  <>
+                    <RefreshCw size={14} className="animate-spin" />
+                    Loading...
+                  </>
+                ) : (
+                  "Load More Logs"
+                )}
+              </Button>
             </div>
           )}
         </div>
@@ -613,7 +658,7 @@ Connection: keep-alive`;
                 <div>
                   <div className="text-[11px] text-[var(--muted)]">Started At</div>
                   <div className="mt-0.5 text-[13px] font-semibold text-[var(--foreground)] truncate" title={new Date(selectedDelivery.startedAt).toISOString()}>
-                    {formatDateTime(selectedDelivery.startedAt)}
+                    {mounted ? formatDateTime(selectedDelivery.startedAt) : ""}
                   </div>
                 </div>
                 <div>
@@ -637,31 +682,28 @@ Connection: keep-alive`;
                 <div className="flex gap-2 -mb-[1px]">
                   <button
                     onClick={() => setActiveTab("request")}
-                    className={`pb-2 text-[13px] font-medium border-b-2 px-1 transition-all ${
-                      activeTab === "request"
-                        ? "border-[var(--accent)] text-[var(--foreground)]"
-                        : "border-transparent text-[var(--muted)] hover:text-[var(--foreground)]"
-                    }`}
+                    className={`pb-2 text-[13px] font-medium border-b-2 px-1 transition-all ${activeTab === "request"
+                      ? "border-[var(--accent)] text-[var(--foreground)]"
+                      : "border-transparent text-[var(--muted)] hover:text-[var(--foreground)]"
+                      }`}
                   >
                     Request Payload
                   </button>
                   <button
                     onClick={() => setActiveTab("response")}
-                    className={`pb-2 text-[13px] font-medium border-b-2 px-1 transition-all ${
-                      activeTab === "response"
-                        ? "border-[var(--accent)] text-[var(--foreground)]"
-                        : "border-transparent text-[var(--muted)] hover:text-[var(--foreground)]"
-                    }`}
+                    className={`pb-2 text-[13px] font-medium border-b-2 px-1 transition-all ${activeTab === "response"
+                      ? "border-[var(--accent)] text-[var(--foreground)]"
+                      : "border-transparent text-[var(--muted)] hover:text-[var(--foreground)]"
+                      }`}
                   >
                     Response Body
                   </button>
                   <button
                     onClick={() => setActiveTab("headers")}
-                    className={`pb-2 text-[13px] font-medium border-b-2 px-1 transition-all ${
-                      activeTab === "headers"
-                        ? "border-[var(--accent)] text-[var(--foreground)]"
-                        : "border-transparent text-[var(--muted)] hover:text-[var(--foreground)]"
-                    }`}
+                    className={`pb-2 text-[13px] font-medium border-b-2 px-1 transition-all ${activeTab === "headers"
+                      ? "border-[var(--accent)] text-[var(--foreground)]"
+                      : "border-transparent text-[var(--muted)] hover:text-[var(--foreground)]"
+                      }`}
                   >
                     Request Headers
                   </button>

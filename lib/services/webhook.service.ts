@@ -93,7 +93,8 @@ export async function dispatchWebhookEvent(
 
 export async function getWebhookDeliveries(
   workspaceId: string,
-  limit: number = 50
+  limit: number = 50,
+  offset: number = 0
 ) {
   if (!isValidUuid(workspaceId)) return [];
 
@@ -118,7 +119,8 @@ export async function getWebhookDeliveries(
     .innerJoin(webhooks, eq(webhookDeliveries.webhookId, webhooks.id))
     .where(eq(webhookDeliveries.workspaceId, workspaceId))
     .orderBy(desc(webhookDeliveries.startedAt))
-    .limit(limit);
+    .limit(limit)
+    .offset(offset);
 }
 
 export async function retryWebhookDelivery(workspaceId: string, deliveryId: string) {

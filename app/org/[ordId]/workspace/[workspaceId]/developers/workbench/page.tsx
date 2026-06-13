@@ -16,12 +16,14 @@ export default async function WorkbenchPage({
     redirect("/");
   }
 
-  const initialDeliveries = await getWebhookDeliveries(workspaceId);
+  const limit = 50; // Change this value to adjust the number of items per page
+  const initialDeliveries = await getWebhookDeliveries(workspaceId, limit);
 
   return (
     <WorkbenchClient
       initialDeliveries={JSON.parse(JSON.stringify(initialDeliveries))}
       workspaceId={workspaceId}
+      limit={limit}
     />
   );
 }

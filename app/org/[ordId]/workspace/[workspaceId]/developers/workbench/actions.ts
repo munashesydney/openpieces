@@ -25,11 +25,13 @@ export async function retryWebhookDeliveryAction(
 }
 
 export async function getWebhookDeliveriesAction(
-  workspaceId: string
+  workspaceId: string,
+  limit: number = 50,
+  offset: number = 0
 ) {
   try {
     await requireWorkspaceOwner(workspaceId);
-    const deliveries = await getWebhookDeliveries(workspaceId);
+    const deliveries = await getWebhookDeliveries(workspaceId, limit, offset);
     return { deliveries };
   } catch (error: any) {
     return { error: error.message };
