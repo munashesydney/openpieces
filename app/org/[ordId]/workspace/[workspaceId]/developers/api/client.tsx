@@ -148,7 +148,7 @@ export function ApiKeysClient({
 
   return (
     <div className="flex w-full px-6 pb-20 pt-8">
-      <div className="w-full max-w-[820px] px-4 space-y-8">
+      <div className="w-full px-4 space-y-8">
         {/* Header */}
         <div className="flex items-start justify-between gap-4">
           <div>

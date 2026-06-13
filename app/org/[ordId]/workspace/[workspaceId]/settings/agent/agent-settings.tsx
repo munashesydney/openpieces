@@ -56,7 +56,7 @@ export function AgentSettings({
           <h1 className="text-2xl font-semibold tracking-tight text-[var(--foreground)]">Your Open Pieces</h1>
           <p className="mt-1 text-[13px] text-[var(--muted)]">Customize your AI agent identity and usage limits.</p>
         </div>
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="space-y-6">
           <Card>
             <CardHeader>
               <CardTitle>AI Agent Identity</CardTitle>
