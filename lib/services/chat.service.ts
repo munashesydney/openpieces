@@ -16,6 +16,7 @@ import {
 } from "@/lib/ai-chat/prompts/universal";
 import { getContextInfo } from "@/lib/ai-chat/context-manager";
 import { getModelLimits } from "@/lib/ai-chat/model-context";
+import { getModelCapabilities } from "@/lib/ai-chat/models";
 import { truncateToolOutput } from "@/lib/ai-chat/tool-truncation";
 import type {
   AiChatListItem,
@@ -24,6 +25,7 @@ import type {
   AiMessageStatus,
   AiToolCall,
   AiToolResult,
+  FileAttachment,
 } from "@/lib/ai-chat/types";
 import { db } from "@/lib/db";
 import {
@@ -222,6 +224,9 @@ function serializeMessage(message: AiMessage): AiChatMessage {
     toolResults: Array.isArray(message.toolResults)
       ? (message.toolResults as AiToolResult[])
       : [],
+    attachments: Array.isArray(message.attachments)
+      ? (message.attachments as FileAttachment[])
+      : [],
     createdAt: message.createdAt.toISOString(),
     updatedAt: message.updatedAt.toISOString(),
   };
@@ -400,6 +405,7 @@ export async function createAiMessage(data: {
   toolCalls?: AiToolCall[];
   toolResults?: AiToolResult[];
   reasoning?: string;
+  attachments?: FileAttachment[];
 }) {
   const [message] = await db
     .insert(aiMessages)
@@ -411,6 +417,7 @@ export async function createAiMessage(data: {
       toolCalls: sanitizeJson(data.toolCalls ?? []),
       toolResults: sanitizeJson(data.toolResults ?? []),
       reasoning: data.reasoning ?? null,
+      attachments: sanitizeJson(data.attachments ?? []),
     })
     .returning();
 
@@ -517,6 +524,7 @@ export async function updateAiMessage(
 export async function appendUserMessageAndMarkPending(input: {
   chatId: string;
   content: string;
+  attachments?: FileAttachment[];
 }) {
   const existingMessages = await getAiMessages(input.chatId);
   const title =
@@ -529,6 +537,7 @@ export async function appendUserMessageAndMarkPending(input: {
     role: "user",
     content: input.content,
     status: "complete",
+    attachments: input.attachments,
   });
 
   await updateAiChatStatus(input.chatId, "pending", {
@@ -549,7 +558,61 @@ export async function appendUserMessageAndMarkPending(input: {
   return message;
 }
 
-async function getModelMessages(chatId: string): Promise<ModelMessage[]> {
+/**
+ * Build a user message content array from text + stored attachments.
+ *
+ * Converts FileAttachment records into the Vercel AI SDK content-part
+ * format ({ type: "image" | "file", ...}) and gates them against the
+ * model's declared capabilities.  Attachments for unsupported modalities
+ * are replaced with a text placard so the user knows they were dropped.
+ */
+function buildUserContent(
+  text: string,
+  attachments: FileAttachment[],
+  capabilities: { vision: boolean; files: boolean },
+): string | any[] {
+  if (attachments.length === 0) return text || "";
+
+  const parts: any[] = [];
+  if (text?.trim()) {
+    parts.push({ type: "text", text });
+  }
+
+  for (const att of attachments) {
+    const isImage = att.mediaType?.startsWith("image/");
+
+    if (isImage) {
+      if (capabilities.vision) {
+        parts.push({ type: "image", image: att.url });
+      } else {
+        parts.push({
+          type: "text",
+          text: `[Image attached: ${att.name}]`,
+        });
+      }
+    } else {
+      if (capabilities.files) {
+        parts.push({
+          type: "file",
+          data: att.url,
+          mediaType: att.mediaType,
+        });
+      } else {
+        parts.push({
+          type: "text",
+          text: `[File attached: ${att.name} (${att.mediaType})]`,
+        });
+      }
+    }
+  }
+
+  return parts;
+}
+
+async function getModelMessages(
+  chatId: string,
+  modelId?: string | null,
+): Promise<ModelMessage[]> {
   const rows = await db
     .select({
       role: aiMessages.role,
@@ -557,12 +620,18 @@ async function getModelMessages(chatId: string): Promise<ModelMessage[]> {
       toolCalls: aiMessages.toolCalls,
       toolResults: aiMessages.toolResults,
       reasoning: aiMessages.reasoning,
+      attachments: aiMessages.attachments,
     })
     .from(aiMessages)
     .where(
       and(eq(aiMessages.chatId, chatId), eq(aiMessages.isCompacted, false)),
     )
     .orderBy(asc(aiMessages.createdAt), asc(aiMessages.id));
+
+  // Determine model capabilities for attachment gating
+  const caps = modelId
+    ? getModelCapabilities(modelId)
+    : { vision: false, files: false };
 
   const result: ModelMessage[] = [];
 
@@ -572,6 +641,9 @@ async function getModelMessages(chatId: string): Promise<ModelMessage[]> {
       : [];
     const toolResults = Array.isArray(message.toolResults)
       ? (message.toolResults as AiToolResult[])
+      : [];
+    const attachments = Array.isArray(message.attachments)
+      ? (message.attachments as FileAttachment[])
       : [];
 
     if (message.role === "assistant") {
@@ -645,10 +717,10 @@ async function getModelMessages(chatId: string): Promise<ModelMessage[]> {
         result.push({ role: "tool", content: toolContent } as ModelMessage);
       }
     } else {
-      // User messages keep string content as-is
+      // User messages: build multi-part content when attachments exist
       result.push({
         role: message.role as "user",
-        content: message.content ?? "",
+        content: buildUserContent(message.content ?? "", attachments, caps),
       } as ModelMessage);
     }
   }
@@ -913,7 +985,7 @@ export async function executeAiChatJob(
     };
 
     try {
-      const messages = await getModelMessages(chat.id);
+      const messages = await getModelMessages(chat.id, chat.model);
       const contextInfo = await getContextInfo(
         chat.model ?? DEFAULT_MODEL,
         messages,
@@ -938,7 +1010,7 @@ export async function executeAiChatJob(
       const selectedModelId = chat.model ?? DEFAULT_MODEL;
       const isAnthropicModel = selectedModelId.startsWith("anthropic/");
 
-      let modelMessages = await getModelMessages(chat.id);
+      let modelMessages = await getModelMessages(chat.id, selectedModelId);
       console.log(
         `[chat.service] Pre-stream message count=${modelMessages.length}, model="${selectedModelId}", anthropic=${isAnthropicModel}`,
       );

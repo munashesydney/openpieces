@@ -56,9 +56,11 @@ export function ChatMessageCard({
         className="max-w-[min(85%,520px)] rounded-[1.35rem] border border-[var(--border)] bg-[var(--sidebar-bg)] px-4 py-2.5 shadow-sm"
         data-role="user"
       >
-        <p className="text-[15px] leading-relaxed text-[var(--foreground)] whitespace-pre-wrap break-words">
-          {content}
-        </p>
+        {content && (
+          <p className="text-[15px] leading-relaxed text-[var(--foreground)] whitespace-pre-wrap break-words">
+            {content}
+          </p>
+        )}
       </div>
     );
   }

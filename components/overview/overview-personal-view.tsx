@@ -4,7 +4,11 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useMediaQuery } from "@/lib/hooks/use-media-query";
 import { PanelLeftOpen } from "lucide-react";
 import { Button } from "@/components/basic/buttons/button";
-import type { AiChatListItem, AiChatMessage } from "@/lib/ai-chat/types";
+import type {
+  AiChatListItem,
+  AiChatMessage,
+  FileAttachment,
+} from "@/lib/ai-chat/types";
 import type {
   DeleteChatActionResult,
   RenameChatActionResult,
@@ -21,6 +25,7 @@ import {
 } from "./overview-chat-area";
 import { useChatStream } from "@/lib/hooks/use-chat-stream";
 import { OverviewComposer } from "./overview-composer";
+import { useModelCapabilities } from "./model-picker";
 import { OverviewTitle } from "./overview-title";
 
 type Chat = {
@@ -42,6 +47,7 @@ type OverviewPersonalViewProps = {
     chatId: string | null,
     content: string,
     mode?: "agent" | "chat",
+    attachments?: FileAttachment[],
   ) => Promise<SendAiMessageActionResult>;
   updateWorkspaceModelAction: (model: string) => Promise<void>;
   updateChatModelAction: (chatId: string, model: string) => Promise<void>;
@@ -61,6 +67,7 @@ function mapMessage(message: AiChatMessage): ChatMessage {
     status: message.status,
     toolCalls: message.toolCalls,
     toolResults: message.toolResults,
+    attachments: message.attachments ?? [],
   };
 }
 
@@ -129,6 +136,9 @@ export function OverviewPersonalView({
   const selectedChatIsRunning =
     selectedChatStatus === "pending" || selectedChatStatus === "processing";
 
+  const activeModel = selectedChat?.model ?? workspaceModel;
+  const modelCapabilities = useModelCapabilities(activeModel);
+
   const selectedMessages = selectedChatId
     ? (messages[selectedChatId] ?? [])
     : [];
@@ -151,6 +161,13 @@ export function OverviewPersonalView({
     setMessages((prev) => {
       const current = prev[selectedChatId] ?? [];
       const fetched = streamMessages;
+
+      // If the fetched list is empty but we already have local messages,
+      // keep them — the fetch is still in-flight and hasn't returned yet.
+      // Otherwise the optimistic messages flash away and the skeleton shows.
+      if (fetched.length === 0 && current.length > 0) {
+        return prev;
+      }
 
       // If the fetched list already ends with an assistant message (any status),
       // the backend has created the real response — no need to keep the optimistic one.
@@ -227,8 +244,12 @@ export function OverviewPersonalView({
     }
   }, [selectedChatId, isCompacting, refetch, fetchContextInfo]);
 
-  const handleSend = async (text: string) => {
+  const handleSend = async (text: string, attachments?: FileAttachment[]) => {
     const currentChatId = selectedChatId;
+    // Pre-generate a temp ID for new chats so we can optimistically append
+    // the user message before the API call resolves.
+    const tempChatId = currentChatId ?? crypto.randomUUID();
+
     const optimisticMessage: ChatMessage = {
       id: crypto.randomUUID(),
       content: text,
@@ -237,6 +258,7 @@ export function OverviewPersonalView({
       status: "complete",
       toolCalls: [],
       toolResults: [],
+      attachments: attachments ?? [],
     };
 
     const optimisticAssistant: ChatMessage = {
@@ -247,20 +269,22 @@ export function OverviewPersonalView({
       status: "pending",
       toolCalls: [],
       toolResults: [],
+      attachments: [],
     };
 
     setIsSending(true);
 
-    if (currentChatId) {
-      setMessages((currentMessages) => ({
-        ...currentMessages,
-        [currentChatId]: [
-          ...(currentMessages[currentChatId] ?? []),
-          optimisticMessage,
-          optimisticAssistant,
-        ],
-      }));
+    // Append optimistic messages instantly — before any async work
+    setMessages((currentMessages) => ({
+      ...currentMessages,
+      [tempChatId]: [
+        ...(currentMessages[tempChatId] ?? []),
+        optimisticMessage,
+        optimisticAssistant,
+      ],
+    }));
 
+    if (currentChatId) {
       setChats((currentChats) =>
         currentChats.map((chat) =>
           chat.id === currentChatId
@@ -276,10 +300,26 @@ export function OverviewPersonalView({
             : chat,
         ),
       );
+    } else {
+      // New chat — add optimistically to the sidebar immediately
+      setSelectedChatId(tempChatId);
+      const tempChat: Chat = {
+        id: tempChatId,
+        title: text.slice(0, 48) || "New chat",
+        status: "pending",
+        error: null,
+        model: workspaceModel,
+      };
+      setChats((currentChats) => [tempChat, ...currentChats]);
     }
 
     try {
-      const result = await sendMessageAction(currentChatId, text, mode);
+      const result = await sendMessageAction(
+        currentChatId,
+        text,
+        mode,
+        attachments,
+      );
 
       if ("error" in result) {
         if (currentChatId) {
@@ -299,20 +339,17 @@ export function OverviewPersonalView({
             ),
           }));
         } else {
-          // New chat that failed — create a placeholder so the error banner renders
-          const failedId = crypto.randomUUID();
-          const failedChat: Chat = {
-            id: failedId,
-            title: text.slice(0, 48) || "New chat",
-            status: "failed" as const,
-            error: result.error,
-            model: null,
-          };
-          setChats((currentChats) => [failedChat, ...currentChats]);
-          setSelectedChatId(failedId);
+          // New chat that failed — keep the temp chat, mark it failed
+          setChats((currentChats) =>
+            currentChats.map((c) =>
+              c.id === tempChatId
+                ? { ...c, status: "failed" as const, error: result.error }
+                : c,
+            ),
+          );
           setMessages((currentMessages) => ({
             ...currentMessages,
-            [failedId]: [optimisticMessage],
+            [tempChatId]: (currentMessages[tempChatId] ?? []).slice(0, -1),
           }));
         }
         return;
@@ -321,14 +358,26 @@ export function OverviewPersonalView({
       const { chat } = result;
       const mappedChat = mapChat(chat);
 
-      setChats((currentChats) => upsertChat(currentChats, mappedChat));
-      setSelectedChatId(chat.id);
-
       if (!currentChatId) {
-        setMessages((currentMessages) => ({
-          ...currentMessages,
-          [chat.id]: [optimisticMessage, optimisticAssistant],
-        }));
+        // Transition from temp chat → real chat
+        const tempMessages = messages[tempChatId] ?? [];
+        setMessages((currentMessages) => {
+          const next = { ...currentMessages };
+          delete next[tempChatId];
+          next[chat.id] = tempMessages;
+          return next;
+        });
+        setChats((currentChats) => {
+          // Remove temp chat, add real one
+          return upsertChat(
+            currentChats.filter((c) => c.id !== tempChatId),
+            mappedChat,
+          );
+        });
+        setSelectedChatId(chat.id);
+      } else {
+        setChats((currentChats) => upsertChat(currentChats, mappedChat));
+        setSelectedChatId(chat.id);
       }
 
       await refetch();
@@ -545,6 +594,9 @@ export function OverviewPersonalView({
     onRenameChat: handleRenameChat,
   };
 
+  // Prevent skeleton flash when we already have local messages for this chat
+  const isLoadingMessages = streamLoading && selectedMessages.length === 0;
+
   return (
     <div className="flex h-full min-h-0 overflow-hidden">
       {sidebarOpen && isLg ? (
@@ -584,7 +636,7 @@ export function OverviewPersonalView({
         {selectedChat ? (
           <>
             <header className="shrink-0 px-4 py-4 sm:px-6 sm:py-5 flex justify-center">
-              {streamLoading ? (
+              {isLoadingMessages ? (
                 <div className="h-5 w-48 rounded-md animate-pulse bg-[var(--hover-bg)]" />
               ) : (
                 <h2 className="text-sm font-semibold text-[var(--foreground)] text-center line-clamp-2">
@@ -597,7 +649,7 @@ export function OverviewPersonalView({
               status={selectedChat.status}
               error={selectedChat.error}
               isChatRunning={selectedChatIsRunning}
-              isLoadingMessages={streamLoading}
+              isLoadingMessages={isLoadingMessages}
               onQuestionSubmit={handleQuestionSubmit}
             />
             <div className="shrink-0 animate-[slideDown_0.4s_ease-out_both]">
@@ -609,7 +661,7 @@ export function OverviewPersonalView({
                   selectedChat.status === "pending" ||
                   selectedChat.status === "processing"
                 }
-                isSending={isSending || streamLoading}
+                isSending={isSending || isLoadingMessages}
                 isRunning={selectedChatIsRunning}
                 isCompacting={isCompacting}
                 contextInfo={contextInfo}
@@ -617,6 +669,7 @@ export function OverviewPersonalView({
                 onModelChange={handleModelChange}
                 mode={mode}
                 onModeChange={setMode}
+                modelCapabilities={modelCapabilities}
               />
             </div>
           </>
@@ -633,6 +686,7 @@ export function OverviewPersonalView({
               onModelChange={handleModelChange}
               mode={mode}
               onModeChange={setMode}
+              modelCapabilities={modelCapabilities}
             />
           </div>
         )}

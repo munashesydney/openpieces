@@ -248,6 +248,9 @@ export const aiMessages = pgTable(
       .notNull()
       .default(sql`'[]'::jsonb`),
     isCompacted: boolean("is_compacted").notNull().default(false),
+    attachments: jsonb("attachments")
+      .notNull()
+      .default(sql`'[]'::jsonb`),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().notNull(),
   },
