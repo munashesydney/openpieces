@@ -131,6 +131,12 @@ export const PROVIDERS: ProviderInfo[] = [
         badge: "NEW",
         capabilities: { vision: true, files: true },
       },
+      {
+        id: "google/gemini-3.5-flash",
+        label: "Gemini 3.5 Flash",
+        badge: "NEW",
+        capabilities: { vision: true, files: true },
+      },
     ],
   },
   {
@@ -188,6 +194,12 @@ export const PROVIDERS: ProviderInfo[] = [
         id: "minimax/minimax-m2.7",
         label: "Minimax M2.7",
         capabilities: { vision: false, files: false },
+      },
+      {
+        id: "minimax/minimax-m3",
+        label: "Minimax M3",
+        badge: "NEW",
+        capabilities: { vision: true, files: true },
       },
     ],
   },
