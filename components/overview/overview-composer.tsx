@@ -222,7 +222,9 @@ export function OverviewComposer({
                 variant="ghost"
                 size="icon"
                 className="h-8 w-8 text-[var(--muted)]"
-                aria-label="Add"
+                aria-label="Attach file or image"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={!canAttach || disabled}
               >
                 <Plus className="h-4 w-4" />
               </Button>
