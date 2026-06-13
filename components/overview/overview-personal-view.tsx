@@ -360,8 +360,8 @@ export function OverviewPersonalView({
 
       if (!currentChatId) {
         // Transition from temp chat → real chat
-        const tempMessages = messages[tempChatId] ?? [];
         setMessages((currentMessages) => {
+          const tempMessages = currentMessages[tempChatId] ?? [];
           const next = { ...currentMessages };
           delete next[tempChatId];
           next[chat.id] = tempMessages;
