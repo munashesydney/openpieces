@@ -32,13 +32,13 @@ export const PROVIDERS: ProviderInfo[] = [
         id: "deepseek/deepseek-v4-pro",
         label: "DeepSeek V4 Pro",
         badge: "NEW",
-        capabilities: { vision: true, files: false },
+        capabilities: { vision: false, files: false },
       },
       {
         id: "deepseek/deepseek-v4-flash",
         label: "DeepSeek V4 Flash",
         badge: "NEW",
-        capabilities: { vision: true, files: false },
+        capabilities: { vision: false, files: false },
       },
       {
         id: "deepseek/deepseek-v3.2",
@@ -63,21 +63,20 @@ export const PROVIDERS: ProviderInfo[] = [
         capabilities: { vision: true, files: false },
       },
       {
-        id: "openai/gpt-5.4-thinking",
-        label: "GPT-5.4 Thinking",
+        id: "openai/gpt-5.5",
+        label: "GPT-5.5",
         badge: "NEW",
         capabilities: { vision: true, files: true },
       },
       {
-        id: "openai/gpt-5.4-pro",
-        label: "GPT-5.4 Pro",
+        id: "openai/gpt-5.5-pro",
+        label: "GPT-5.5 Pro",
         badge: "NEW",
         capabilities: { vision: true, files: true },
       },
       {
         id: "openai/gpt-5.4-mini",
         label: "GPT-5.4 Mini",
-        badge: "NEW",
         capabilities: { vision: true, files: true },
       },
     ],
@@ -100,6 +99,12 @@ export const PROVIDERS: ProviderInfo[] = [
       {
         id: "anthropic/claude-opus-4.7",
         label: "Claude Opus 4.7",
+        badge: "NEW",
+        capabilities: { vision: true, files: true },
+      },
+      {
+        id: "anthropic/claude-opus-4.8",
+        label: "Claude Opus 4.8",
         badge: "NEW",
         capabilities: { vision: true, files: true },
       },
@@ -182,6 +187,89 @@ export const PROVIDERS: ProviderInfo[] = [
       {
         id: "minimax/minimax-m2.7",
         label: "Minimax M2.7",
+        capabilities: { vision: false, files: false },
+      },
+    ],
+  },
+  {
+    id: "xiaomi",
+    label: "Xiaomi",
+    models: [
+      {
+        id: "xiaomi/mimo-v2.5",
+        label: "MiMo V2.5",
+        capabilities: { vision: true, files: true },
+      },
+      {
+        id: "xiaomi/mimo-v2.5-pro",
+        label: "MiMo V2.5 Pro",
+        capabilities: { vision: true, files: true },
+      },
+      {
+        id: "xiaomi/mimo-v2-pro",
+        label: "MiMo V2 Pro",
+        capabilities: { vision: false, files: false },
+      },
+      {
+        id: "xiaomi/mimo-v2-flash",
+        label: "MiMo V2 Flash",
+        capabilities: { vision: false, files: false },
+      },
+    ],
+  },
+  {
+    id: "alibaba",
+    label: "Alibaba",
+    models: [
+      {
+        id: "alibaba/qwen3.6-27b",
+        label: "Qwen 3.6 27B",
+        capabilities: { vision: true, files: true },
+      },
+      {
+        id: "alibaba/qwen-3.6-max-preview",
+        label: "Qwen 3.6 Max Preview",
+        capabilities: { vision: false, files: true },
+      },
+      {
+        id: "alibaba/qwen3.6-plus",
+        label: "Qwen 3.6 Plus",
+        capabilities: { vision: true, files: true },
+      },
+      {
+        id: "alibaba/qwen3.5-flash",
+        label: "Qwen 3.5 Flash",
+        capabilities: { vision: true, files: true },
+      },
+      {
+        id: "alibaba/qwen3.5-plus",
+        label: "Qwen 3.5 Plus",
+        capabilities: { vision: true, files: true },
+      },
+    ],
+  },
+  {
+    id: "zai",
+    label: "Z.ai",
+    models: [
+      {
+        id: "zai/glm-5.1",
+        label: "GLM 5.1",
+        capabilities: { vision: false, files: false },
+      },
+      {
+        id: "zai/glm-5v-turbo",
+        label: "GLM 5V Turbo",
+        capabilities: { vision: true, files: true },
+      },
+      {
+        id: "zai/glm-5-turbo",
+        label: "GLM 5 Turbo",
+        capabilities: { vision: false, files: false },
+      },
+      {
+        id: "zai/glm-5",
+        label: "GLM 5",
         capabilities: { vision: false, files: false },
       },
     ],

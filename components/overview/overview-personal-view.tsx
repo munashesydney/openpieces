@@ -594,6 +594,9 @@ export function OverviewPersonalView({
     onRenameChat: handleRenameChat,
   };
 
+  // Prevent skeleton flash when we already have local messages for this chat
+  const isLoadingMessages = streamLoading && selectedMessages.length === 0;
+
   return (
     <div className="flex h-full min-h-0 overflow-hidden">
       {sidebarOpen && isLg ? (
@@ -633,7 +636,7 @@ export function OverviewPersonalView({
         {selectedChat ? (
           <>
             <header className="shrink-0 px-4 py-4 sm:px-6 sm:py-5 flex justify-center">
-              {streamLoading ? (
+              {isLoadingMessages ? (
                 <div className="h-5 w-48 rounded-md animate-pulse bg-[var(--hover-bg)]" />
               ) : (
                 <h2 className="text-sm font-semibold text-[var(--foreground)] text-center line-clamp-2">
@@ -646,7 +649,7 @@ export function OverviewPersonalView({
               status={selectedChat.status}
               error={selectedChat.error}
               isChatRunning={selectedChatIsRunning}
-              isLoadingMessages={streamLoading}
+              isLoadingMessages={isLoadingMessages}
               onQuestionSubmit={handleQuestionSubmit}
             />
             <div className="shrink-0 animate-[slideDown_0.4s_ease-out_both]">
@@ -658,7 +661,7 @@ export function OverviewPersonalView({
                   selectedChat.status === "pending" ||
                   selectedChat.status === "processing"
                 }
-                isSending={isSending || streamLoading}
+                isSending={isSending || isLoadingMessages}
                 isRunning={selectedChatIsRunning}
                 isCompacting={isCompacting}
                 contextInfo={contextInfo}

@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, ChevronLeft, ChevronRight } from "lucide-react";
+import { Check, ChevronLeft, ChevronRight, Eye, FileText } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useMediaQuery } from "@/lib/hooks/use-media-query";
 import {
@@ -43,6 +43,20 @@ export function ModelPicker({ initialModel, onModelChange }: ModelPickerProps) {
     "top",
   );
   const rootRef = useRef<HTMLDivElement | null>(null);
+
+  const capIconClass = (active: boolean) =>
+    `h-3 w-3 shrink-0 ${active ? "text-white/60" : "text-[var(--muted)]/50"}`;
+
+  function renderCapIcons(m: ModelInfo, active: boolean) {
+    const { vision, files } = m.capabilities;
+    if (!vision && !files) return null;
+    return (
+      <>
+        {vision && <Eye className={capIconClass(active)} />}
+        {files && <FileText className={capIconClass(active)} />}
+      </>
+    );
+  }
 
   useEffect(() => {
     if (open && rootRef.current) {
@@ -183,6 +197,7 @@ export function ModelPicker({ initialModel, onModelChange }: ModelPickerProps) {
                   >
                     <div className="flex min-w-0 items-center gap-2">
                       <span className="truncate">{m.label}</span>
+                      {renderCapIcons(m, activeModelId === m.id)}
                       {m.badge && (
                         <span
                           className={`shrink-0 rounded-full px-1.5 py-0.5 text-[9px] font-bold ${
@@ -253,6 +268,7 @@ export function ModelPicker({ initialModel, onModelChange }: ModelPickerProps) {
                   >
                     <div className="flex min-w-0 items-center gap-2 overflow-hidden">
                       <span className="truncate">{m.label}</span>
+                      {renderCapIcons(m, activeModelId === m.id)}
                       {m.badge && (
                         <span
                           className={`rounded-full px-1.5 py-0.5 text-[9px] font-bold ${
