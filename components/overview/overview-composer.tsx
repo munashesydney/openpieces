@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, useCallback } from "react";
+import { createPortal } from "react-dom";
 import { Paperclip, Plus, Send, Square, Upload, X } from "lucide-react";
 import { ContextProgressRing } from "./context-progress-ring";
 import { ModelPicker } from "./model-picker";
@@ -77,6 +78,7 @@ export function OverviewComposer({
   const [attachments, setAttachments] = useState<FileAttachment[]>([]);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [isDragOver, setIsDragOver] = useState(false);
+  const [previewImage, setPreviewImage] = useState<string | null>(null);
   const dragCounterRef = useRef(0);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -194,6 +196,16 @@ export function OverviewComposer({
     }
   }, [value]);
 
+  // Close image preview on Escape
+  useEffect(() => {
+    if (!previewImage) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setPreviewImage(null);
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [previewImage]);
+
   return (
     <div className="flex w-full justify-center px-4 pb-8 pt-8 sm:px-6 sm:pb-14 sm:pt-14">
       <div className="relative w-full max-w-[820px] min-w-0">
@@ -246,7 +258,10 @@ export function OverviewComposer({
                   return (
                     <div
                       key={`${att.name}-${i}`}
-                      className="group relative flex items-center gap-2 rounded-lg border border-[var(--border)] bg-[var(--hover-bg)] px-3 py-1.5 text-xs"
+                      className={`group relative flex items-center gap-2 rounded-lg border border-[var(--border)] bg-[var(--hover-bg)] px-3 py-1.5 text-xs ${isImage ? "cursor-pointer hover:bg-[var(--hover-bg-strong)]" : ""}`}
+                      onClick={
+                        isImage ? () => setPreviewImage(att.url) : undefined
+                      }
                     >
                       {isImage ? (
                         <img
@@ -262,7 +277,10 @@ export function OverviewComposer({
                       </span>
                       <button
                         type="button"
-                        onClick={() => removeAttachment(i)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          removeAttachment(i);
+                        }}
                         className="ml-1 rounded p-0.5 text-[var(--muted)] hover:bg-[var(--hover-bg-strong)] hover:text-[var(--foreground)]"
                         aria-label={`Remove ${att.name}`}
                       >
@@ -360,6 +378,31 @@ export function OverviewComposer({
           <div className="absolute right-[15%] top-1/4 h-32 w-1/3 rounded-[100%] bg-[var(--secondary)] opacity-25 blur-[60px]" />
         </div>
       </div>
+
+      {/* Fullscreen image preview — portal to body so it escapes any parent stacking contexts */}
+      {previewImage &&
+        createPortal(
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4"
+            onClick={() => setPreviewImage(null)}
+          >
+            <button
+              type="button"
+              className="absolute top-4 right-4 p-2 text-white/70 hover:text-white transition-colors cursor-pointer"
+              onClick={() => setPreviewImage(null)}
+              aria-label="Close preview"
+            >
+              <X className="h-6 w-6" />
+            </button>
+            <img
+              src={previewImage}
+              alt="Preview"
+              className="max-h-[90vh] max-w-[90vw] rounded-lg object-contain"
+              onClick={(e) => e.stopPropagation()}
+            />
+          </div>,
+          document.body,
+        )}
     </div>
   );
 }
