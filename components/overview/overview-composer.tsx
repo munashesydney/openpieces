@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, useCallback } from "react";
-import { Paperclip, Plus, Send, Square, X } from "lucide-react";
+import { Paperclip, Plus, Send, Square, Upload, X } from "lucide-react";
 import { ContextProgressRing } from "./context-progress-ring";
 import { ModelPicker } from "./model-picker";
 import { ModeToggle, type ComposerMode } from "./mode-toggle";
@@ -76,6 +76,8 @@ export function OverviewComposer({
   const [value, setValue] = useState("");
   const [attachments, setAttachments] = useState<FileAttachment[]>([]);
   const [uploadError, setUploadError] = useState<string | null>(null);
+  const [isDragOver, setIsDragOver] = useState(false);
+  const dragCounterRef = useRef(0);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -110,13 +112,18 @@ export function OverviewComposer({
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files || files.length === 0) return;
+    await processFiles(Array.from(files));
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  };
 
+  /** Shared file ingestion — used by both the file input and drag-drop. */
+  const processFiles = async (files: File[]) => {
     setUploadError(null);
     const newAttachments: FileAttachment[] = [];
 
-    for (let i = 0; i < files.length; i++) {
+    for (const file of files) {
       try {
-        const att = await readFileAsAttachment(files[i]!);
+        const att = await readFileAsAttachment(file);
         newAttachments.push(att);
       } catch (err) {
         setUploadError(
@@ -126,11 +133,54 @@ export function OverviewComposer({
       }
     }
 
-    setAttachments((prev) => [...prev, ...newAttachments]);
-
-    // Reset input so the same file can be re-selected
-    if (fileInputRef.current) fileInputRef.current.value = "";
+    if (newAttachments.length > 0) {
+      setAttachments((prev) => [...prev, ...newAttachments]);
+    }
   };
+
+  // ── Drag-and-drop handlers ──
+  const handleDragEnter = useCallback(
+    (e: React.DragEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      if (!canAttach || disabled || isSending) return;
+      dragCounterRef.current++;
+      if (e.dataTransfer.types.includes("Files")) {
+        setIsDragOver(true);
+      }
+    },
+    [canAttach, disabled, isSending],
+  );
+
+  const handleDragLeave = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    dragCounterRef.current--;
+    if (dragCounterRef.current <= 0) {
+      dragCounterRef.current = 0;
+      setIsDragOver(false);
+    }
+  }, []);
+
+  const handleDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+  }, []);
+
+  const handleDrop = useCallback(
+    async (e: React.DragEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      setIsDragOver(false);
+      dragCounterRef.current = 0;
+      if (!canAttach || disabled || isSending) return;
+
+      const files = Array.from(e.dataTransfer.files);
+      if (files.length === 0) return;
+      await processFiles(files);
+    },
+    [canAttach, disabled, isSending],
+  );
 
   const removeAttachment = (index: number) => {
     setAttachments((prev) => prev.filter((_, i) => i !== index));
@@ -147,7 +197,13 @@ export function OverviewComposer({
   return (
     <div className="flex w-full justify-center px-4 pb-8 pt-8 sm:px-6 sm:pb-14 sm:pt-14">
       <div className="relative w-full max-w-[820px] min-w-0">
-        <Card className="rounded border border-[var(--border)] bg-[var(--card-bg)] shadow-[0_18px_60px_rgba(0,0,0,0.2)] transition-all duration-300">
+        <Card
+          className="rounded border border-[var(--border)] bg-[var(--card-bg)] shadow-[0_18px_60px_rgba(0,0,0,0.2)] transition-all duration-300"
+          onDragEnter={handleDragEnter}
+          onDragLeave={handleDragLeave}
+          onDragOver={handleDragOver}
+          onDrop={handleDrop}
+        >
           <div className="px-3 py-3 sm:px-4 sm:py-4">
             <div className="grid grid-cols-[40px_1fr] items-center gap-x-3">
               <Button
@@ -282,6 +338,16 @@ export function OverviewComposer({
               )}
             </div>
           </div>
+
+          {/* Drag-and-drop overlay */}
+          {isDragOver && (
+            <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center rounded bg-[var(--accent)]/10 border-2 border-dashed border-[var(--accent)]">
+              <div className="flex flex-col items-center gap-2 text-[var(--accent)]">
+                <Upload className="h-8 w-8" />
+                <span className="text-sm font-semibold">Drop files here</span>
+              </div>
+            </div>
+          )}
         </Card>
 
         {/* Dynamic ambient glow based on mode */}
