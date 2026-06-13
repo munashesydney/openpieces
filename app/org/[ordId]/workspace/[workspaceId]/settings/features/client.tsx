@@ -32,7 +32,7 @@ export function FeatureFlagsClient({
 
   return (
     <div className="flex w-full px-6 pb-20 pt-8">
-      <div className="w-full max-w-[820px] px-4 space-y-8">
+      <div className="w-full px-4 space-y-8">
         <div>
           <p className="text-[10px] uppercase tracking-[0.2em] text-[var(--secondary)] mb-1.5">
             Features

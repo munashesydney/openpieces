@@ -7,7 +7,7 @@ import { Input } from "@/components/basic/input/input";
 export default function AdvancedPage() {
   return (
     <div className="flex w-full px-6 pb-20">
-      <div className="w-full max-w-[820px] px-4 space-y-8">
+      <div className="w-full px-4 space-y-8">
         <section className="rounded-2xl border border-[var(--border)] bg-[var(--sidebar-bg)] p-8 shadow-sm">
           <h2 className="text-xl font-semibold text-[var(--foreground)]">
             API Configuration

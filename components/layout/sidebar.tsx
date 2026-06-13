@@ -9,6 +9,7 @@ import {
   Settings,
   Brain,
   Building2,
+  Code2,
 } from "lucide-react";
 import { WorkspaceSwitcher } from "./workspace-switcher";
 
@@ -50,6 +51,15 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
     orgId && workspaceId
       ? pathname.includes(`/org/${orgId}/workspace/${workspaceId}/settings`)
       : pathname.startsWith("/settings");
+
+  const developersHref =
+    orgId && workspaceId
+      ? `/org/${orgId}/workspace/${workspaceId}/developers/api`
+      : "/developers";
+  const developersActive =
+    orgId && workspaceId
+      ? pathname.includes(`/org/${orgId}/workspace/${workspaceId}/developers`)
+      : pathname.startsWith("/developers");
 
   if (collapsed) {
     return (
@@ -117,6 +127,21 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
             <Settings
               className="h-4 w-4"
               strokeWidth={settingsActive ? 2.5 : 1.5}
+              fill="none"
+            />
+          </Link>
+          <Link
+            href={developersHref}
+            className={`flex h-9 w-9 items-center justify-center rounded border transition-all ${
+              developersActive
+                ? "border-[var(--accent)]/30 bg-[var(--hover-bg-strong)] text-[var(--foreground)] shadow-[0_0_12px_var(--accent-glow)]"
+                : "border-transparent text-[var(--muted)] hover:border-[var(--border)] hover:bg-[var(--hover-bg)] hover:text-[var(--foreground)]"
+            }`}
+            aria-label="Developers"
+          >
+            <Code2
+              className="h-4 w-4"
+              strokeWidth={developersActive ? 2.5 : 1.5}
               fill="none"
             />
           </Link>
@@ -219,6 +244,26 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
               />
               Settings
               {settingsActive && (
+                <span className="ml-auto h-1.5 w-1.5 rounded-full bg-[var(--secondary)] shadow-[0_0_6px_var(--secondary-glow)]" />
+              )}
+            </Link>
+          </li>
+          <li>
+            <Link
+              href={developersHref}
+              className={`flex items-center gap-2.5 rounded px-3 py-2.5 text-[13px] font-medium transition-all ${
+                developersActive
+                  ? "bg-[var(--hover-bg-strong)] text-[var(--foreground)]"
+                  : "text-[var(--muted)] hover:bg-[var(--hover-bg)] hover:text-[var(--foreground)]"
+              }`}
+            >
+              <Code2
+                className="h-4 w-4 shrink-0"
+                strokeWidth={developersActive ? 2.5 : 1.5}
+                fill="none"
+              />
+              Developers
+              {developersActive && (
                 <span className="ml-auto h-1.5 w-1.5 rounded-full bg-[var(--secondary)] shadow-[0_0_6px_var(--secondary-glow)]" />
               )}
             </Link>

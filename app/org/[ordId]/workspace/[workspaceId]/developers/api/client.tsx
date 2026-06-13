@@ -15,6 +15,7 @@ import { Button } from "@/components/basic/buttons/button";
 import { Input } from "@/components/basic/input/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Modal } from "@/components/ui/modal";
+import { ApiKeyCreateSheet } from "@/components/developers/api-key-create-sheet";
 import {
   createApiKeyAction,
   deleteApiKeyAction,
@@ -147,7 +148,7 @@ export function ApiKeysClient({
 
   return (
     <div className="flex w-full px-6 pb-20 pt-8">
-      <div className="w-full max-w-[820px] px-4 space-y-8">
+      <div className="w-full px-4 space-y-8">
         {/* Header */}
         <div className="flex items-start justify-between gap-4">
           <div>
@@ -161,52 +162,29 @@ export function ApiKeysClient({
               API keys used to authenticate requests to your workspace.
             </p>
           </div>
-          {!showCreateForm && (
-            <Button
-              variant="primary"
-              size="md"
-              className="mt-8"
-              onClick={() => setShowCreateForm(true)}
-            >
-              <Plus size={12} />
-              Create Key
-            </Button>
-          )}
+          <Button
+            variant="primary"
+            size="md"
+            className="mt-8"
+            onClick={() => setShowCreateForm(true)}
+          >
+            <Plus size={12} />
+            Create Key
+          </Button>
         </div>
 
+        <ApiKeyCreateSheet
+          isOpen={showCreateForm}
+          onClose={() => {
+            setShowCreateForm(false);
+            setError("");
+          }}
+          action={handleCreate}
+          formError={error || null}
+          isPending={creating}
+        />
+
         <div className="space-y-4">
-          {showCreateForm && (
-            <form
-              action={handleCreate}
-              className="rounded border border-[var(--border)] bg-[var(--sidebar-bg)] p-4 space-y-3"
-            >
-              {error && <p className="text-[12px] text-red-400">{error}</p>}
-              <Input
-                label="Key Name"
-                name="name"
-                placeholder="e.g. Production, CI/CD, Mobile App"
-                autoFocus
-                required
-              />
-              <div className="flex items-center justify-end gap-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    setShowCreateForm(false);
-                    setError("");
-                  }}
-                >
-                  Cancel
-                </Button>
-                <Button type="submit" size="sm" isLoading={creating}>
-                  <Plus size={12} />
-                  Generate Key
-                </Button>
-              </div>
-            </form>
-          )}
 
           {/* Keys list */}
           {keys.length === 0 && !createdKey ? (

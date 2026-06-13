@@ -101,7 +101,7 @@ export function GeneralSettings({
             Manage how your workspace is identified and configured.
           </p>
         </div>
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="space-y-6">
           <Card>
             <CardHeader>
               <CardTitle>Workspace Identity</CardTitle>
@@ -166,7 +166,7 @@ export function GeneralSettings({
             </CardContent>
           </Card>
 
-          <Card className="hover:border-red-500/30 lg:col-start-1">
+          <Card className="hover:border-red-500/30">
             <CardHeader>
               <CardTitle className="text-red-500">Danger Zone</CardTitle>
               <CardDescription>
