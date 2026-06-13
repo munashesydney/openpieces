@@ -40,7 +40,7 @@ interface WebhookDelivery {
   retryAt: string | null;
 }
 
-function RetryCountdown({
+function RetryBadge({
   retryAt,
   onElapsed,
 }: {
@@ -48,16 +48,22 @@ function RetryCountdown({
   onElapsed?: () => void;
 }) {
   const [timeLeft, setTimeLeft] = useState("");
+  const [isPast, setIsPast] = useState(false);
 
   useEffect(() => {
+    let hasElapsed = false;
     const calculateTimeLeft = () => {
       const target = new Date(retryAt).getTime();
       const now = Date.now();
       const diffMs = target - now;
 
       if (diffMs <= 0) {
-        onElapsed?.();
-        return "Retrying now...";
+        if (!hasElapsed) {
+          hasElapsed = true;
+          onElapsed?.();
+        }
+        setIsPast(true);
+        return "";
       }
 
       const diffSecs = Math.floor(diffMs / 1000);
@@ -77,7 +83,20 @@ function RetryCountdown({
     return () => clearInterval(timer);
   }, [retryAt, onElapsed]);
 
-  return <span className="font-medium">{timeLeft}</span>;
+  if (isPast) {
+    return (
+      <span className="inline-flex shrink-0 items-center justify-center px-2 py-0.5 rounded text-[11px] font-semibold bg-slate-500/10 text-slate-400 border border-slate-500/20">
+        Retried
+      </span>
+    );
+  }
+
+  return (
+    <span className="inline-flex shrink-0 items-center gap-1 px-2 py-0.5 rounded text-[11px] font-semibold bg-amber-500/10 text-amber-400 border border-amber-500/20">
+      <span className="h-1.5 w-1.5 rounded-full bg-amber-400 animate-pulse" />
+      Retrying <span className="font-medium">{timeLeft}</span>
+    </span>
+  );
 }
 
 export function WorkbenchClient({
@@ -250,12 +269,7 @@ export function WorkbenchClient({
 
   const getStatusBadge = (delivery: WebhookDelivery) => {
     if (delivery.status === "retrying" && delivery.retryAt) {
-      return (
-        <span className="inline-flex shrink-0 items-center gap-1 px-2 py-0.5 rounded text-[11px] font-semibold bg-amber-500/10 text-amber-400 border border-amber-500/20">
-          <span className="h-1.5 w-1.5 rounded-full bg-amber-400 animate-pulse" />
-          Retrying <RetryCountdown retryAt={delivery.retryAt} onElapsed={handleRefresh} />
-        </span>
-      );
+      return <RetryBadge retryAt={delivery.retryAt} onElapsed={handleRefresh} />;
     }
     if (delivery.success) {
       return (
@@ -348,9 +362,6 @@ Connection: keep-alive`;
             <CardContent className="p-5">
               <div className="flex items-center justify-between">
                 <span className="text-[12px] font-medium text-[var(--muted)]">Success Rate</span>
-                <span className="p-1.5 rounded bg-emerald-500/10 text-emerald-400">
-                  <Activity size={14} />
-                </span>
               </div>
               <div className="mt-3 flex items-baseline gap-2">
                 <span className="text-2xl font-bold tracking-tight text-[var(--foreground)]">
@@ -371,9 +382,6 @@ Connection: keep-alive`;
             <CardContent className="p-5">
               <div className="flex items-center justify-between">
                 <span className="text-[12px] font-medium text-[var(--muted)]">Total Attempts</span>
-                <span className="p-1.5 rounded bg-[var(--hover-bg-strong)] text-[var(--muted)]">
-                  <ArrowRightLeft size={14} />
-                </span>
               </div>
               <div className="mt-3 flex items-baseline gap-2">
                 <span className="text-2xl font-bold tracking-tight text-[var(--foreground)]">
@@ -393,9 +401,6 @@ Connection: keep-alive`;
             <CardContent className="p-5">
               <div className="flex items-center justify-between">
                 <span className="text-[12px] font-medium text-[var(--muted)]">Avg Latency</span>
-                <span className="p-1.5 rounded bg-amber-500/10 text-amber-400">
-                  <Clock size={14} />
-                </span>
               </div>
               <div className="mt-3 flex items-baseline gap-2">
                 <span className="text-2xl font-bold tracking-tight text-[var(--foreground)]">
