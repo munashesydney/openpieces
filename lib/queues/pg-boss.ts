@@ -6,6 +6,7 @@ export const SERVICE_SPAWN_QUEUE = "service-spawn";
 export const SERVICE_STOP_QUEUE = "service-stop";
 export const TASK_EXECUTION_QUEUE = "task-execution";
 export const BRAIN_QUEUE = "brain-processing";
+export const WEBHOOK_DELIVERY_QUEUE = "webhook-delivery";
 
 declare global {
   var __openpiecesPgBoss: PgBoss | undefined;
@@ -75,6 +76,11 @@ export async function getPgBoss(): Promise<PgBoss> {
       const existingBrainQueue = await boss.getQueue(BRAIN_QUEUE);
       if (!existingBrainQueue) {
         await boss.createQueue(BRAIN_QUEUE);
+      }
+
+      const existingWebhookQueue = await boss.getQueue(WEBHOOK_DELIVERY_QUEUE);
+      if (!existingWebhookQueue) {
+        await boss.createQueue(WEBHOOK_DELIVERY_QUEUE, { retryLimit: 5, retryBackoff: true });
       }
 
       globalThis.__openpiecesPgBoss = boss;
@@ -162,4 +168,16 @@ export type BrainJob = {
 export async function enqueueBrainJob(job: BrainJob) {
   const boss = await getPgBoss();
   return boss.send(BRAIN_QUEUE, job);
+}
+
+export type WebhookDeliveryJob = {
+  webhookId: string;
+  workspaceId: string;
+  eventName: string;
+  payload: any;
+};
+
+export async function enqueueWebhookDelivery(job: WebhookDeliveryJob) {
+  const boss = await getPgBoss();
+  return boss.send(WEBHOOK_DELIVERY_QUEUE, job);
 }

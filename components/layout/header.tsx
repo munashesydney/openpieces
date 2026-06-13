@@ -19,6 +19,7 @@ import {
   User,
   Flag,
   Code2,
+  Webhook,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -165,6 +166,12 @@ export function Header() {
       href: prefix ? `${prefix}/settings/api` : "/settings/api",
       icon: Code2,
       activePattern: prefix ? `${prefix}/settings/api` : "/settings/api",
+    },
+    {
+      label: "Webhooks",
+      href: prefix ? `${prefix}/settings/webhooks` : "/settings/webhooks",
+      icon: Webhook,
+      activePattern: prefix ? `${prefix}/settings/webhooks` : "/settings/webhooks",
     },
   ];
 

@@ -9,6 +9,7 @@ import {
 } from "../lib/workers/service-worker";
 import { startTaskWorker } from "../lib/workers/task-worker";
 import { startBrainWorker } from "../lib/workers/brain-worker";
+import { startWebhookWorker } from "../lib/workers/webhook-worker";
 
 let boss: PgBoss | undefined;
 
@@ -43,10 +44,11 @@ async function main() {
     startServiceWorker(),
     startTaskWorker(),
     startBrainWorker(),
+    startWebhookWorker(),
   ]);
   boss = chatBoss;
   console.log(
-    "[ai-worker] listening for AI chat jobs, agent chat jobs, service spawn jobs, task execution, and brain processing",
+    "[ai-worker] listening for AI chat jobs, agent chat jobs, service spawn jobs, task execution, brain processing, and webhook deliveries",
   );
 }
 

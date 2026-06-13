@@ -528,3 +528,54 @@ export const apiKeys = pgTable(
 
 export type ApiKeyRow = typeof apiKeys.$inferSelect;
 export type NewApiKeyRow = typeof apiKeys.$inferInsert;
+
+// ── Webhooks ─────────────────────────────────────────────────────────────────
+
+export const webhooks = pgTable(
+  "webhooks",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    workspaceId: uuid("workspace_id")
+      .notNull()
+      .references(() => workspaces.id, { onDelete: "cascade" }),
+    url: text("url").notNull(),
+    secretEncrypted: text("secret_encrypted").notNull(),
+    events: jsonb("events").notNull().$type<string[]>(),
+    isActive: boolean("is_active").notNull().default(true),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (table) => [
+    index("webhooks_workspace_id_idx").on(table.workspaceId),
+  ],
+);
+
+export type WebhookRow = typeof webhooks.$inferSelect;
+export type NewWebhookRow = typeof webhooks.$inferInsert;
+
+export const webhookDeliveries = pgTable(
+  "webhook_deliveries",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    webhookId: uuid("webhook_id")
+      .notNull()
+      .references(() => webhooks.id, { onDelete: "cascade" }),
+    workspaceId: uuid("workspace_id")
+      .notNull()
+      .references(() => workspaces.id, { onDelete: "cascade" }),
+    eventName: text("event_name").notNull(),
+    payload: jsonb("payload").notNull(),
+    responseStatus: integer("response_status"),
+    responseBody: text("response_body"),
+    success: boolean("success").notNull(),
+    startedAt: timestamp("started_at").notNull(),
+    completedAt: timestamp("completed_at").notNull(),
+  },
+  (table) => [
+    index("webhook_deliveries_webhook_id_idx").on(table.webhookId),
+    index("webhook_deliveries_workspace_id_idx").on(table.workspaceId),
+  ],
+);
+
+export type WebhookDeliveryRow = typeof webhookDeliveries.$inferSelect;
+export type NewWebhookDeliveryRow = typeof webhookDeliveries.$inferInsert;

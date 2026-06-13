@@ -48,6 +48,7 @@ import {
 } from "@/lib/services/workspace-settings.service";
 import { updateWorkflowExecutionByChatId } from "@/lib/services/workflow-execution.service";
 import { getChatAbortController } from "@/lib/workers/chat-controller";
+import { dispatchWebhookEvent } from "@/lib/services/webhook.service";
 
 const DEFAULT_CHAT_TITLE = "New chat";
 const DEFAULT_MODEL = process.env.AI_MODEL ?? "deepseek/deepseek-v3.2";
@@ -313,7 +314,14 @@ export async function createAiChat(
     })
     .returning();
 
-  return serializeChat(chat);
+  const serialized = serializeChat(chat);
+  if (chat.agentType === "orchestrator") {
+    dispatchWebhookEvent(data.workspaceId, "chat.created", serialized).catch(
+      console.error,
+    );
+  }
+
+  return serialized;
 }
 
 export async function getAiChatsForWorkspace(
@@ -421,7 +429,22 @@ export async function createAiMessage(data: {
     })
     .returning();
 
-  return serializeMessage(message);
+  const [chat] = await db
+    .select({ workspaceId: aiChats.workspaceId, agentType: aiChats.agentType })
+    .from(aiChats)
+    .where(eq(aiChats.id, data.chatId))
+    .limit(1);
+
+  const serialized = serializeMessage(message);
+  if (chat && chat.agentType === "orchestrator") {
+    dispatchWebhookEvent(
+      chat.workspaceId,
+      "message.created",
+      serialized,
+    ).catch(console.error);
+  }
+
+  return serialized;
 }
 
 export async function updateAiChatStatus(
@@ -470,7 +493,14 @@ export async function deleteAiChat(chatId: string, userId: string) {
   const [deleted] = await db
     .delete(aiChats)
     .where(and(eq(aiChats.id, chatId), eq(aiChats.userId, userId)))
-    .returning({ id: aiChats.id });
+    .returning({ id: aiChats.id, workspaceId: aiChats.workspaceId, agentType: aiChats.agentType });
+
+  if (deleted && deleted.agentType === "orchestrator") {
+    dispatchWebhookEvent(deleted.workspaceId, "chat.deleted", {
+      id: deleted.id,
+      workspaceId: deleted.workspaceId,
+    }).catch(console.error);
+  }
 
   return deleted ?? null;
 }
@@ -506,7 +536,7 @@ export async function updateAiMessage(
     reasoning?: string | null;
   },
 ) {
-  await db
+  const [updated] = await db
     .update(aiMessages)
     .set({
       content: data.content,
@@ -518,7 +548,45 @@ export async function updateAiMessage(
       reasoning: data.reasoning !== undefined ? data.reasoning : undefined,
       updatedAt: new Date(),
     })
-    .where(eq(aiMessages.id, messageId));
+    .where(eq(aiMessages.id, messageId))
+    .returning();
+
+  if (updated && (data.status || data.toolCalls)) {
+    const [chat] = await db
+      .select({ workspaceId: aiChats.workspaceId, agentType: aiChats.agentType })
+      .from(aiChats)
+      .where(eq(aiChats.id, updated.chatId))
+      .limit(1);
+
+    if (chat && chat.agentType === "orchestrator") {
+      if (data.status === "complete") {
+        dispatchWebhookEvent(
+          chat.workspaceId,
+          "message.completed",
+          serializeMessage(updated),
+        ).catch(console.error);
+      } else if (data.status === "error") {
+        dispatchWebhookEvent(
+          chat.workspaceId,
+          "message.error",
+          serializeMessage(updated),
+        ).catch(console.error);
+      }
+
+      if (data.toolCalls && data.toolCalls.length > 0) {
+        for (const tc of data.toolCalls) {
+          dispatchWebhookEvent(chat.workspaceId, "tool.called", {
+            messageId,
+            chatId: updated.chatId,
+            toolCallId: tc.toolCallId,
+            toolName: tc.toolName,
+            input: tc.input,
+            executedAt: new Date().toISOString(),
+          }).catch(console.error);
+        }
+      }
+    }
+  }
 }
 
 export async function appendUserMessageAndMarkPending(input: {
