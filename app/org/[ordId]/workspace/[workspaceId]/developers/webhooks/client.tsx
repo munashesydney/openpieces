@@ -13,6 +13,7 @@ import { Button } from "@/components/basic/buttons/button";
 import { Input } from "@/components/basic/input/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Modal } from "@/components/ui/modal";
+import { WebhookCreateSheet } from "@/components/developers/webhook-create-sheet";
 import {
   createWebhookAction,
   deleteWebhookAction,
@@ -106,72 +107,29 @@ export function WebhooksClient({
               Receive HTTP callbacks when events occur in your workspace.
             </p>
           </div>
-          {!showCreateForm && (
-            <Button
-              variant="primary"
-              size="md"
-              className="mt-8"
-              onClick={() => setShowCreateForm(true)}
-            >
-              <Plus size={12} />
-              Add Webhook
-            </Button>
-          )}
+          <Button
+            variant="primary"
+            size="md"
+            className="mt-8"
+            onClick={() => setShowCreateForm(true)}
+          >
+            <Plus size={12} />
+            Add Webhook
+          </Button>
         </div>
 
+        <WebhookCreateSheet
+          isOpen={showCreateForm}
+          onClose={() => {
+            setShowCreateForm(false);
+            setError("");
+          }}
+          action={handleCreate}
+          formError={error || null}
+          isPending={creating}
+        />
+
         <div className="space-y-4">
-          {showCreateForm && (
-            <form
-              action={handleCreate}
-              className="rounded border border-[var(--border)] bg-[var(--sidebar-bg)] p-4 space-y-4"
-            >
-              {error && <p className="text-[12px] text-red-400">{error}</p>}
-              
-              <Input
-                label="Payload URL"
-                name="url"
-                placeholder="https://example.com/webhook"
-                autoFocus
-                required
-                type="url"
-              />
-
-              <div className="space-y-2">
-                <label className="text-[13px] font-medium text-[var(--foreground)]">Events</label>
-                <div className="grid grid-cols-2 gap-2">
-                  {AVAILABLE_EVENTS.map((event) => (
-                    <label key={event} className="flex items-center gap-2 cursor-pointer">
-                      <input 
-                        type="checkbox" 
-                        name="events" 
-                        value={event} 
-                        className="rounded border-[var(--border)] bg-[var(--sidebar-bg)] text-[var(--accent)]"
-                      />
-                      <span className="text-[13px] text-[var(--muted)]">{event}</span>
-                    </label>
-                  ))}
-                </div>
-              </div>
-
-              <div className="flex items-center justify-end gap-2 pt-2 border-t border-[var(--border)]">
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    setShowCreateForm(false);
-                    setError("");
-                  }}
-                >
-                  Cancel
-                </Button>
-                <Button type="submit" size="sm" isLoading={creating}>
-                  <Plus size={12} />
-                  Save Webhook
-                </Button>
-              </div>
-            </form>
-          )}
 
           {/* Webhooks list */}
           {webhooks.length === 0 && !createdSecret ? (
