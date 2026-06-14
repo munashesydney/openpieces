@@ -20,6 +20,7 @@ import {
   Flag,
   Code2,
   Webhook,
+  LineChart,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -189,6 +190,12 @@ export function Header() {
       href: prefix ? `${prefix}/developers/workbench` : "/developers/workbench",
       icon: Activity,
       activePattern: prefix ? `${prefix}/developers/workbench` : "/developers/workbench",
+    },
+    {
+      label: "Usage",
+      href: prefix ? `${prefix}/developers/usage` : "/developers/usage",
+      icon: LineChart,
+      activePattern: prefix ? `${prefix}/developers/usage` : "/developers/usage",
     },
   ];
 

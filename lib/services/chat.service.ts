@@ -49,6 +49,7 @@ import {
 import { updateWorkflowExecutionByChatId } from "@/lib/services/workflow-execution.service";
 import { getChatAbortController } from "@/lib/workers/chat-controller";
 import { dispatchWebhookEvent } from "@/lib/services/webhook.service";
+import { recordAiUsage } from "@/lib/services/ai-usage.service";
 
 const DEFAULT_CHAT_TITLE = "New chat";
 const DEFAULT_MODEL = process.env.AI_MODEL ?? "deepseek/deepseek-v3.2";
@@ -246,9 +247,9 @@ function createChatTitleFromMessage(content: string): string {
  * Generate an AI-powered title for a conversation based on the first user message.
  * Falls back to returning null — caller should keep the existing title.
  */
-async function generateChatTitle(firstMessage: string): Promise<string | null> {
+async function generateChatTitle(firstMessage: string, chatId: string): Promise<string | null> {
   try {
-    const { output } = await generateText({
+    const { output, usage } = await generateText({
       model: getModel("deepseek/deepseek-v4-flash"),
       system: TITLE_GENERATOR_PROMPT,
       prompt: firstMessage.slice(0, 500),
@@ -258,6 +259,23 @@ async function generateChatTitle(firstMessage: string): Promise<string | null> {
         }),
       }),
     });
+    
+    if (usage) {
+      const [chat] = await db.select({ workspaceId: aiChats.workspaceId, userId: aiChats.userId }).from(aiChats).where(eq(aiChats.id, chatId)).limit(1);
+      if (chat) {
+        recordAiUsage({
+          workspaceId: chat.workspaceId,
+          userId: chat.userId,
+          chatId,
+          agentType: "title_generator",
+          model: "deepseek/deepseek-v4-flash",
+          promptTokens: (usage as any).promptTokens,
+          completionTokens: (usage as any).completionTokens,
+          totalTokens: usage.totalTokens,
+        }).catch(console.error);
+      }
+    }
+    
     const title = output.title.trim();
     return title || null;
   } catch {
@@ -626,7 +644,7 @@ export async function appendUserMessageAndMarkPending(input: {
 
   // Fire off AI title generation for first message (don't await — it's non-critical)
   if (existingMessages.length === 0) {
-    generateChatTitle(input.content).then((aiTitle) => {
+    generateChatTitle(input.content, input.chatId).then((aiTitle) => {
       if (aiTitle) {
         updateAiChatStatus(input.chatId, "pending", { title: aiTitle }).catch(
           () => {},
@@ -903,6 +921,24 @@ export async function compactChat(
     ] as ModelMessage[],
     maxOutputTokens: 4000,
     stopWhen: stepCountIs(2),
+  });
+
+  result.usage.then(async (usage) => {
+    if (usage) {
+      const [chat] = await db.select({ workspaceId: aiChats.workspaceId, userId: aiChats.userId }).from(aiChats).where(eq(aiChats.id, chatId)).limit(1);
+      if (chat) {
+        await recordAiUsage({
+          workspaceId: chat.workspaceId,
+          userId: chat.userId,
+          chatId,
+          agentType: "compactor",
+          model: model ?? DEFAULT_MODEL,
+          promptTokens: (usage as any).promptTokens,
+          completionTokens: (usage as any).completionTokens,
+          totalTokens: usage.totalTokens,
+        });
+      }
+    }
   });
 
   let summary = "";
@@ -1286,6 +1322,22 @@ export async function executeAiChatJob(
       }
 
       clearInterval(stopPollInterval);
+
+      Promise.resolve(result.usage).then(async (usage) => {
+        if (usage) {
+          await recordAiUsage({
+            workspaceId: input.workspaceId,
+            userId: input.userId,
+            chatId: chat.id,
+            messageId: assistantMessage.id,
+            agentType: chat.agentType ?? "orchestrator",
+            model: selectedModelId,
+            promptTokens: (usage as any).promptTokens,
+            completionTokens: (usage as any).completionTokens,
+            totalTokens: usage.totalTokens,
+          }).catch(console.error);
+        }
+      });
 
       console.log(
         `[chat.service] Stream ended: isContextError=${isContextError}, contentLen=${content.length}, attempt=${attempt}/${MAX_ATTEMPTS}`,
