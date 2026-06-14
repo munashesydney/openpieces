@@ -1,8 +1,17 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
-import { ChevronLeft, Play, XCircle, CheckCircle, Clock, AlertCircle, Loader2 } from "lucide-react";
+import { useRouter, useParams } from "next/navigation";
+import {
+  ChevronLeft,
+  ChevronRight,
+  Play,
+  XCircle,
+  CheckCircle,
+  Clock,
+  AlertCircle,
+  Loader2,
+} from "lucide-react";
 import { Card } from "../ui/card";
 import { Button } from "@/components/basic/buttons/button";
 import { type WorkflowExecution } from "@/lib/db/schema";
@@ -67,6 +76,8 @@ const statusConfig = {
   },
 };
 
+const PAGE_SIZE = 10;
+
 export function WorkflowExecutionsList({
   executions,
   workflowId,
@@ -77,10 +88,16 @@ export function WorkflowExecutionsList({
   workspaceId: string;
 }) {
   const router = useRouter();
+  const [page, setPage] = useState(1);
+  const totalPages = Math.ceil(executions.length / PAGE_SIZE);
+  const paginatedExecutions = executions.slice(
+    (page - 1) * PAGE_SIZE,
+    page * PAGE_SIZE,
+  );
 
   return (
     <div className="flex w-full justify-center px-6 pb-20 pt-10 font-Inter">
-      <div className="w-full max-w-[820px] space-y-10">
+      <div className="w-full px-4 space-y-10">
         {/* Navigation & Header */}
         <div className="space-y-6">
           <button
@@ -94,7 +111,9 @@ export function WorkflowExecutionsList({
           <div>
             <div className="flex items-center gap-2">
               <Play className="h-5 w-5 text-[var(--accent)]" />
-              <h1 className="text-2xl font-semibold text-[var(--foreground)]">Workflow Executions</h1>
+              <h1 className="text-2xl font-semibold text-[var(--foreground)]">
+                Workflow Executions
+              </h1>
             </div>
             <p className="mt-1 text-sm text-[var(--muted)]">
               View the execution history for this workflow.
@@ -109,17 +128,77 @@ export function WorkflowExecutionsList({
               <div className="mb-3 flex justify-center">
                 <Play className="h-8 w-8 text-[var(--border)]" />
               </div>
-              <p className="font-medium text-[var(--foreground)]">No executions yet</p>
-              <p className="mt-1">This workflow hasn&apos;t been executed yet.</p>
+              <p className="font-medium text-[var(--foreground)]">
+                No executions yet
+              </p>
+              <p className="mt-1">
+                This workflow hasn&apos;t been executed yet.
+              </p>
             </div>
           ) : (
             <div className="flex flex-col gap-4">
-              {executions.map((execution) => (
+              {paginatedExecutions.map((execution) => (
                 <ExecutionCard key={execution.id} execution={execution} />
               ))}
             </div>
           )}
         </div>
+
+        {/* Pagination */}
+        {executions.length > 0 && (
+          <div className="flex items-center justify-between px-2">
+            <div className="text-sm text-[var(--muted)]">
+              Showing{" "}
+              <span className="font-medium text-[var(--foreground)]">
+                {(page - 1) * PAGE_SIZE + 1}
+              </span>{" "}
+              to{" "}
+              <span className="font-medium text-[var(--foreground)]">
+                {Math.min(page * PAGE_SIZE, executions.length)}
+              </span>{" "}
+              of{" "}
+              <span className="font-medium text-[var(--foreground)]">
+                {executions.length}
+              </span>{" "}
+              records
+            </div>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="icon"
+                disabled={page <= 1}
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
+                aria-label="Previous"
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
+              <div className="flex gap-1">
+                {Array.from({ length: totalPages }, (_, i) => i + 1).map(
+                  (p) => (
+                    <Button
+                      key={p}
+                      variant={p === page ? "primary" : "outline"}
+                      size="icon"
+                      className="text-sm"
+                      onClick={() => setPage(p)}
+                    >
+                      {p}
+                    </Button>
+                  ),
+                )}
+              </div>
+              <Button
+                variant="outline"
+                size="icon"
+                disabled={page >= totalPages}
+                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                aria-label="Next"
+              >
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -129,16 +208,31 @@ function ExecutionCard({ execution }: { execution: WorkflowExecution }) {
   const config = statusConfig[execution.status];
   const StatusIcon = config.icon;
   const isRunning = execution.status === "running";
+  const router = useRouter();
+  const params = useParams<{ ordId: string; workspaceId: string }>();
+
+  const handleClick = () => {
+    if (execution.chatId) {
+      router.push(
+        `/org/${params.ordId}/workspace/${params.workspaceId}/personal?chat=${execution.chatId}`,
+      );
+    }
+  };
 
   return (
-    <Card className={`overflow-hidden border-l-4 ${config.border}`}>
+    <Card
+      className={`overflow-hidden border border-[var(--border)] ${execution.chatId ? "cursor-pointer hover:bg-[var(--hover-bg)]/50 transition-colors" : ""}`}
+      onClick={handleClick}
+    >
       <div className="p-5">
         <div className="flex items-start justify-between gap-4">
           <div className="flex items-start gap-4 flex-1 min-w-0">
             <div
               className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${config.bg} ${config.color}`}
             >
-              <StatusIcon className={`h-4 w-4 ${isRunning ? "animate-spin" : ""}`} />
+              <StatusIcon
+                className={`h-4 w-4 ${isRunning ? "animate-spin" : ""}`}
+              />
             </div>
             <div className="flex-1 min-w-0 space-y-1.5">
               <div className="flex items-center gap-2 flex-wrap">

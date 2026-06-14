@@ -4,6 +4,7 @@ import { OverviewPersonalView } from "@/components/overview/overview-personal-vi
 import { requireWorkspaceOwner } from "@/lib/services/auth.service";
 import {
   getAiChatsForWorkspace,
+  getAiChatById,
   getAiMessages,
 } from "@/lib/services/chat.service";
 import { getWorkspaceSettings } from "@/lib/services/workspace-settings.service";
@@ -17,8 +18,10 @@ import {
 
 export default async function Home(props: {
   params: Promise<{ workspaceId: string }>;
+  searchParams: Promise<{ chat?: string }>;
 }) {
   const { workspaceId } = await props.params;
+  const { chat: chatParam } = await props.searchParams;
   const pageSize = 20;
 
   const { user } = await requireWorkspaceOwner(workspaceId);
@@ -30,10 +33,24 @@ export default async function Home(props: {
       pageSize,
       "orchestrator",
     );
-  const initialSelectedChatId = null;
-  const initialMessages = initialSelectedChatId
-    ? { [initialSelectedChatId]: await getAiMessages(initialSelectedChatId) }
-    : {};
+
+  // If ?chat=... param is present, load that specific chat
+  let initialSelectedChatId: string | null = null;
+  let initialMessages: Record<string, any> = {};
+
+  if (chatParam) {
+    const linkedChat = await getAiChatById(chatParam, user.id);
+    if (linkedChat) {
+      initialSelectedChatId = linkedChat.id;
+      initialMessages = {
+        [linkedChat.id]: await getAiMessages(linkedChat.id),
+      };
+      // Prepend the linked chat if it's not already in the orchestrator list
+      if (!initialChats.find((c) => c.id === linkedChat.id)) {
+        initialChats.unshift(linkedChat);
+      }
+    }
+  }
 
   const settings = await getWorkspaceSettings(workspaceId);
   const initialWorkspaceModel =
