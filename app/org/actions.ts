@@ -64,3 +64,15 @@ export async function reactivateWorkspaceAction(workspaceId: string) {
   revalidatePath("/org");
   return { success: true };
 }
+
+export async function getWorkspacesCostAction(
+  workspaceIds: string[],
+): Promise<Array<{ workspaceId: string; totalCost: number }>> {
+  const { getWorkspacesCosts } =
+    await import("@/lib/services/ai-usage.service");
+  const costs = await getWorkspacesCosts(workspaceIds);
+  return Array.from(costs.entries()).map(([workspaceId, data]) => ({
+    workspaceId,
+    totalCost: data.totalCost,
+  }));
+}

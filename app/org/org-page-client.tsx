@@ -1,9 +1,10 @@
 "use client";
 
 import { useState, useCallback, useTransition } from "react";
-import { Building2, Folder, Plus, Archive } from "lucide-react";
+import { Building2, Folder, Plus, Filter, Check } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { getWorkspacesCostAction } from "./actions";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Modal } from "@/components/ui/modal";
 import { Button } from "@/components/basic/buttons/button";
@@ -42,6 +43,9 @@ export function OrgPageClient({
   const [createError, setCreateError] = useState<string | null>(null);
   const [newMenuOpen, setNewMenuOpen] = useState(false);
   const [reactivatingId, setReactivatingId] = useState<string | null>(null);
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const [showCost, setShowCost] = useState(false);
+  const [costs, setCosts] = useState<Record<string, number>>({});
   const [dragState, setDragState] = useState<{
     workspaceId: string;
     workspaceName: string;
@@ -56,6 +60,7 @@ export function OrgPageClient({
   };
 
   const toggleDeactivated = () => {
+    setFiltersOpen(false);
     const url = new URL(window.location.href);
     if (showDeactivated) {
       url.searchParams.delete("deactivated");
@@ -64,6 +69,26 @@ export function OrgPageClient({
     }
     router.push(url.pathname + url.search);
   };
+
+  const toggleCost = useCallback(async () => {
+    setFiltersOpen(false);
+    const next = !showCost;
+    setShowCost(next);
+    if (next) {
+      const allIds = [
+        ...standaloneWorkspaces.map((ws) => ws.id),
+        ...Array.from(workspaceMap.values()).flatMap((ws) =>
+          ws.map((w) => w.id),
+        ),
+      ];
+      const result = await getWorkspacesCostAction(allIds);
+      const costMap: Record<string, number> = {};
+      for (const item of result) {
+        costMap[item.workspaceId] = item.totalCost;
+      }
+      setCosts(costMap);
+    }
+  }, [showCost, standaloneWorkspaces, workspaceMap]);
 
   const handleCreateOrg = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -124,7 +149,7 @@ export function OrgPageClient({
       {/* Content */}
       <main className="flex-1 mx-auto w-full max-w-7xl px-6 py-12">
         {/* Heading */}
-        <div className="mb-8 flex items-end justify-between">
+        <div className="mb-8 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
           <div>
             <h1 className="text-4xl font-bold text-[var(--foreground)]">
               Organizations &amp; Workspaces
@@ -134,15 +159,63 @@ export function OrgPageClient({
             </p>
           </div>
           <div className="flex items-center gap-2">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={toggleDeactivated}
-              disabled={isPending}
-            >
-              <Archive className="h-3.5 w-3.5 mr-1.5" />
-              {showDeactivated ? "Hide deactivated" : "Show deactivated"}
-            </Button>
+            <div className="relative">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setFiltersOpen((v) => !v)}
+              >
+                <Filter className="h-3.5 w-3.5 mr-1.5" />
+                Filters
+              </Button>
+              {filtersOpen && (
+                <>
+                  <button
+                    type="button"
+                    className="fixed inset-0 z-10"
+                    onClick={() => setFiltersOpen(false)}
+                    aria-label="Close"
+                  />
+                  <div className="absolute right-0 top-full z-20 mt-2 w-52 rounded border border-[var(--border)] bg-[var(--sidebar-bg)] shadow-[0_12px_40px_rgba(0,0,0,0.35)] overflow-hidden">
+                    <button
+                      type="button"
+                      onClick={toggleDeactivated}
+                      className="flex w-full items-center gap-2.5 px-3 py-2.5 text-left text-[13px] font-medium text-[var(--foreground)] hover:bg-[var(--hover-bg)] transition-colors"
+                    >
+                      <div
+                        className={`flex h-4 w-4 shrink-0 items-center justify-center rounded border ${showDeactivated ? "border-[var(--accent)] bg-[var(--accent)]" : "border-[var(--border)]"}`}
+                      >
+                        {showDeactivated && (
+                          <Check
+                            className="h-3 w-3 text-white"
+                            strokeWidth={3}
+                          />
+                        )}
+                      </div>
+                      Show deactivated
+                    </button>
+                    <div className="h-px bg-[var(--border)]" />
+                    <button
+                      type="button"
+                      onClick={toggleCost}
+                      className="flex w-full items-center gap-2.5 px-3 py-2.5 text-left text-[13px] font-medium text-[var(--foreground)] hover:bg-[var(--hover-bg)] transition-colors"
+                    >
+                      <div
+                        className={`flex h-4 w-4 shrink-0 items-center justify-center rounded border ${showCost ? "border-[var(--accent)] bg-[var(--accent)]" : "border-[var(--border)]"}`}
+                      >
+                        {showCost && (
+                          <Check
+                            className="h-3 w-3 text-white"
+                            strokeWidth={3}
+                          />
+                        )}
+                      </div>
+                      Show cost
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
             <div className="relative">
               <button
                 type="button"
@@ -226,6 +299,8 @@ export function OrgPageClient({
                     setDragState({ workspaceId: id, workspaceName: name })
                   }
                   onDragEnd={() => setDragState(null)}
+                  costs={costs}
+                  showCost={showCost}
                 />
               ))}
             </div>
@@ -254,6 +329,8 @@ export function OrgPageClient({
                       setDragState({ workspaceId: id, workspaceName: name })
                     }
                     onDragEnd={() => setDragState(null)}
+                    costs={costs}
+                    showCost={showCost}
                   />
                 ))}
               </div>

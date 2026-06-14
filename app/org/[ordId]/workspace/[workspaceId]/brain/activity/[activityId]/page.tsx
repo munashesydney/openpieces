@@ -52,7 +52,7 @@ export default async function ActivityDetailPage(props: {
   };
 
   return (
-    <div className="mx-auto max-w-2xl px-8 py-8">
+    <div className="w-full px-8 py-8">
       <Link
         href={`/org/${ordId}/workspace/${workspaceId}/brain/activity`}
         className="mb-6 inline-flex items-center gap-2 text-sm text-[var(--muted)] hover:text-[var(--foreground)] transition-colors"

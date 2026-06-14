@@ -73,6 +73,13 @@ export function OpenCodePage({
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
+  // Clear the sending indicator when the session finishes
+  useEffect(() => {
+    if (sessionStatus === "idle" || sessionStatus === "error") {
+      setIsSending(false);
+    }
+  }, [sessionStatus]);
+
   const loadSessions = async (page = 1, append = false) => {
     try {
       if (page === 1) setIsSessionsLoading(true);

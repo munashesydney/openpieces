@@ -31,6 +31,8 @@ export function DroppableOrgCard({
   reactivatingId,
   onDragStart,
   onDragEnd,
+  costs,
+  showCost,
 }: {
   org: Organization;
   workspaces: Workspace[];
@@ -40,6 +42,8 @@ export function DroppableOrgCard({
   reactivatingId?: string | null;
   onDragStart: (id: string, name: string) => void;
   onDragEnd: () => void;
+  costs: Record<string, number>;
+  showCost: boolean;
 }) {
   const [isOver, setIsOver] = useState(false);
   const [clickExpanded, setClickExpanded] = useState(false);
@@ -154,6 +158,8 @@ export function DroppableOrgCard({
               reactivatingId={reactivatingId}
               onDragStart={onDragStart}
               onDragEnd={onDragEnd}
+              costs={costs}
+              showCost={showCost}
             />
           ))}
         </div>
@@ -171,6 +177,8 @@ function DraggableWorkspaceRow({
   reactivatingId,
   onDragStart,
   onDragEnd,
+  costs,
+  showCost,
 }: {
   ws: Workspace;
   orgId: string;
@@ -178,6 +186,8 @@ function DraggableWorkspaceRow({
   reactivatingId?: string | null;
   onDragStart: (id: string, name: string) => void;
   onDragEnd: () => void;
+  costs: Record<string, number>;
+  showCost: boolean;
 }) {
   const handleDragStart = useCallback(
     (e: DragEvent) => {
@@ -207,6 +217,11 @@ function DraggableWorkspaceRow({
         <p className="text-[12px] text-[var(--muted)] truncate">
           {ws.description}
         </p>
+        {showCost && (
+          <p className="text-[11px] text-emerald-400 font-mono mt-0.5">
+            ${(costs[ws.id] ?? 0).toFixed(4)}
+          </p>
+        )}
       </div>
       {ws.deactivatedAt && onReactivate && (
         <Button
@@ -258,12 +273,16 @@ export function DraggableStandaloneCard({
   reactivatingId,
   onDragStart,
   onDragEnd,
+  costs,
+  showCost,
 }: {
   ws: Workspace;
   onReactivate?: (workspaceId: string) => void;
   reactivatingId?: string | null;
   onDragStart: (id: string, name: string) => void;
   onDragEnd: () => void;
+  costs: Record<string, number>;
+  showCost: boolean;
 }) {
   const handleDragStart = useCallback(
     (e: DragEvent) => {
@@ -300,6 +319,11 @@ export function DraggableStandaloneCard({
                 <p className="mt-1 text-sm text-[var(--muted)] truncate">
                   {ws.description || "No description"}
                 </p>
+                {showCost && (
+                  <p className="mt-1 text-[12px] text-emerald-400 font-mono">
+                    ${(costs[ws.id] ?? 0).toFixed(4)}
+                  </p>
+                )}
               </div>
               {onReactivate && (
                 <Button
@@ -343,6 +367,11 @@ export function DraggableStandaloneCard({
                 <p className="mt-1 text-sm text-[var(--muted)] truncate">
                   {ws.description || "No description"}
                 </p>
+                {showCost && (
+                  <p className="mt-1 text-[12px] text-emerald-400 font-mono">
+                    ${(costs[ws.id] ?? 0).toFixed(4)}
+                  </p>
+                )}
               </div>
             </div>
           </Card>

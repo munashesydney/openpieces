@@ -275,6 +275,7 @@ export const opencodeSessions = pgTable("opencode_sessions", {
   status: text("status").default("idle").notNull(),
   lastMessage: text("last_message"),
   lastMessageAt: timestamp("last_message_at"),
+  lastUsageSyncAt: timestamp("last_usage_sync_at"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
@@ -582,3 +583,33 @@ export const webhookDeliveries = pgTable(
 
 export type WebhookDeliveryRow = typeof webhookDeliveries.$inferSelect;
 export type NewWebhookDeliveryRow = typeof webhookDeliveries.$inferInsert;
+
+export const aiUsage = pgTable(
+  "ai_usage",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    workspaceId: uuid("workspace_id")
+      .notNull()
+      .references(() => workspaces.id, { onDelete: "cascade" }),
+    userId: uuid("user_id").references(() => users.id, { onDelete: "set null" }),
+    chatId: uuid("chat_id").references(() => aiChats.id, { onDelete: "set null" }),
+    messageId: uuid("message_id").references(() => aiMessages.id, { onDelete: "set null" }),
+    opencodeSessionId: text("opencode_session_id").references(() => opencodeSessions.sessionId, { onDelete: "set null" }),
+    agentType: text("agent_type").notNull(),
+    model: text("model").notNull(),
+    promptTokens: integer("prompt_tokens").notNull().default(0),
+    completionTokens: integer("completion_tokens").notNull().default(0),
+    totalTokens: integer("total_tokens").notNull().default(0),
+    cost: real("cost").notNull().default(0),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => [
+    index("ai_usage_workspace_id_idx").on(table.workspaceId),
+    index("ai_usage_agent_type_idx").on(table.agentType),
+    index("ai_usage_created_at_idx").on(table.createdAt),
+  ],
+);
+
+export type AiUsageRow = typeof aiUsage.$inferSelect;
+export type NewAiUsageRow = typeof aiUsage.$inferInsert;
+

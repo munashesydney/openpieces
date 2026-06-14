@@ -10,6 +10,10 @@ const CONTEXT_CACHE_TTL_MS = 60 * 60 * 1000; // 1 hour
 interface ModelLimits {
   context: number; // context window in tokens
   output: number; // max output tokens
+  pricing?: {
+    prompt: number;
+    completion: number;
+  };
 }
 
 interface CacheEntry {
@@ -84,13 +88,30 @@ async function fetchFromGateway(model: string): Promise<ModelLimits | null> {
     const endpoint = json.data?.endpoints?.[0];
     if (!endpoint) return null;
 
+    let pricing;
+    if (endpoint.pricing && typeof endpoint.pricing.prompt === 'string') {
+      pricing = {
+        prompt: parseFloat(endpoint.pricing.prompt),
+        completion: parseFloat(endpoint.pricing.completion),
+      };
+    }
+
     return {
       context: (endpoint.context_length as number) || 128000,
       output: (endpoint.output_limit as number) || 4096,
+      pricing,
     };
   } catch {
     return null;
   }
+}
+
+/**
+ * Retrieve pricing for a model from the AI Gateway cache.
+ */
+export async function getModelPricing(model: string): Promise<{prompt: number, completion: number} | null> {
+  const limits = await getModelLimits(model);
+  return limits.pricing || null;
 }
 
 /**
