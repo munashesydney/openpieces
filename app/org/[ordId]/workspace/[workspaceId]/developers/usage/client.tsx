@@ -95,6 +95,13 @@ export function UsageClient({
     return `${pathname}?${params.toString()}`;
   };
 
+  const formatTokens = (n: number) => {
+    if (n >= 1_000_000_000) return `${(n / 1_000_000_000).toFixed(1)}B`;
+    if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
+    if (n >= 1_000) return `${(n / 1_000).toFixed(1)}K`;
+    return n.toLocaleString();
+  };
+
   if (!initialLoadDone && isPending) {
     return <UsageSkeleton />;
   }
@@ -164,7 +171,7 @@ export function UsageClient({
               </div>
               <div className="mt-3 flex items-baseline gap-2">
                 <span className="text-3xl font-bold tracking-tight text-[var(--foreground)]">
-                  {(metrics?.totalTokens ?? 0).toLocaleString()}
+                  {formatTokens(metrics?.totalTokens ?? 0)}
                 </span>
                 <span className="text-[11px] text-[var(--muted)]">
                   tokens used
@@ -248,17 +255,20 @@ export function UsageClient({
                     <div className="text-[11px] text-[var(--muted)] mt-1 flex gap-3">
                       <span>{new Date(record.createdAt).toLocaleString()}</span>
                       <span>
-                        Tokens: {record.totalTokens} ({record.promptTokens} in /{" "}
-                        {record.completionTokens} out)
+                        Tokens: {formatTokens(record.totalTokens)} (
+                        {formatTokens(record.promptTokens)} in /{" "}
+                        {formatTokens(record.completionTokens)} out)
                       </span>
-                      {record.chatId && (
-                        <a
-                          href={`/org/${ordId}/workspace/${workspaceId}/brain?chat=${record.chatId}`}
-                          className="text-[var(--accent)] hover:underline"
-                        >
-                          View Chat
-                        </a>
-                      )}
+                      {record.chatId &&
+                        record.agentType !== "title_generator" &&
+                        record.agentType !== "context_compactor" && (
+                          <a
+                            href={`/org/${ordId}/workspace/${workspaceId}/personal?chat=${record.chatId}`}
+                            className="text-[var(--accent)] hover:underline"
+                          >
+                            View Chat
+                          </a>
+                        )}
                       {record.opencodeSessionId && (
                         <span className="text-[var(--accent)]">
                           OpenCode Session
