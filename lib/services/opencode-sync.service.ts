@@ -30,8 +30,9 @@ export async function syncOpenCodeUsage(sessionId: string) {
     let hasNewUsage = false;
 
     for (const message of messages) {
-      // OpenCode messages use 'timestamp' or 'created_at' depending on API version, assuming 'created_at' or 'timestamp'
-      const msgTimestamp = message.timestamp || message.created_at;
+      const info = message.info || {};
+      // OpenCode messages store timestamps in a nested `time` object
+      const msgTimestamp = info.time?.completed || info.time?.created;
       if (!msgTimestamp) continue;
       
       const msgDate = new Date(msgTimestamp);
@@ -39,8 +40,8 @@ export async function syncOpenCodeUsage(sessionId: string) {
         continue;
       }
 
-      if (message.role === "assistant" && message.cost && message.cost > 0) {
-        const tokens = message.tokens || { input: 0, output: 0, total: 0 };
+      if (info.role === "assistant" && info.cost && info.cost > 0) {
+        const tokens = info.tokens || { input: 0, output: 0, total: 0 };
         
         await recordAiUsage({
           workspaceId: service.workspaceId,
@@ -51,7 +52,7 @@ export async function syncOpenCodeUsage(sessionId: string) {
           promptTokens: tokens.input || 0,
           completionTokens: tokens.output || 0,
           totalTokens: tokens.total || 0,
-          cost: message.cost,
+          cost: info.cost,
         });
         hasNewUsage = true;
       }

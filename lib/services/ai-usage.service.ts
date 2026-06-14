@@ -1,7 +1,7 @@
 import { db } from "@/lib/db";
 import { aiUsage } from "@/lib/db/schema";
 import { getModelPricing } from "@/lib/ai-chat/model-context";
-import { desc, eq, sql } from "drizzle-orm";
+import { desc, eq, sql, gte, lte, and } from "drizzle-orm";
 
 export async function recordAiUsage(input: {
   workspaceId: string;
@@ -50,11 +50,19 @@ export async function recordAiUsage(input: {
   });
 }
 
-export async function getWorkspaceAiUsageMetrics(workspaceId: string) {
+export async function getWorkspaceAiUsageMetrics(
+  workspaceId: string,
+  startDate?: Date,
+  endDate?: Date
+) {
+  const conditions = [eq(aiUsage.workspaceId, workspaceId)];
+  if (startDate) conditions.push(gte(aiUsage.createdAt, startDate));
+  if (endDate) conditions.push(lte(aiUsage.createdAt, endDate));
+
   const totalCostResult = await db
     .select({ totalCost: sql<number>`sum(${aiUsage.cost})`, totalTokens: sql<number>`sum(${aiUsage.totalTokens})` })
     .from(aiUsage)
-    .where(eq(aiUsage.workspaceId, workspaceId));
+    .where(and(...conditions));
 
   const totalCost = totalCostResult[0]?.totalCost ?? 0;
   const totalTokens = totalCostResult[0]?.totalTokens ?? 0;
@@ -66,7 +74,7 @@ export async function getWorkspaceAiUsageMetrics(workspaceId: string) {
       tokens: sql<number>`sum(${aiUsage.totalTokens})`,
     })
     .from(aiUsage)
-    .where(eq(aiUsage.workspaceId, workspaceId))
+    .where(and(...conditions))
     .groupBy(aiUsage.agentType);
 
   return {
@@ -76,11 +84,32 @@ export async function getWorkspaceAiUsageMetrics(workspaceId: string) {
   };
 }
 
-export async function getWorkspaceAiUsageRecords(workspaceId: string, limit = 50) {
-  return await db
+export async function getWorkspaceAiUsageRecords(
+  workspaceId: string, 
+  page = 1, 
+  pageSize = 50,
+  startDate?: Date,
+  endDate?: Date
+) {
+  const conditions = [eq(aiUsage.workspaceId, workspaceId)];
+  if (startDate) conditions.push(gte(aiUsage.createdAt, startDate));
+  if (endDate) conditions.push(lte(aiUsage.createdAt, endDate));
+
+  const records = await db
     .select()
     .from(aiUsage)
-    .where(eq(aiUsage.workspaceId, workspaceId))
+    .where(and(...conditions))
     .orderBy(desc(aiUsage.createdAt))
-    .limit(limit);
+    .limit(pageSize)
+    .offset((page - 1) * pageSize);
+
+  const [countResult] = await db
+    .select({ count: sql<number>`count(*)` })
+    .from(aiUsage)
+    .where(and(...conditions));
+
+  return {
+    data: records,
+    total: Number(countResult?.count || 0),
+  };
 }
