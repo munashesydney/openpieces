@@ -437,6 +437,7 @@ export async function triggerBrainIngestion(workspaceId: string): Promise<{
   const unprocessedLogs = await getUnprocessedActivityLogs(workspaceId, 50);
 
   if (unprocessedLogs.length === 0) {
+    await updateLastIngestionRun(workspaceId);
     return {
       processed: 0,
       chatId: "",
@@ -519,6 +520,8 @@ After creating all relevant entries, respond with a brief summary of what you cr
   const processedIds = unprocessedLogs.map((log) => log.id);
   await markActivityLogsProcessed(processedIds);
 
+  await updateLastIngestionRun(workspaceId);
+
   return {
     processed: unprocessedLogs.length,
     chatId: chat.id,
@@ -537,6 +540,7 @@ export async function triggerBrainReinforcement(workspaceId: string): Promise<{
   );
 
   if (unreinforcedEntries.length === 0) {
+    await updateLastReinforcementRun(workspaceId);
     return {
       processed: 0,
       chatId: "",
@@ -592,6 +596,8 @@ Use the tools freely to investigate and clean up the brain. Respond with a summa
   // Mark all unreinforced entries as reenforced
   const entryIds = unreinforcedEntries.map((e) => e.id);
   await markBrainEntriesReenforced(entryIds);
+
+  await updateLastReinforcementRun(workspaceId);
 
   return {
     processed: unreinforcedEntries.length,
