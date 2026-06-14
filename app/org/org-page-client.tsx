@@ -124,7 +124,7 @@ export function OrgPageClient({
       {/* Content */}
       <main className="flex-1 mx-auto w-full max-w-7xl px-6 py-12">
         {/* Heading */}
-        <div className="mb-8 flex items-end justify-between">
+        <div className="mb-8 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
           <div>
             <h1 className="text-4xl font-bold text-[var(--foreground)]">
               Organizations &amp; Workspaces
