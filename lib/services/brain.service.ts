@@ -2,9 +2,19 @@ import { eq, and, desc, asc, sql, inArray } from "drizzle-orm";
 import { cosineDistance } from "drizzle-orm";
 import { embed } from "ai";
 import { db } from "@/lib/db";
-import { activityLog, brain, brainSettings, type Brain, type BrainSettings } from "@/lib/db/schema";
+import {
+  activityLog,
+  brain,
+  brainSettings,
+  opencodeSessions,
+  type Brain,
+  type BrainSettings,
+} from "@/lib/db/schema";
 import { isValidUuid } from "@/lib/utils/uuid";
-import { createAiChat, appendUserMessageAndMarkPending } from "@/lib/services/chat.service";
+import {
+  createAiChat,
+  appendUserMessageAndMarkPending,
+} from "@/lib/services/chat.service";
 import { enqueueChatExecution } from "@/lib/queues/pg-boss";
 import { getWorkspaceOwnerId } from "@/lib/services/workspace.service";
 
@@ -12,7 +22,9 @@ import { getWorkspaceOwnerId } from "@/lib/services/workspace.service";
 // Brain Settings
 // ──────────────────────────────────────────────────────────────
 
-export async function getBrainSettings(workspaceId: string): Promise<BrainSettings | null> {
+export async function getBrainSettings(
+  workspaceId: string,
+): Promise<BrainSettings | null> {
   if (!isValidUuid(workspaceId)) return null;
 
   const result = await db
@@ -24,7 +36,9 @@ export async function getBrainSettings(workspaceId: string): Promise<BrainSettin
   return result[0] ?? null;
 }
 
-export async function getOrCreateBrainSettings(workspaceId: string): Promise<BrainSettings> {
+export async function getOrCreateBrainSettings(
+  workspaceId: string,
+): Promise<BrainSettings> {
   let settings = await getBrainSettings(workspaceId);
 
   if (!settings) {
@@ -40,7 +54,15 @@ export async function getOrCreateBrainSettings(workspaceId: string): Promise<Bra
 
 export async function updateBrainSettings(
   workspaceId: string,
-  updates: Partial<Pick<BrainSettings, "ingestionEnabled" | "ingestionIntervalMinutes" | "reinforcementEnabled" | "reinforcementIntervalHours">>
+  updates: Partial<
+    Pick<
+      BrainSettings,
+      | "ingestionEnabled"
+      | "ingestionIntervalMinutes"
+      | "reinforcementEnabled"
+      | "reinforcementIntervalHours"
+    >
+  >,
 ): Promise<BrainSettings | null> {
   if (!isValidUuid(workspaceId)) return null;
 
@@ -53,7 +75,9 @@ export async function updateBrainSettings(
   return updated ?? null;
 }
 
-export async function updateLastIngestionRun(workspaceId: string): Promise<void> {
+export async function updateLastIngestionRun(
+  workspaceId: string,
+): Promise<void> {
   if (!isValidUuid(workspaceId)) return;
   await db
     .update(brainSettings)
@@ -61,7 +85,9 @@ export async function updateLastIngestionRun(workspaceId: string): Promise<void>
     .where(eq(brainSettings.workspaceId, workspaceId));
 }
 
-export async function updateLastReinforcementRun(workspaceId: string): Promise<void> {
+export async function updateLastReinforcementRun(
+  workspaceId: string,
+): Promise<void> {
   if (!isValidUuid(workspaceId)) return;
   await db
     .update(brainSettings)
@@ -73,7 +99,10 @@ export async function updateLastReinforcementRun(workspaceId: string): Promise<v
 // Activity Log Processing (Ingestion)
 // ──────────────────────────────────────────────────────────────
 
-export async function getUnprocessedActivityLogs(workspaceId: string, limit: number = 10): Promise<typeof activityLog.$inferSelect[]> {
+export async function getUnprocessedActivityLogs(
+  workspaceId: string,
+  limit: number = 10,
+): Promise<(typeof activityLog.$inferSelect)[]> {
   if (!isValidUuid(workspaceId)) return [];
 
   return db
@@ -82,8 +111,8 @@ export async function getUnprocessedActivityLogs(workspaceId: string, limit: num
     .where(
       and(
         eq(activityLog.workspaceId, workspaceId),
-        eq(activityLog.processedByBrain, false)
-      )
+        eq(activityLog.processedByBrain, false),
+      ),
     )
     .orderBy(asc(activityLog.createdAt))
     .limit(limit);
@@ -149,7 +178,7 @@ export async function createBrainEntry(data: {
 export async function getBrainEntries(
   workspaceId: string,
   page: number = 1,
-  limit: number = 10
+  limit: number = 10,
 ): Promise<{ data: Brain[]; total: number }> {
   if (!isValidUuid(workspaceId)) return { data: [], total: 0 };
 
@@ -175,7 +204,10 @@ export async function getBrainEntries(
   };
 }
 
-export async function getBrainEntryById(brainId: string, workspaceId: string): Promise<Brain | null> {
+export async function getBrainEntryById(
+  brainId: string,
+  workspaceId: string,
+): Promise<Brain | null> {
   if (!isValidUuid(brainId) || !isValidUuid(workspaceId)) return null;
 
   const result = await db
@@ -190,7 +222,7 @@ export async function getBrainEntryById(brainId: string, workspaceId: string): P
 export async function searchBrain(
   query: string,
   workspaceId: string,
-  limit: number = 10
+  limit: number = 10,
 ): Promise<Brain[]> {
   if (!isValidUuid(workspaceId)) return [];
 
@@ -217,7 +249,10 @@ export async function searchBrain(
 // Brain Entry Updates
 // ──────────────────────────────────────────────────────────────
 
-export async function reinforceBrainEntry(brainId: string, newSummary: string): Promise<Brain | null> {
+export async function reinforceBrainEntry(
+  brainId: string,
+  newSummary: string,
+): Promise<Brain | null> {
   if (!isValidUuid(brainId)) return null;
 
   // Generate new embedding
@@ -257,18 +292,28 @@ export async function deleteBrainEntry(brainId: string): Promise<boolean> {
  * Summarize an activity log entry into a brain entry using AI
  */
 export async function summarizeActivityLogForBrain(
-  activityEntry: typeof activityLog.$inferSelect
-): Promise<{ summary: string; type: "fact" | "episode"; category: "pieces" | "workflows" | "runs" | "credentials" | "general"; tags: string[] }> {
+  activityEntry: typeof activityLog.$inferSelect,
+): Promise<{
+  summary: string;
+  type: "fact" | "episode";
+  category: "pieces" | "workflows" | "runs" | "credentials" | "general";
+  tags: string[];
+}> {
   const userId = await getWorkspaceOwnerId(activityEntry.workspaceId);
   if (!userId) {
-    throw new Error(`Could not find owner for workspace ${activityEntry.workspaceId}`);
+    throw new Error(
+      `Could not find owner for workspace ${activityEntry.workspaceId}`,
+    );
   }
 
   // Create an AI chat to summarize this activity
-  const chat = await createAiChat({
-    workspaceId: activityEntry.workspaceId,
-    userId,
-  }, "brain");
+  const chat = await createAiChat(
+    {
+      workspaceId: activityEntry.workspaceId,
+      userId,
+    },
+    "brain",
+  );
 
   const activityDescription = `
 Activity Type: ${activityEntry.recordType}
@@ -313,7 +358,9 @@ Respond with a JSON object containing:
   // This is a simplified approach - in production you might want to poll or use callbacks
   // For now, we'll just return a placeholder and let the chat worker handle it
 
-  console.log(`[brain] Created summarization chat ${chat.id} for activity ${activityEntry.id}`);
+  console.log(
+    `[brain] Created summarization chat ${chat.id} for activity ${activityEntry.id}`,
+  );
 
   return {
     summary: `Activity: ${activityEntry.operation} on ${activityEntry.recordType}`,
@@ -327,18 +374,23 @@ Respond with a JSON object containing:
  * Reinforce an existing brain entry using AI
  */
 export async function reinforceBrainEntryWithAI(
-  brainEntry: Brain
+  brainEntry: Brain,
 ): Promise<{ newSummary: string }> {
   const userId = await getWorkspaceOwnerId(brainEntry.workspaceId);
   if (!userId) {
-    throw new Error(`Could not find owner for workspace ${brainEntry.workspaceId}`);
+    throw new Error(
+      `Could not find owner for workspace ${brainEntry.workspaceId}`,
+    );
   }
 
   // Create an AI chat to reinforce this brain entry
-  const chat = await createAiChat({
-    workspaceId: brainEntry.workspaceId,
-    userId,
-  }, "brain");
+  const chat = await createAiChat(
+    {
+      workspaceId: brainEntry.workspaceId,
+      userId,
+    },
+    "brain",
+  );
 
   const messageContent = `Please review and reinforce the following memory entry. This entry has been reinforced ${brainEntry.reinforcementCount} times before and has a confidence score of ${brainEntry.confidence}.
 
@@ -364,7 +416,9 @@ Respond with a JSON object:
     userId,
   });
 
-  console.log(`[brain] Created reinforcement chat ${chat.id} for brain entry ${brainEntry.id}`);
+  console.log(
+    `[brain] Created reinforcement chat ${chat.id} for brain entry ${brainEntry.id}`,
+  );
 
   return {
     newSummary: brainEntry.summary, // Placeholder - actual update happens when chat completes
@@ -383,7 +437,11 @@ export async function triggerBrainIngestion(workspaceId: string): Promise<{
   const unprocessedLogs = await getUnprocessedActivityLogs(workspaceId, 50);
 
   if (unprocessedLogs.length === 0) {
-    return { processed: 0, chatId: "", message: "No unprocessed activity logs found" };
+    return {
+      processed: 0,
+      chatId: "",
+      message: "No unprocessed activity logs found",
+    };
   }
 
   const userId = await getWorkspaceOwnerId(workspaceId);
@@ -393,14 +451,50 @@ export async function triggerBrainIngestion(workspaceId: string): Promise<{
 
   const chat = await createAiChat({ workspaceId, userId }, "brain");
 
+  // Enrich opencode INSERT logs with the current last_message from the session
+  const opencodeInsertLogs = unprocessedLogs.filter(
+    (log) => log.recordType === "opencode" && log.operation === "INSERT",
+  );
+
+  const lastMessageBySession = new Map<string, string | null>();
+  if (opencodeInsertLogs.length > 0) {
+    const sessionIds = opencodeInsertLogs
+      .map((log) => log.recordId)
+      .filter(Boolean) as string[];
+    const sessions = await db
+      .select({
+        sessionId: opencodeSessions.sessionId,
+        lastMessage: opencodeSessions.lastMessage,
+      })
+      .from(opencodeSessions)
+      .where(inArray(opencodeSessions.sessionId, sessionIds));
+
+    for (const s of sessions) {
+      lastMessageBySession.set(s.sessionId, s.lastMessage);
+    }
+  }
+
   const logsDescription = unprocessedLogs
-    .map((log, i) => `--- Activity ${i + 1} ---
+    .map((log, i) => {
+      let extra = "";
+      if (
+        log.recordType === "opencode" &&
+        log.operation === "INSERT" &&
+        log.recordId
+      ) {
+        const lastMsg = lastMessageBySession.get(log.recordId);
+        if (lastMsg) {
+          extra = `\nLast Message: ${lastMsg}`;
+        }
+      }
+      return `--- Activity ${i + 1} ---
 Type: ${log.recordType}
 Operation: ${log.operation}
 Record ID: ${log.recordId ?? "N/A"}
-Timestamp: ${log.createdAt.toISOString()}
+Timestamp: ${log.createdAt.toISOString()}${extra}
 Old Data: ${JSON.stringify(log.oldData ?? {}, null, 2)}
-New Data: ${JSON.stringify(log.newData ?? {}, null, 2)}`)
+New Data: ${JSON.stringify(log.newData ?? {}, null, 2)}`;
+    })
     .join("\n\n");
 
   const prompt = `You are a workspace memory manager. Analyze the following activity logs and create memory entries for important facts/events using the manage_brain tool with action=create.
@@ -437,10 +531,17 @@ export async function triggerBrainReinforcement(workspaceId: string): Promise<{
   chatId: string;
   message: string;
 }> {
-  const unreinforcedEntries = await getUnreinforcedBrainEntries(workspaceId, 50);
+  const unreinforcedEntries = await getUnreinforcedBrainEntries(
+    workspaceId,
+    50,
+  );
 
   if (unreinforcedEntries.length === 0) {
-    return { processed: 0, chatId: "", message: "No unreinforced brain entries found" };
+    return {
+      processed: 0,
+      chatId: "",
+      message: "No unreinforced brain entries found",
+    };
   }
 
   const userId = await getWorkspaceOwnerId(workspaceId);
@@ -451,7 +552,8 @@ export async function triggerBrainReinforcement(workspaceId: string): Promise<{
   const chat = await createAiChat({ workspaceId, userId }, "brain");
 
   const entriesDescription = unreinforcedEntries
-    .map((entry, i) => `--- Memory ${i + 1} ---
+    .map(
+      (entry, i) => `--- Memory ${i + 1} ---
 ID: ${entry.id}
 Type: ${entry.type}
 Category: ${entry.category}
@@ -459,7 +561,8 @@ Summary: ${entry.summary}
 Confidence: ${entry.confidence}
 Reinforcement Count: ${entry.reinforcementCount}
 Tags: ${entry.tags?.join(", ") ?? "none"}
-Created: ${entry.createdAt.toISOString()}`)
+Created: ${entry.createdAt.toISOString()}`,
+    )
     .join("\n\n");
 
   const prompt = `You are a workspace memory manager. Your job is to review and reinforce the brain's memory entries.
@@ -503,14 +606,16 @@ Use the tools freely to investigate and clean up the brain. Respond with a summa
 
 export async function getUnreinforcedBrainEntries(
   workspaceId: string,
-  limit: number = 10
+  limit: number = 10,
 ): Promise<Brain[]> {
   if (!isValidUuid(workspaceId)) return [];
 
   return db
     .select()
     .from(brain)
-    .where(and(eq(brain.workspaceId, workspaceId), eq(brain.isReenforced, false)))
+    .where(
+      and(eq(brain.workspaceId, workspaceId), eq(brain.isReenforced, false)),
+    )
     .orderBy(asc(brain.createdAt))
     .limit(limit);
 }
@@ -532,7 +637,13 @@ export async function getBrainStats(workspaceId: string): Promise<{
   categoryBreakdown: Record<string, number>;
 }> {
   if (!isValidUuid(workspaceId)) {
-    return { totalEntries: 0, factsCount: 0, episodesCount: 0, averageConfidence: 0, categoryBreakdown: {} };
+    return {
+      totalEntries: 0,
+      factsCount: 0,
+      episodesCount: 0,
+      averageConfidence: 0,
+      categoryBreakdown: {},
+    };
   }
 
   const entries = await db
@@ -543,14 +654,22 @@ export async function getBrainStats(workspaceId: string): Promise<{
   const totalEntries = entries.length;
   const factsCount = entries.filter((e) => e.type === "fact").length;
   const episodesCount = entries.filter((e) => e.type === "episode").length;
-  const averageConfidence = totalEntries > 0
-    ? entries.reduce((sum, e) => sum + e.confidence, 0) / totalEntries
-    : 0;
+  const averageConfidence =
+    totalEntries > 0
+      ? entries.reduce((sum, e) => sum + e.confidence, 0) / totalEntries
+      : 0;
 
   const categoryBreakdown: Record<string, number> = {};
   for (const entry of entries) {
-    categoryBreakdown[entry.category] = (categoryBreakdown[entry.category] ?? 0) + 1;
+    categoryBreakdown[entry.category] =
+      (categoryBreakdown[entry.category] ?? 0) + 1;
   }
 
-  return { totalEntries, factsCount, episodesCount, averageConfidence, categoryBreakdown };
+  return {
+    totalEntries,
+    factsCount,
+    episodesCount,
+    averageConfidence,
+    categoryBreakdown,
+  };
 }
