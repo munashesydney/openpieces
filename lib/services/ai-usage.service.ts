@@ -1,7 +1,7 @@
 import { db } from "@/lib/db";
 import { aiUsage } from "@/lib/db/schema";
 import { getModelPricing } from "@/lib/ai-chat/model-context";
-import { desc, eq, sql, gte, lte, and } from "drizzle-orm";
+import { desc, eq, sql, gte, lte, and, inArray } from "drizzle-orm";
 
 export async function recordAiUsage(input: {
   workspaceId: string;
@@ -17,12 +17,17 @@ export async function recordAiUsage(input: {
   cost?: number; // allow pre-calculated cost (e.g. from OpenCode)
 }) {
   let cost = input.cost ?? 0;
-  
+
   if (cost === 0) {
     const pricing = await getModelPricing(input.model);
     if (pricing) {
-      if ((input.promptTokens && input.promptTokens > 0) || (input.completionTokens && input.completionTokens > 0)) {
-        cost = ((input.promptTokens || 0) * pricing.prompt) + ((input.completionTokens || 0) * pricing.completion);
+      if (
+        (input.promptTokens && input.promptTokens > 0) ||
+        (input.completionTokens && input.completionTokens > 0)
+      ) {
+        cost =
+          (input.promptTokens || 0) * pricing.prompt +
+          (input.completionTokens || 0) * pricing.completion;
       } else if (input.totalTokens && input.totalTokens > 0) {
         // Fallback for providers that only return totalTokens
         const avgPrice = (pricing.prompt + pricing.completion) / 2;
@@ -33,7 +38,7 @@ export async function recordAiUsage(input: {
 
   const promptTokens = input.promptTokens || 0;
   const completionTokens = input.completionTokens || 0;
-  const totalTokens = input.totalTokens ?? (promptTokens + completionTokens);
+  const totalTokens = input.totalTokens ?? promptTokens + completionTokens;
 
   await db.insert(aiUsage).values({
     workspaceId: input.workspaceId,
@@ -53,14 +58,17 @@ export async function recordAiUsage(input: {
 export async function getWorkspaceAiUsageMetrics(
   workspaceId: string,
   startDate?: Date,
-  endDate?: Date
+  endDate?: Date,
 ) {
   const conditions = [eq(aiUsage.workspaceId, workspaceId)];
   if (startDate) conditions.push(gte(aiUsage.createdAt, startDate));
   if (endDate) conditions.push(lte(aiUsage.createdAt, endDate));
 
   const totalCostResult = await db
-    .select({ totalCost: sql<number>`sum(${aiUsage.cost})`, totalTokens: sql<number>`sum(${aiUsage.totalTokens})` })
+    .select({
+      totalCost: sql<number>`sum(${aiUsage.cost})`,
+      totalTokens: sql<number>`sum(${aiUsage.totalTokens})`,
+    })
     .from(aiUsage)
     .where(and(...conditions));
 
@@ -84,12 +92,37 @@ export async function getWorkspaceAiUsageMetrics(
   };
 }
 
+export async function getWorkspacesCosts(
+  workspaceIds: string[],
+): Promise<Map<string, { totalCost: number; totalTokens: number }>> {
+  if (workspaceIds.length === 0) return new Map();
+
+  const result = await db
+    .select({
+      workspaceId: aiUsage.workspaceId,
+      totalCost: sql<number>`sum(${aiUsage.cost})`,
+      totalTokens: sql<number>`sum(${aiUsage.totalTokens})`,
+    })
+    .from(aiUsage)
+    .where(inArray(aiUsage.workspaceId, workspaceIds))
+    .groupBy(aiUsage.workspaceId);
+
+  const map = new Map<string, { totalCost: number; totalTokens: number }>();
+  for (const row of result) {
+    map.set(row.workspaceId, {
+      totalCost: row.totalCost,
+      totalTokens: row.totalTokens,
+    });
+  }
+  return map;
+}
+
 export async function getWorkspaceAiUsageRecords(
-  workspaceId: string, 
-  page = 1, 
+  workspaceId: string,
+  page = 1,
   pageSize = 50,
   startDate?: Date,
-  endDate?: Date
+  endDate?: Date,
 ) {
   const conditions = [eq(aiUsage.workspaceId, workspaceId)];
   if (startDate) conditions.push(gte(aiUsage.createdAt, startDate));

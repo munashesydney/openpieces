@@ -434,7 +434,10 @@ export async function triggerBrainIngestion(workspaceId: string): Promise<{
   chatId: string;
   message: string;
 }> {
-  const unprocessedLogs = await getUnprocessedActivityLogs(workspaceId, 50);
+  const rawLogs = await getUnprocessedActivityLogs(workspaceId, 50);
+  const unprocessedLogs = rawLogs.filter(
+    (log) => !(log.recordType === "opencode" && log.operation === "UPDATE"),
+  );
 
   if (unprocessedLogs.length === 0) {
     await updateLastIngestionRun(workspaceId);
@@ -517,7 +520,7 @@ After creating all relevant entries, respond with a brief summary of what you cr
 
   await enqueueChatExecution({ chatId: chat.id, workspaceId, userId });
 
-  const processedIds = unprocessedLogs.map((log) => log.id);
+  const processedIds = rawLogs.map((log) => log.id);
   await markActivityLogsProcessed(processedIds);
 
   await updateLastIngestionRun(workspaceId);
