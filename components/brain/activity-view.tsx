@@ -121,7 +121,7 @@ export function ActivityView({
   return (
     <div className="flex h-full flex-col">
       {/* Mode selector */}
-      <div className="flex items-center justify-center gap-1 px-8 pt-8">
+      <div className="flex items-center justify-center gap-1 px-8 pt-8 pb-6">
         {(Object.keys(modeConfig) as SearchMode[]).map((mode) => {
           const Icon = modeConfig[mode].icon;
           const isActive = selectedMode === mode;
