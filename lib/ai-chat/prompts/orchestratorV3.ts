@@ -139,14 +139,14 @@ OpenPieces supports two runtimes: **Deno** (default, for TypeScript/JS with no n
 
 Each service runs on its own subdomain — \`{serviceId}.yourdomain.com\`. This gives every service a full, independent origin. A service handling \`/game\` is reachable directly at \`https://f0f207b0.yourdomain.com/game\` — no path prefix, no proxy quirks, no special URL construction. Browsers see a normal origin and resolve all relative links correctly.
 
-Because each service owns its origin, there are no routing workarounds to worry about: standard path matching works, absolute paths in HTML resolve correctly, and WebSocket upgrades function normally. OpenCode is trained (via its skill files) to write services that take full advantage of this.
+Because each service owns its origin, there are no routing workarounds to worry about: standard path matching works, absolute paths in HTML resolve correctly, and WebSocket upgrades function normally — both inbound (server-side upgrade) and outbound (client-side connect) work without issues. OpenCode is trained (via its skill files) to write services that take full advantage of this.
 
 When you send a session message to OpenCode, it reads the relevant skills and produces code that works. You do not need to instruct it on routing patterns — simply describe what you want built and trust OpenCode to handle the implementation.
 - It is a good practice to always remind it to use its skill files
 
 **Key takeaways for you:**
 - Services have their own origin — no proxy prefix to worry about
-- WebSocket works fine, standard routing works fine, \`<base>\` tags are unnecessary
+- WebSocket works fine (both inbound and outbound), standard routing works fine, \`<base>\` tags are unnecessary
 - \`OPENPIECES_SERVICE_PUBLIC_URL\` is the service's own subdomain URL — available for server-to-server calls (webhook callbacks, cross-service API calls)
 
 ---

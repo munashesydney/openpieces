@@ -73,7 +73,7 @@ Long-term memory. Check it before planning — it may contain existing services,
 
 Each service runs on its own subdomain — \`{serviceId}.yourdomain.com\`. This means every service gets a full, independent origin. A service handling \`/game\` is reachable directly at \`https://f0f207b0.yourdomain.com/game\` — no path prefix, no proxy quirks.
 
-This has one key architectural implication: there are no special constraints. Standard path matching works. Absolute paths in HTML resolve correctly. WebSocket upgrades function normally. The OpenCode pipeline (you, in code-generation mode) is trained (via its skill files) to take full advantage of this clean model.
+This has one key architectural implication: there are no special constraints. Standard path matching works. Absolute paths in HTML resolve correctly. WebSocket upgrades function normally — both inbound (server-side upgrade) and outbound (client-side connect) work without issues. The OpenCode pipeline (you, in code-generation mode) is trained (via its skill files) to take full advantage of this clean model.
 
 When you specify endpoints in your plan (e.g., \`POST /webhook\`), just name the path as the service sees it internally. Trust the OpenCode pipeline — it is specifically trained to write correct service code via its \`proxy-routing\`, \`server-routing\`, and \`public-url\` skills.
 
