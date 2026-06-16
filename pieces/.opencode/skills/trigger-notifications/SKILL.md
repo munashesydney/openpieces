@@ -131,6 +131,21 @@ payment_intent: pi_xyz789
 - **IMPORTANT**: This is an OpenPieces chat ID — not a Telegram chat ID, not a Discord channel ID, not any external chat ID
 - It is always optional; if you don't have it, don't pass it
 
+## Request body reference
+
+When implementing the POST manually (or for Podman runtimes), these are the fields:
+
+| Field | Required | Description |
+|---|---|---|
+| `workspaceId` | ✅ | Set automatically — use `OPENPIECES_WORKSPACE_ID` env var |
+| `userId` | ✅ | Set automatically — use `OPENPIECES_USER_ID` env var |
+| `serviceId` | ✅ | Set automatically — use `OPENPIECES_SERVICE_ID` env var |
+| `content` | ✅ | The message content. Must be non-empty. The helper prepends metadata (`[serviceId: ...]`, `[event: ...]`) for you |
+| `eventName` | depends | Required for event-based emit (preferred). Leave out when using legacy `workflowId` |
+| `workflowId` | depends | Required for legacy direct workflow trigger. Leave out when using `eventName` |
+| `eventPayload` | ❌ | Optional structured data passed along to the workflow execution |
+| `chatId` | ❌ | Optional — omit or pass `null` to start a new conversation |
+
 ## Processing flow
 
 1. Receive inbound event (validate signatures, auth headers first)

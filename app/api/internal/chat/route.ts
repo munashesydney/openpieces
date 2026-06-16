@@ -14,13 +14,14 @@ import { getServicesByWorkflowId } from "@/lib/services/service.service";
 import { getWorkflowById } from "@/lib/services/workflow.service";
 import { getActionServicesForWorkflow } from "@/lib/services/workflow-action.service";
 import { getEndpointsByServiceId } from "@/lib/services/service-endpoint.service";
-import { getEventById } from "@/lib/services/event.service";
+import { getEventById, createOrGetEvent } from "@/lib/services/event.service";
 
 type InternalChatRequestBody = {
   workspaceId: string;
   userId: string;
   workflowId?: string;
   serviceId: string;
+  eventName?: string;
   eventId?: string;
   eventPayload?: Record<string, unknown> | null;
   chatId?: string | null;
@@ -180,6 +181,7 @@ export async function POST(request: NextRequest) {
   const workflowId = body.workflowId?.trim();
   const serviceId = body.serviceId?.trim();
   const eventId = body.eventId?.trim();
+  const eventName = body.eventName?.trim();
   const eventPayload = body.eventPayload ?? null;
   const content = body.content?.trim();
 
@@ -192,10 +194,10 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  if (!workflowId && !eventId) {
+  if (!workflowId && !eventId && !eventName) {
     return NextResponse.json(
       {
-        error: "Either workflowId or eventId is required",
+        error: "Either workflowId, eventId, or eventName is required",
       },
       { status: 400 },
     );
@@ -239,19 +241,28 @@ export async function POST(request: NextRequest) {
     }
 
     // ── Event-based fan-out ──
-    if (eventId) {
-      // Verify the event exists
-      const event = await getEventById(eventId, workspaceId);
-      if (!event) {
-        return NextResponse.json(
-          { error: `Event not found: ${eventId}` },
-          { status: 404 },
-        );
+    if (eventId || eventName) {
+      // Resolve event: by ID or auto-create by name
+      let resolvedEvent: Awaited<ReturnType<typeof getEventById>> | null = null;
+      let effectiveEventId = "";
+
+      if (eventId) {
+        resolvedEvent = await getEventById(eventId, workspaceId);
+        if (!resolvedEvent) {
+          return NextResponse.json(
+            { error: `Event not found: ${eventId}` },
+            { status: 404 },
+          );
+        }
+        effectiveEventId = eventId;
+      } else if (eventName) {
+        resolvedEvent = await createOrGetEvent(workspaceId, eventName);
+        effectiveEventId = resolvedEvent.id;
       }
 
       // Create workflow executions for all subscribed workflows
       const executionResults = await createWorkflowExecutionsForEvent(
-        eventId,
+        effectiveEventId,
         workspaceId,
         eventPayload,
       );
@@ -259,8 +270,8 @@ export async function POST(request: NextRequest) {
       if (executionResults.length === 0) {
         return NextResponse.json(
           {
-            eventId,
-            eventName: event.eventName,
+            eventId: effectiveEventId,
+            eventName: resolvedEvent!.eventName,
             message:
               "No workflows are subscribed to this event. No workflow executions created.",
             executions: [],
@@ -270,7 +281,7 @@ export async function POST(request: NextRequest) {
       }
 
       // Create a chat for each subscribed workflow and fire them
-      const chatPrefix = `[Event: ${event.eventName}]\n[serviceId: ${serviceId}]\n\n`;
+      const chatPrefix = `[Event: ${resolvedEvent!.eventName}]\n[serviceId: ${serviceId}]\n\n`;
       const eventPrefixedContent = chatPrefix + content;
 
       const results: WorkflowExecutionResult[] = [];
@@ -282,7 +293,7 @@ export async function POST(request: NextRequest) {
           eventPrefixedContent,
           null, // each workflow gets its own fresh chat
           "event",
-          eventId,
+          effectiveEventId,
           eventPayload,
         );
         results.push(result);
@@ -290,8 +301,8 @@ export async function POST(request: NextRequest) {
 
       return NextResponse.json(
         {
-          eventId,
-          eventName: event.eventName,
+          eventId: effectiveEventId,
+          eventName: resolvedEvent!.eventName,
           status: "queued",
           executions: results,
         },
