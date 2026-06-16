@@ -5,6 +5,11 @@ import {
   updateWorkflow,
   deleteWorkflow,
 } from "@/lib/services/workflow.service";
+import {
+  subscribeWorkflowToEvent,
+  unsubscribeWorkflowFromEvent,
+  getEventByName,
+} from "@/lib/services/event.service";
 import type { ToolContext } from "@/lib/tools/registry";
 import type { WorkflowToolInput } from "./definition";
 
@@ -12,8 +17,16 @@ export async function executeWorkflow(
   input: WorkflowToolInput,
   context: ToolContext,
 ) {
-  const { action, workflowId, page, limit, createDetails, updateDetails } =
-    input;
+  const {
+    action,
+    workflowId,
+    eventId,
+    eventName,
+    page,
+    limit,
+    createDetails,
+    updateDetails,
+  } = input;
   const { workspaceId } = context;
 
   if (!workspaceId) {
@@ -119,9 +132,51 @@ export async function executeWorkflow(
       return { success: true, deleted: workflowId };
     }
 
+    case "subscribe": {
+      if (!workflowId) {
+        throw new Error("workflowId is required for action 'subscribe'");
+      }
+
+      let resolvedEventId = eventId;
+      if (!resolvedEventId && eventName) {
+        const evt = await getEventByName(workspaceId, eventName);
+        if (!evt) {
+          throw new Error(`Event not found: ${eventName}`);
+        }
+        resolvedEventId = evt.id;
+      }
+      if (!resolvedEventId) {
+        throw new Error(
+          "eventId or eventName is required for action 'subscribe'",
+        );
+      }
+
+      const sub = await subscribeWorkflowToEvent(
+        workflowId,
+        resolvedEventId,
+        workspaceId,
+      );
+      return sub;
+    }
+
+    case "unsubscribe": {
+      if (!workflowId) {
+        throw new Error("workflowId is required for action 'unsubscribe'");
+      }
+      if (!eventId) {
+        throw new Error("eventId is required for action 'unsubscribe'");
+      }
+
+      const unsubbed = await unsubscribeWorkflowFromEvent(workflowId, eventId);
+      if (!unsubbed) {
+        throw new Error("Subscription not found or could not be removed");
+      }
+      return { success: true, workflowId, eventId };
+    }
+
     default: {
       throw new Error(
-        `Unknown action: ${action}. Valid actions are: list, get, create, update, delete.`,
+        `Unknown action: ${action}. Valid actions are: list, get, create, update, delete, subscribe, unsubscribe.`,
       );
     }
   }

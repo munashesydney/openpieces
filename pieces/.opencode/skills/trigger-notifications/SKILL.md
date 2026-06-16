@@ -12,25 +12,71 @@ metadata:
 
 Trigger services receive inbound events (webhooks, polls) and forward them to the Events AI using a shared `notifyEventsAi` helper. This skill explains how to implement that notification correctly.
 
-## When to use me
-
-Use this skill when building a **trigger service**. Action services can also call `notifyEventsAi` to report notable events or errors back to the Orchestrator — it's just an HTTP POST to the internal chat endpoint, available to any runtime.
-
----
+You can emit a named event (preferred) to fan out to all subscribed workflows, or target a specific workflow directly (legacy). Action services can also call `notifyEventsAi` to report notable events or errors back to the system.
 
 ## The notify helper
 
 This is a Deno/TypeScript implementation. For Podman pieces (Python, Go, etc.), implement the same logic: POST to `${OPENPIECES_INTERNAL_URL}/api/internal/chat` with the `x-internal-secret` header set to `INTERNAL_API_KEY`.
 
-### Deno helper
+### Deno — emit event by name (preferred)
 
-Place this in a shared `notify.ts` file and import it from your trigger service:
+Place this in a shared `notify.ts` file and import it from your service:
 
 ```ts
 // notify.ts
 export async function notifyEventsAi(
   content: string,
-  chatId?: string | null
+  options?: {
+    chatId?: string | null;
+    eventName?: string;
+    eventPayload?: Record<string, unknown>;
+  },
+): Promise<void> {
+  const workspaceId = Deno.env.get("OPENPIECES_WORKSPACE_ID")!;
+  const userId = Deno.env.get("OPENPIECES_USER_ID")!;
+  const serviceId = Deno.env.get("OPENPIECES_SERVICE_ID")!;
+  const apiKey = Deno.env.get("INTERNAL_API_KEY")!;
+  const internalUrl = Deno.env.get("OPENPIECES_INTERNAL_URL") ?? "http://app:3141";
+
+  const enrichedContent = `[serviceId: ${serviceId}]\n${
+    options?.eventName ? `[event: ${options.eventName}]` : ""
+  }\n\n${content}`;
+
+  const body: Record<string, unknown> = {
+    workspaceId,
+    userId,
+    serviceId,
+    content: enrichedContent,
+    chatId: options?.chatId ?? null,
+  };
+
+  if (options?.eventName) body.eventName = options.eventName;
+  if (options?.eventPayload) body.eventPayload = options.eventPayload;
+
+  const res = await fetch(`${internalUrl}/api/internal/chat`, {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      "x-internal-secret": apiKey,
+    },
+    body: JSON.stringify(body),
+  });
+
+  if (!res.ok) {
+    console.error(`Failed to notify orchestrator: ${res.status}`);
+  }
+}
+```
+
+### Deno — target specific workflow (legacy)
+
+Use this only when you need to trigger exactly one workflow by ID:
+
+```ts
+// notify.ts
+export async function notifyWorkflowDirectly(
+  content: string,
+  chatId?: string | null,
 ): Promise<void> {
   const workspaceId = Deno.env.get("OPENPIECES_WORKSPACE_ID")!;
   const userId = Deno.env.get("OPENPIECES_USER_ID")!;
@@ -63,21 +109,13 @@ export async function notifyEventsAi(
 }
 ```
 
-## When to call notifyEventsAi
-
-| Situation | What to include in content |
-|---|---|
-| Webhook received | Event type, key IDs, relevant payload fields |
-| Scheduled / poll job detects a change | What changed, new state, old state |
-| Notable error occurs | Enough context to retry or alert |
-
 ## Message format
 
 Concise but actionable — include the essential data only:
 
 ```
 [serviceId: <OPENPIECES_SERVICE_ID>]
-[workflowId: <OPENPIECES_WORKFLOW_ID>]
+[event: stripe.payment_intent.succeeded]
 
 Stripe webhook received: payment_intent.succeeded
 amount: 4900
@@ -99,9 +137,3 @@ payment_intent: pi_xyz789
 2. Extract relevant fields
 3. Call `notifyEventsAi` with a concise message containing the event details
 4. Return appropriate HTTP response to the caller (200 for success)
-
-## What trigger services do not do
-
-- Trigger services do **not** process business logic — they receive, validate, and forward
-- Trigger services do **not** call external APIs based on event content — that is the action service's job
-- Trigger services never respond with data payloads — just a confirmation status

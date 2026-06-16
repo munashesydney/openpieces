@@ -9,6 +9,7 @@ import {
 } from "@/lib/services/service.service";
 import { getTasksByWorkflowId } from "@/lib/services/task.service";
 import { getActionServicesForWorkflow } from "@/lib/services/workflow-action.service";
+import { getEventsForWorkflow, getEvents } from "@/lib/services/event.service";
 
 export default async function WorkflowDetailPage({
   params,
@@ -20,6 +21,8 @@ export default async function WorkflowDetailPage({
   const [
     [workflow, triggerServices, tasks, linkedActionServices],
     allServicesResult,
+    subscribedEvents,
+    allEventsResult,
   ] = await Promise.all([
     Promise.all([
       getWorkflowById(workflowId, workspaceId),
@@ -28,6 +31,8 @@ export default async function WorkflowDetailPage({
       getActionServicesForWorkflow(workflowId, workspaceId),
     ]),
     getServices(workspaceId, 1, 1000), // Get all services for linking sheet
+    getEventsForWorkflow(workflowId, workspaceId),
+    getEvents(workspaceId, 1, 100),
   ]);
 
   if (!workflow) notFound();
@@ -48,6 +53,8 @@ export default async function WorkflowDetailPage({
           tasks={tasks}
           linkedActionServices={linkedActionServices}
           availableActionServices={availableActionServices}
+          subscribedEvents={subscribedEvents}
+          availableEvents={allEventsResult.data}
         />
       </MainArea>
     </DashboardLayout>

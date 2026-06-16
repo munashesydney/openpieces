@@ -18,12 +18,21 @@ import { Button } from "@/components/basic/buttons/button";
 import { ActionMenu } from "@/components/basic/input/action-menu";
 import { Sheet } from "../ui/sheet";
 import { Dropdown } from "@/components/basic/input/dropdown";
-import { type Workflow, type Service, type Task } from "@/lib/db/schema";
+import {
+  type Workflow,
+  type Service,
+  type Task,
+  type Event,
+} from "@/lib/db/schema";
 import {
   deleteWorkflowAction,
   linkActionServiceToWorkflowAction,
   unlinkActionServiceFromWorkflowAction,
 } from "@/app/org/[ordId]/workspace/[workspaceId]/personal/workflows/actions";
+import {
+  subscribeWorkflowToEventAction,
+  unsubscribeWorkflowFromEventAction,
+} from "@/app/org/[ordId]/workspace/[workspaceId]/personal/events/actions";
 import Link from "next/link";
 import { WorkflowDeleteModal } from "./workflow-delete-modal";
 import { WorkflowSteps } from "./workflow-steps";
@@ -39,6 +48,8 @@ interface WorkflowDetailProps {
   tasks: Task[];
   linkedActionServices: Service[];
   availableActionServices: Service[];
+  subscribedEvents: Event[];
+  availableEvents: Event[];
 }
 
 export function WorkflowDetail({
@@ -49,6 +60,8 @@ export function WorkflowDetail({
   tasks,
   linkedActionServices,
   availableActionServices,
+  subscribedEvents,
+  availableEvents,
 }: WorkflowDetailProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -56,6 +69,9 @@ export function WorkflowDetail({
   const [selectedActionServiceId, setSelectedActionServiceId] = useState("");
   const [linkError, setLinkError] = useState<string | null>(null);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [isEventSheetOpen, setIsEventSheetOpen] = useState(false);
+  const [selectedEventId, setSelectedEventId] = useState("");
+  const [eventLinkError, setEventLinkError] = useState<string | null>(null);
   const handleDelete = () => {
     startTransition(async () => {
       await deleteWorkflowAction(workspaceId, workflow.id);
@@ -88,6 +104,35 @@ export function WorkflowDetail({
         workspaceId,
         workflow.id,
         actionServiceId,
+      );
+    });
+  };
+
+  const handleSubscribeEvent = async () => {
+    if (!selectedEventId) return;
+    setEventLinkError(null);
+    startTransition(async () => {
+      const result = await subscribeWorkflowToEventAction(
+        workspaceId,
+        workflow.id,
+        selectedEventId,
+      );
+      if ("error" in result) {
+        setEventLinkError(result.error);
+        return;
+      }
+      setIsEventSheetOpen(false);
+      setSelectedEventId("");
+      setEventLinkError(null);
+    });
+  };
+
+  const handleUnsubscribeEvent = (eventId: string) => {
+    startTransition(async () => {
+      await unsubscribeWorkflowFromEventAction(
+        workspaceId,
+        workflow.id,
+        eventId,
       );
     });
   };
@@ -230,6 +275,99 @@ export function WorkflowDetail({
                   </div>
                 )}
               </div>
+            </div>
+          )}
+        </div>
+
+        {/* Events: event subscriptions */}
+        <div className="space-y-4">
+          <div className="flex items-center justify-between px-1">
+            <div className="flex items-center gap-2">
+              <Zap className="h-4 w-4 text-[var(--secondary)]" />
+              <h2 className="text-sm font-bold uppercase tracking-wider text-[var(--muted)]">
+                Event Subscriptions
+              </h2>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-1"
+              onClick={() => {
+                setSelectedEventId("");
+                setEventLinkError(null);
+                setIsEventSheetOpen(true);
+              }}
+            >
+              <Plus className="h-3 w-3" />
+              Subscribe
+            </Button>
+          </div>
+
+          <Sheet
+            isOpen={isEventSheetOpen}
+            onClose={() => {
+              setIsEventSheetOpen(false);
+              setEventLinkError(null);
+              setSelectedEventId("");
+            }}
+            title="Subscribe to Event"
+            description="Choose an event to subscribe to. The workflow will be triggered when this event fires."
+            footer={<></>}
+          >
+            <div className="space-y-6">
+              <Dropdown
+                label="Event"
+                value={selectedEventId}
+                onChange={setSelectedEventId}
+                options={[
+                  { label: "Select an event...", value: "" },
+                  ...availableEvents
+                    .filter(
+                      (ev) => !subscribedEvents.some((sub) => sub.id === ev.id),
+                    )
+                    .map((ev) => ({
+                      label: ev.eventName,
+                      value: ev.id,
+                    })),
+                ]}
+              />
+
+              {eventLinkError && (
+                <div className="rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-500">
+                  {eventLinkError}
+                </div>
+              )}
+
+              <div className="mt-6 flex justify-end gap-3 border-t border-[var(--border)] pt-4">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={() => setIsEventSheetOpen(false)}
+                  disabled={isPending}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleSubscribeEvent}
+                  disabled={isPending || !selectedEventId}
+                >
+                  {isPending ? "Subscribing..." : "Subscribe"}
+                </Button>
+              </div>
+            </div>
+          </Sheet>
+
+          {subscribedEvents.length === 0 ? (
+            <EmptySlot label="No events subscribed. Subscribe to an event to trigger this workflow automatically." />
+          ) : (
+            <div className="flex flex-col gap-3">
+              {subscribedEvents.map((ev) => (
+                <SubscribedEventRow
+                  key={ev.id}
+                  event={ev}
+                  onUnsubscribe={() => handleUnsubscribeEvent(ev.id)}
+                />
+              ))}
             </div>
           )}
         </div>
@@ -470,6 +608,56 @@ function LinkedActionRow({
             {
               label: "Unlink",
               value: "unlink",
+              icon: <Unlink className="h-4 w-4" />,
+              destructive: true,
+            },
+          ]}
+        />
+      </div>
+    </Card>
+  );
+}
+
+function SubscribedEventRow({
+  event,
+  onUnsubscribe,
+}: {
+  event: { id: string; eventName: string; description: string | null };
+  onUnsubscribe: () => void;
+}) {
+  const [isPending, startTransition] = useTransition();
+
+  return (
+    <Card
+      className={`p-4 ${isPending ? "opacity-50 pointer-events-none" : ""}`}
+    >
+      <div className="flex items-center gap-4">
+        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[var(--secondary)]/10 text-[var(--secondary)]">
+          <Zap className="h-4 w-4" />
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-medium text-[var(--foreground)] truncate font-mono">
+            {event.eventName}
+          </p>
+          {event.description && (
+            <p className="text-xs text-[var(--muted)] truncate mt-0.5">
+              {event.description}
+            </p>
+          )}
+        </div>
+        <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--secondary)]">
+          event
+        </span>
+        <ActionMenu
+          onSelect={(val) => {
+            if (val === "unsubscribe") {
+              startTransition(onUnsubscribe);
+            }
+          }}
+          options={[
+            {
+              label: "Unsubscribe",
+              value: "unsubscribe",
               icon: <Unlink className="h-4 w-4" />,
               destructive: true,
             },

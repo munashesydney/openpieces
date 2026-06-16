@@ -46,7 +46,9 @@ export async function updateWorkflowAction(
 
   await updateWorkflow(workflowId, workspaceId, { title, description, status });
   revalidatePath(`/org/${orgId}/workspace/${workspaceId}/personal/workflows`);
-  revalidatePath(`/org/${orgId}/workspace/${workspaceId}/personal/workflows/${workflowId}`);
+  revalidatePath(
+    `/org/${orgId}/workspace/${workspaceId}/personal/workflows/${workflowId}`,
+  );
 }
 
 export async function deleteWorkflowAction(
@@ -76,7 +78,9 @@ export async function linkActionServiceToWorkflowAction(
     return { error: "Something went wrong. Please try again." };
   }
 
-  revalidatePath(`/org/${orgId}/workspace/${workspaceId}/personal/workflows/${workflowId}`);
+  revalidatePath(
+    `/org/${orgId}/workspace/${workspaceId}/personal/workflows/${workflowId}`,
+  );
   return { success: true };
 }
 
@@ -105,7 +109,9 @@ export async function unlinkActionServiceFromWorkflowAction(
     return { error: "Something went wrong. Please try again." };
   }
 
-  revalidatePath(`/org/${orgId}/workspace/${workspaceId}/personal/workflows/${workflowId}`);
+  revalidatePath(
+    `/org/${orgId}/workspace/${workspaceId}/personal/workflows/${workflowId}`,
+  );
   return { success: true };
 }
 
@@ -141,7 +147,9 @@ export async function addDetailedStepAction(
     return { error: "Something went wrong. Please try again." };
   }
 
-  revalidatePath(`/org/${orgId}/workspace/${workspaceId}/personal/workflows/${workflowId}`);
+  revalidatePath(
+    `/org/${orgId}/workspace/${workspaceId}/personal/workflows/${workflowId}`,
+  );
   return { success: true };
 }
 
@@ -184,7 +192,9 @@ export async function updateDetailedStepAction(
     return { error: "Something went wrong. Please try again." };
   }
 
-  revalidatePath(`/org/${orgId}/workspace/${workspaceId}/personal/workflows/${workflowId}`);
+  revalidatePath(
+    `/org/${orgId}/workspace/${workspaceId}/personal/workflows/${workflowId}`,
+  );
   return { success: true };
 }
 
@@ -284,7 +294,9 @@ export async function pushWorkflowToHubAction(
     hubUpdatedAt: new Date(),
   });
 
-  revalidatePath(`/org/${orgId}/workspace/${workspaceId}/personal/workflows/${workflowId}`);
+  revalidatePath(
+    `/org/${orgId}/workspace/${workspaceId}/personal/workflows/${workflowId}`,
+  );
   return { success: true, hubWorkflowId: result.hubWorkflowId };
 }
 
@@ -372,6 +384,8 @@ export async function deleteDetailedStepAction(
     return { error: "Something went wrong. Please try again." };
   }
 
-  revalidatePath(`/org/${orgId}/workspace/${workspaceId}/personal/workflows/${workflowId}`);
+  revalidatePath(
+    `/org/${orgId}/workspace/${workspaceId}/personal/workflows/${workflowId}`,
+  );
   return { success: true };
 }

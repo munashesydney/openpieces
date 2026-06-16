@@ -45,6 +45,7 @@ export const AGENT_TOOL_POLICY: Record<
     call_endpoint: "all",
     manage_workflow_action_links: "all",
     manage_brain: "all",
+    manage_events: "all",
     runtime: "all",
     web_search: "all",
   },
@@ -60,6 +61,7 @@ export const AGENT_TOOL_POLICY: Record<
     manage_service_endpoints: ["list", "get"],
     manage_workflow_action_links: ["list_linked"],
     manage_brain: ["list", "search", "get"],
+    manage_events: ["list", "get", "list_subscriptions"],
     // runtime's own definition strips spawn_agent for non-spawner agent types
     runtime: "all",
     web_search: "all",
@@ -76,6 +78,7 @@ export const AGENT_TOOL_POLICY: Record<
     manage_secrets: ["list", "get"],
     manage_service_endpoints: ["list", "get"],
     manage_workflow_action_links: ["list_linked"],
+    manage_events: ["list", "get", "list_subscriptions"],
     runtime: "all",
     web_search: "all",
   },
@@ -91,6 +94,7 @@ export const AGENT_TOOL_POLICY: Record<
     manage_service_endpoints: ["list", "get"],
     manage_workflow_action_links: ["list_linked"],
     manage_brain: ["list", "search", "get"],
+    manage_events: ["list", "get", "list_subscriptions"],
     runtime: "all",
     web_search: "all",
   },
@@ -107,6 +111,7 @@ export const AGENT_TOOL_POLICY: Record<
     manage_service_endpoints: ["list", "get"],
     manage_workflow_action_links: ["list_linked"],
     manage_brain: "all",
+    manage_events: ["list", "get", "list_subscriptions"],
     // runtime's own definition permits spawn_agent → orchestrator for "events"
     runtime: "all",
     web_search: "all",
@@ -142,6 +147,7 @@ export const DO_ACTIONS: Record<string, Set<string> | "__all__"> = {
   call_endpoint: "__all__",
   manage_workflow_action_links: new Set(["link", "unlink"]),
   manage_brain: new Set(["create", "update", "delete"]),
+  manage_events: new Set(["create", "update", "delete"]),
   runtime: new Set(["spawn_agent"]),
 };
 

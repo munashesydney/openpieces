@@ -127,6 +127,13 @@
       "when": 1781474063000,
       "tag": "0017_opencode_skip_activity",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1781593715229,
+      "tag": "0018_tricky_glorian",
+      "breakpoints": true
     }
   ]
 }

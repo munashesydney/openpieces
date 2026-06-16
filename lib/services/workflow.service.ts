@@ -1,12 +1,19 @@
 import { eq, and, count } from "drizzle-orm";
 import { db } from "../db";
-import { workflows, services, tasks, type NewWorkflow, type Workflow } from "../db/schema";
+import {
+  workflows,
+  services,
+  tasks,
+  eventSubscriptions,
+  type NewWorkflow,
+  type Workflow,
+} from "../db/schema";
 import { isValidUuid } from "../utils/uuid";
 
 export async function getWorkflows(
   workspaceId: string,
   page: number = 1,
-  pageSize: number = 10
+  pageSize: number = 10,
 ): Promise<{ data: Workflow[]; total: number }> {
   if (!isValidUuid(workspaceId)) return { data: [], total: 0 };
 
@@ -34,14 +41,16 @@ export async function getWorkflows(
 
 export async function getWorkflowById(
   workflowId: string,
-  workspaceId: string
+  workspaceId: string,
 ): Promise<Workflow | null> {
   if (!isValidUuid(workflowId) || !isValidUuid(workspaceId)) return null;
 
   const result = await db
     .select()
     .from(workflows)
-    .where(and(eq(workflows.id, workflowId), eq(workflows.workspaceId, workspaceId)))
+    .where(
+      and(eq(workflows.id, workflowId), eq(workflows.workspaceId, workspaceId)),
+    )
     .limit(1);
 
   return result[0] ?? null;
@@ -55,19 +64,21 @@ export async function createWorkflow(data: NewWorkflow): Promise<Workflow> {
 export async function updateWorkflow(
   workflowId: string,
   workspaceId: string,
-  data: Partial<NewWorkflow>
+  data: Partial<NewWorkflow>,
 ): Promise<Workflow> {
   const result = await db
     .update(workflows)
     .set({ ...data, updatedAt: new Date() })
-    .where(and(eq(workflows.id, workflowId), eq(workflows.workspaceId, workspaceId)))
+    .where(
+      and(eq(workflows.id, workflowId), eq(workflows.workspaceId, workspaceId)),
+    )
     .returning();
   return result[0];
 }
 
 export async function deleteWorkflow(
   workflowId: string,
-  workspaceId: string
+  workspaceId: string,
 ): Promise<boolean> {
   if (!isValidUuid(workflowId) || !isValidUuid(workspaceId)) return false;
 
@@ -75,17 +86,42 @@ export async function deleteWorkflow(
     // Delete all services linked to this workflow
     await tx
       .delete(services)
-      .where(and(eq(services.workflowId, workflowId), eq(services.workspaceId, workspaceId)));
+      .where(
+        and(
+          eq(services.workflowId, workflowId),
+          eq(services.workspaceId, workspaceId),
+        ),
+      );
+
+    // Delete all event subscriptions linked to this workflow
+    await tx
+      .delete(eventSubscriptions)
+      .where(
+        and(
+          eq(eventSubscriptions.workflowId, workflowId),
+          eq(eventSubscriptions.workspaceId, workspaceId),
+        ),
+      );
 
     // Delete all tasks linked to this workflow
     await tx
       .delete(tasks)
-      .where(and(eq(tasks.workflowId, workflowId), eq(tasks.workspaceId, workspaceId)));
+      .where(
+        and(
+          eq(tasks.workflowId, workflowId),
+          eq(tasks.workspaceId, workspaceId),
+        ),
+      );
 
     // Now delete the workflow itself
     const result = await tx
       .delete(workflows)
-      .where(and(eq(workflows.id, workflowId), eq(workflows.workspaceId, workspaceId)))
+      .where(
+        and(
+          eq(workflows.id, workflowId),
+          eq(workflows.workspaceId, workspaceId),
+        ),
+      )
       .returning({ id: workflows.id });
 
     return result.length > 0;

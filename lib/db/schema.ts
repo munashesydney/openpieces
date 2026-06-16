@@ -82,6 +82,62 @@ export const workflows = pgTable("workflows", {
 export type Workflow = typeof workflows.$inferSelect;
 export type NewWorkflow = typeof workflows.$inferInsert;
 
+// ── Events ────────────────────────────────────────────────────────────────────
+
+export const events = pgTable(
+  "events",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    workspaceId: uuid("workspace_id")
+      .notNull()
+      .references(() => workspaces.id, { onDelete: "cascade" }),
+    eventName: text("event_name").notNull(),
+    description: text("description").notNull().default(""),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (table) => [
+    uniqueIndex("events_workspace_name_idx").on(
+      table.workspaceId,
+      table.eventName,
+    ),
+    index("events_workspace_id_idx").on(table.workspaceId),
+  ],
+);
+
+export type Event = typeof events.$inferSelect;
+export type NewEvent = typeof events.$inferInsert;
+
+export const eventSubscriptions = pgTable(
+  "event_subscriptions",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    workspaceId: uuid("workspace_id")
+      .notNull()
+      .references(() => workspaces.id, { onDelete: "cascade" }),
+    workflowId: uuid("workflow_id")
+      .notNull()
+      .references(() => workflows.id, { onDelete: "cascade" }),
+    eventId: uuid("event_id")
+      .notNull()
+      .references(() => events.id, { onDelete: "cascade" }),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => [
+    uniqueIndex("event_sub_workflow_event_idx").on(
+      table.workflowId,
+      table.eventId,
+    ),
+    index("event_sub_event_idx").on(table.eventId),
+    index("event_sub_workflow_idx").on(table.workflowId),
+  ],
+);
+
+export type EventSubscription = typeof eventSubscriptions.$inferSelect;
+export type NewEventSubscription = typeof eventSubscriptions.$inferInsert;
+
+// ── Tasks ─────────────────────────────────────────────────────────────────────
+
 export const tasks = pgTable("tasks", {
   id: uuid("id").defaultRandom().primaryKey(),
   workspaceId: uuid("workspace_id")
@@ -484,8 +540,12 @@ export const workflowExecutions = pgTable("workflow_executions", {
     onDelete: "set null",
   }),
   taskId: uuid("task_id").references(() => tasks.id, { onDelete: "set null" }),
+  eventId: uuid("event_id").references(() => events.id, {
+    onDelete: "set null",
+  }),
+  eventPayload: jsonb("event_payload"),
   triggerType: text("trigger_type", {
-    enum: ["internal_chat", "task"],
+    enum: ["internal_chat", "task", "event"],
   }).notNull(),
   status: text("status", {
     enum: ["pending", "running", "completed", "failed", "cancelled"],
@@ -546,9 +606,7 @@ export const webhooks = pgTable(
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().notNull(),
   },
-  (table) => [
-    index("webhooks_workspace_id_idx").on(table.workspaceId),
-  ],
+  (table) => [index("webhooks_workspace_id_idx").on(table.workspaceId)],
 );
 
 export type WebhookRow = typeof webhooks.$inferSelect;
@@ -591,10 +649,19 @@ export const aiUsage = pgTable(
     workspaceId: uuid("workspace_id")
       .notNull()
       .references(() => workspaces.id, { onDelete: "cascade" }),
-    userId: uuid("user_id").references(() => users.id, { onDelete: "set null" }),
-    chatId: uuid("chat_id").references(() => aiChats.id, { onDelete: "set null" }),
-    messageId: uuid("message_id").references(() => aiMessages.id, { onDelete: "set null" }),
-    opencodeSessionId: text("opencode_session_id").references(() => opencodeSessions.sessionId, { onDelete: "set null" }),
+    userId: uuid("user_id").references(() => users.id, {
+      onDelete: "set null",
+    }),
+    chatId: uuid("chat_id").references(() => aiChats.id, {
+      onDelete: "set null",
+    }),
+    messageId: uuid("message_id").references(() => aiMessages.id, {
+      onDelete: "set null",
+    }),
+    opencodeSessionId: text("opencode_session_id").references(
+      () => opencodeSessions.sessionId,
+      { onDelete: "set null" },
+    ),
     agentType: text("agent_type").notNull(),
     model: text("model").notNull(),
     promptTokens: integer("prompt_tokens").notNull().default(0),
@@ -612,4 +679,3 @@ export const aiUsage = pgTable(
 
 export type AiUsageRow = typeof aiUsage.$inferSelect;
 export type NewAiUsageRow = typeof aiUsage.$inferInsert;
-

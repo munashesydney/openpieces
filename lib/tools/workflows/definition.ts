@@ -5,15 +5,37 @@ const workflowStatusEnum = z.enum(["active", "archived"]);
 export const workflowToolDefinition = {
   name: "manage_workflows",
   description:
-    "Manage workflows in the workspace. Use to list workflows, get one by id, create, update, or delete a workflow.",
+    "Manage workflows in the workspace. Use to list workflows, get one by id, create, update, delete a workflow, or manage event subscriptions (subscribe/unsubscribe).",
   inputSchema: z.object({
     action: z
-      .enum(["list", "get", "create", "update", "delete"])
+      .enum([
+        "list",
+        "get",
+        "create",
+        "update",
+        "delete",
+        "subscribe",
+        "unsubscribe",
+      ])
       .describe("The action to perform"),
     workflowId: z
       .string()
       .optional()
-      .describe("Workflow ID. Required for get, update, and delete actions."),
+      .describe(
+        "Workflow ID. Required for get, update, delete, subscribe, and unsubscribe actions.",
+      ),
+    eventName: z
+      .string()
+      .optional()
+      .describe(
+        "Event name (e.g. 'stripe.payment_intent.succeeded'). Used with subscribe action to subscribe by event name.",
+      ),
+    eventId: z
+      .string()
+      .optional()
+      .describe(
+        "Event ID. Used with subscribe and unsubscribe actions to specify the event.",
+      ),
     page: z
       .number()
       .optional()
