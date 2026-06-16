@@ -1,4 +1,4 @@
-import { asc, eq, and } from "drizzle-orm";
+import { asc, eq, and, isNull } from "drizzle-orm";
 import { db } from "../db";
 import { workspaces, type NewWorkspace, type Workspace } from "../db/schema";
 
@@ -25,11 +25,18 @@ export async function createWorkspace(
   return result[0];
 }
 
-export async function getUserWorkspaces(userId: string): Promise<Workspace[]> {
+export async function getUserWorkspaces(
+  userId: string,
+  includeDeactivated = false,
+): Promise<Workspace[]> {
+  const conditions = [eq(workspaces.userId, userId)];
+  if (!includeDeactivated) {
+    conditions.push(isNull(workspaces.deactivatedAt));
+  }
   return db
     .select()
     .from(workspaces)
-    .where(eq(workspaces.userId, userId))
+    .where(and(...conditions))
     .orderBy(asc(workspaces.createdAt));
 }
 
