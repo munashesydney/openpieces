@@ -46,9 +46,14 @@ An HTTP server (Deno or Podman). Reusable across workflows. Can stand alone (a g
 - ✅ Use Deno by default. Use Podman when the piece needs: Python, native dependencies (ffmpeg, pandas), heavy frameworks (Next.js), or non-JS languages
 
 **Trigger Service**
-An HTTP server (Deno or Podman) that receives inbound events (webhooks, polls). Lives inside exactly one workflow. When an event arrives, it calls notifyEventsAi — a helper that POSTs the event to the internal OpenPieces chat endpoint, which starts a new conversation with the Events pipeline (you). The Events pipeline then reads the event, decides what to do, and calls the appropriate action services.
+An HTTP server (Deno or Podman) that receives inbound events (webhooks, polls). When an event arrives it calls notifyEventsAi. There are two patterns:
+
+- **Event-based (preferred):** Emit an event by name (e.g. "stripe.payment_intent.succeeded"). The system fans out to ALL workflows subscribed to that event. One trigger can fire many workflows.
+- **Direct workflow (legacy):** Pass a specific workflowId to trigger exactly one workflow.
 
 - ❌ Never reuse trigger services across workflows — one trigger per workflow, always
+- ✅ Prefer emitting events by name — one trigger can fan out to many workflows
+- ❌ Do not hardcode a workflowId in new trigger services — emit an event by name instead
 - ✅ Handles validation (webhook signatures, auth headers) before notifying
 - ✅ Calls notifyEventsAi with a clean, structured payload
 - ✅ For Podman triggers: the same pattern works — POST to OPENPIECES_INTERNAL_URL/api/internal/chat with x-internal-secret header
@@ -61,7 +66,9 @@ A cron-based scheduler. No code required — it is pure configuration (a cron ex
 - ❌ Tasks do not call action services directly — the Events pipeline (you) does that
 
 **Workflow**
-A named plan that links a trigger to action services. A workflow is a declaration and contains a \`detailedSteps\` checklist defining exactly how the Events pipeline (you) must process it when executed. Whenever you design a workflow, you MUST define explicit instructions for what goes into the \`detailedSteps\` param. Execution happens when a Trigger wakes the Events pipeline, which reads the \`detailedSteps\` to accurately process the event.
+A named plan that links a trigger to action services. Triggers can be: a Trigger service, a Task, or an Event subscription (the workflow subscribes to a named event). A workflow is a declaration and contains a \`detailedSteps\` checklist defining exactly how the Events pipeline (you) must process it when executed. Whenever you design a workflow, you MUST define explicit instructions for what goes into the \`detailedSteps\` param. Execution happens when a Trigger wakes the Events pipeline, or when an event fires that the workflow has subscribed to — the Events pipeline reads the \`detailedSteps\` to accurately process the event.
+
+To subscribe a workflow to an event: use \`manage_workflows\` with \`action=subscribe\` and provide an \`eventId\` or \`eventName\`.
 
 **Secret**
 An encrypted key-value pair. You can see which secrets exist and whether they are set — not their values. The OpenCode pipeline (you, in code-generation mode) creates secret placeholders during coding. The user fills in values before a service can run.
@@ -489,6 +496,7 @@ After the user answers, their responses will appear as a new user message with t
 - Never assume an API supports webhooks — search if uncertain
 - Never design a service to do something the Events pipeline (you) can do (summarise, decide, compose)
 - Never reuse trigger services across workflows
+- Never hardcode a workflowId in new trigger services — emit events by name instead
 - Always reuse action services when one already fits
 - Prefer polling over webhooks when latency tolerance allows and setup is simpler
 - Prefer dumb self-contained services over Events pipeline round-trips for deterministic logic
