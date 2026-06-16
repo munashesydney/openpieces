@@ -1,6 +1,6 @@
 ---
 name: proxy-routing
-description: URL construction and WebSocket limitation for OpenPieces services
+description: URL construction and WebSocket support for OpenPieces services
 license: MIT
 compatibility: opencode
 metadata:
@@ -42,28 +42,11 @@ return new Response(null, {
 
 ---
 
-## WebSocket limitation
+## WebSocket support
 
-The proxy uses `fetch()` internally, which cannot perform a WebSocket handshake. `Deno.upgradeWebSocket(req)` will fail.
+WebSocket works normally behind the proxy — both inbound (server-side upgrade) and outbound (client-side connect).
 
-Use HTTP short polling instead:
-
-```js
-var res = await fetch('/api/join?room=' + roomCode, { method: 'POST' });
-var data = await res.json();
-
-setInterval(async function() {
-  var res = await fetch('/api/state?room=' + roomCode);
-  var data = await res.json();
-  if (data.ready) { /* update UI */ }
-}, 1000);
-
-await fetch('/api/move', {
-  method: 'POST',
-  headers: { 'content-type': 'application/json' },
-  body: JSON.stringify({ room: roomCode, action: actionData })
-});
-```
+Each service has its own subdomain origin, so standard WebSocket handshakes resolve correctly without any special configuration.
 
 ---
 
@@ -80,5 +63,4 @@ Serve assets from a `static/` directory. Reference with absolute paths:
 
 ## What NOT to do
 
-- ❌ WebSocket — `fetch()` cannot upgrade connections
 - ❌ Hardcoding service IDs in URLs — use `OPENPIECES_SERVICE_PUBLIC_URL` for server-to-server calls

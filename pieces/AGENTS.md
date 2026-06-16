@@ -71,18 +71,9 @@ All OpenPieces services run behind a proxy. Each service gets its own subdomain 
 
 | Skill | What it covers |
 |---|---|
-| `proxy-routing` | URL construction, WebSocket limitation, static asset serving |
+| `proxy-routing` | URL construction, WebSocket support, static asset serving |
 | `server-routing` | Server-side path matching, route priority ordering |
 | `public-url` | The only legitimate uses of `OPENPIECES_SERVICE_PUBLIC_URL` (server-to-server and webhooks only) |
-
-### 🚫 WebSocket is Banned
-
-The proxy uses `fetch()` internally to forward requests. The `fetch()` API **cannot** perform a WebSocket handshake — `Deno.upgradeWebSocket(req)` will always fail behind the proxy.
-
-- **Do NOT use WebSocket** in any service
-- **Do use HTTP short polling** instead — see the `proxy-routing` skill for the pattern
-
-This is not a style choice. WebSocket will literally not work. Any service that relies on it will be broken in production.
 
 ---
 
@@ -97,7 +88,7 @@ Skills live in `.opencode/skills/<name>/SKILL.md` relative to the pieces root. R
 | `service-boilerplate` | Every new **Deno** service — the canonical `Deno.serve` template, port from args, `/health` endpoint |
 | `podman-runtime` | Every **Podman** service — `piece.json` schema, `Dockerfile`, scaffold workflow, resource limits, `/health` requirement |
 | `file-storage` | When persisting state — SQLite, file I/O, JSON storage patterns |
-| `proxy-routing` | When serving HTML or client-side JS — URL construction, WebSocket limitation, static assets |
+| `proxy-routing` | When serving HTML or client-side JS — URL construction, WebSocket support, static assets |
 | `server-routing` | When writing route handlers — path matching, priority ordering |
 | `public-url` | When constructing server-to-server URLs or webhook callbacks — the only legitimate use of `OPENPIECES_SERVICE_PUBLIC_URL` |
 | `environment-secrets` | When using `Deno.env.get()` for user-supplied credentials — secrets tool workflow, required secrets |
