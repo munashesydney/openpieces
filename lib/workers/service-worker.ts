@@ -371,6 +371,7 @@ async function executeServiceSpawnJob(job: ServiceSpawnJob) {
     LD_LIBRARY_PATH: "/opt/deno-glibc",
     NODE_ENV: "production",
     PORT: port.toString(),
+    INTERNAL_API_KEY: process.env.INTERNAL_API_KEY?.toString(),
     OPENPIECES_USER_ID: workspaceOwnerId,
     OPENPIECES_WORKSPACE_ID: service.workspaceId,
     OPENPIECES_SERVICE_ID: serviceId,
@@ -575,7 +576,7 @@ async function executeServiceSpawnJob(job: ServiceSpawnJob) {
       // child process / container so it doesn't become a zombie.
       if (runtime === "podman") {
         const containerName = containerNameForService(serviceId);
-        stopContainer(containerName).catch(() => { });
+        stopContainer(containerName).catch(() => {});
         _containerIds.delete(serviceId);
       } else if (proc.pid) {
         try {
@@ -651,7 +652,7 @@ async function executeServiceSpawnJob(job: ServiceSpawnJob) {
     // Kill the unresponsive child process / container so it doesn't linger
     if (runtime === "podman") {
       const containerName = containerNameForService(serviceId);
-      stopContainer(containerName).catch(() => { });
+      stopContainer(containerName).catch(() => {});
       _containerIds.delete(serviceId);
     } else if (proc.pid) {
       try {
@@ -679,10 +680,10 @@ async function sendSpawnFailureMessage(
     // Extract last 10 lines for a concise error message
     const lastLines = logTail
       ? logTail
-        .split("\n")
-        .filter((l) => l.trim())
-        .slice(-10)
-        .join("\n")
+          .split("\n")
+          .filter((l) => l.trim())
+          .slice(-10)
+          .join("\n")
       : "";
 
     const { sendMessage } = await import("@/lib/services/opencode.service");
@@ -1117,16 +1118,16 @@ export async function startServiceWorker() {
         } catch (updateError) {
           const targetStatus =
             error instanceof Error &&
-              (error.message.includes("has no index.ts") ||
-                error.message.includes("has no Dockerfile") ||
-                error.message.includes(`missing required "image"`) ||
-                error.message.includes(`missing required "entrypoint"`) ||
-                error.message.includes("podman is not available") ||
-                error.message.includes("podman feature flag is disabled") ||
-                error.message.includes("Missing or empty required secrets") ||
-                error.message.includes(
-                  "is already being spawned by another worker",
-                ))
+            (error.message.includes("has no index.ts") ||
+              error.message.includes("has no Dockerfile") ||
+              error.message.includes(`missing required "image"`) ||
+              error.message.includes(`missing required "entrypoint"`) ||
+              error.message.includes("podman is not available") ||
+              error.message.includes("podman feature flag is disabled") ||
+              error.message.includes("Missing or empty required secrets") ||
+              error.message.includes(
+                "is already being spawned by another worker",
+              ))
               ? "stopped"
               : "crashed";
           console.error(
