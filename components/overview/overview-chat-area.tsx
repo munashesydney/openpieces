@@ -17,6 +17,7 @@ export type ChatMessage = {
   toolCalls: AiToolCall[];
   toolResults: AiToolResult[];
   attachments: FileAttachment[];
+  createdAt?: string;
 };
 
 export type ContextInfo = {
@@ -203,6 +204,7 @@ export function OverviewChatArea({
                       isStreaming={isStreaming}
                       onQuestionSubmit={onQuestionSubmit}
                       isFollowedByUserMessage={isFollowedByUserMessage}
+                      createdAt={msg.createdAt}
                     />
                   )}
                 </div>

@@ -68,6 +68,7 @@ function mapMessage(message: AiChatMessage): ChatMessage {
     toolCalls: message.toolCalls,
     toolResults: message.toolResults,
     attachments: message.attachments ?? [],
+    createdAt: message.createdAt,
   };
 }
 
@@ -259,6 +260,7 @@ export function OverviewPersonalView({
       toolCalls: [],
       toolResults: [],
       attachments: attachments ?? [],
+      createdAt: new Date().toISOString(),
     };
 
     const optimisticAssistant: ChatMessage = {
@@ -270,6 +272,7 @@ export function OverviewPersonalView({
       toolCalls: [],
       toolResults: [],
       attachments: [],
+      createdAt: new Date().toISOString(),
     };
 
     setIsSending(true);
