@@ -363,7 +363,7 @@ async function executeServiceSpawnJob(job: ServiceSpawnJob) {
 
   // ── Build the common environment object ───────────────────────────────
   const baseEnv = {
-    ...process.env,
+    //...process.env, //commented this out because it unnecessarry
     ...secretEnv,
   };
   const commonEnv = {
