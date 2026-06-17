@@ -1,6 +1,6 @@
 {
-  "id": "075ef721-8b01-4286-9620-084642608004",
-  "prevId": "0017_opencode_skip_activity",
+  "id": "0019_event_triggers",
+  "prevId": "075ef721-8b01-4286-9620-084642608004",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
