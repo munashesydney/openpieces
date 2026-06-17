@@ -14,7 +14,7 @@ import { getServicesByWorkflowId } from "@/lib/services/service.service";
 import { getWorkflowById } from "@/lib/services/workflow.service";
 import { getActionServicesForWorkflow } from "@/lib/services/workflow-action.service";
 import { getEndpointsByServiceId } from "@/lib/services/service-endpoint.service";
-import { getEventById, createOrGetEvent } from "@/lib/services/event.service";
+import { getEventById, getEventByName } from "@/lib/services/event.service";
 
 type InternalChatRequestBody = {
   workspaceId: string;
@@ -256,14 +256,14 @@ export async function POST(request: NextRequest) {
         }
         effectiveEventId = eventId;
       } else if (eventName) {
-        try {
-          resolvedEvent = await createOrGetEvent(workspaceId, eventName);
-          effectiveEventId = resolvedEvent.id;
-        } catch (err) {
-          const message =
-            err instanceof Error ? err.message : "Invalid event name";
-          return NextResponse.json({ error: message }, { status: 400 });
+        resolvedEvent = await getEventByName(workspaceId, eventName);
+        if (!resolvedEvent) {
+          return NextResponse.json(
+            { error: `Event not found: ${eventName}` },
+            { status: 404 },
+          );
         }
+        effectiveEventId = resolvedEvent.id;
       }
 
       // Create workflow executions for all subscribed workflows

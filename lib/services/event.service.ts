@@ -72,24 +72,6 @@ export async function getEventByName(
   return result[0] ?? null;
 }
 
-export async function createOrGetEvent(
-  workspaceId: string,
-  eventName: string,
-): Promise<Event> {
-  if (!eventName.startsWith("op.")) {
-    throw new Error("Event name must start with 'op.'");
-  }
-
-  const existing = await getEventByName(workspaceId, eventName);
-  if (existing) return existing;
-
-  const result = await db
-    .insert(events)
-    .values({ workspaceId, eventName })
-    .returning();
-  return result[0];
-}
-
 export async function createEvent(data: NewEvent): Promise<Event> {
   if (!data.eventName.startsWith("op.")) {
     throw new Error("Event name must start with 'op.'");
