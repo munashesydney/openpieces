@@ -644,13 +644,19 @@ export async function appendUserMessageAndMarkPending(input: {
 
   // Fire off AI title generation for first message (don't await — it's non-critical)
   if (existingMessages.length === 0) {
-    generateChatTitle(input.content, input.chatId).then((aiTitle) => {
-      if (aiTitle) {
-        updateAiChatStatus(input.chatId, "pending", { title: aiTitle }).catch(
-          () => {},
-        );
-      }
+    const chat = await db.query.aiChats.findFirst({
+      where: eq(aiChats.id, input.chatId),
     });
+
+    if (chat?.agentType === "orchestrator") {
+      generateChatTitle(input.content, input.chatId).then((aiTitle) => {
+        if (aiTitle) {
+          updateAiChatStatus(input.chatId, "pending", { title: aiTitle }).catch(
+            () => {},
+          );
+        }
+      });
+    }
   }
 
   return message;

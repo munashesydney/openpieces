@@ -18,6 +18,7 @@ import { endpointsToolDefinition } from "@/lib/tools/service-endpoints/definitio
 import { callEndpointToolDefinition } from "@/lib/tools/call-endpoint/definition";
 import { workflowActionLinksToolDefinition } from "@/lib/tools/workflow-action-links/definition";
 import { brainToolDefinition } from "@/lib/tools/brain/definition";
+import { eventsToolDefinition } from "@/lib/tools/events/definition";
 import { webSearchToolDefinition } from "@/lib/tools/web-search/definition";
 
 // ── Tool execute functions ──
@@ -31,6 +32,7 @@ import { executeEndpoints } from "@/lib/tools/service-endpoints/execute";
 import { executeCallEndpoint } from "@/lib/tools/call-endpoint/execute";
 import { executeWorkflowActionLinks } from "@/lib/tools/workflow-action-links/execute";
 import { executeBrainTool } from "@/lib/tools/brain/execute";
+import { executeEventsTool } from "@/lib/tools/events/execute";
 import { executeWebSearchTool } from "@/lib/tools/web-search/execute";
 
 export type ToolContext = {
@@ -244,6 +246,13 @@ export function createTools(context: ToolContext) {
     "manage_brain",
     brainToolDefinition,
     executeBrainTool,
+    context,
+  );
+  addIfAllowed(
+    tools,
+    "manage_events",
+    eventsToolDefinition,
+    executeEventsTool,
     context,
   );
   addIfAllowed(

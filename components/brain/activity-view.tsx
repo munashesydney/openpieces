@@ -12,11 +12,20 @@ import {
   Route,
   ArrowRight,
   RefreshCw,
+  Zap,
+  Link2,
 } from "lucide-react";
 import { Button } from "@/components/basic/buttons/button";
 import type { ActivityLog } from "../../lib/db/schema";
 
-type SearchMode = "workflows" | "services" | "tasks" | "endpoints" | "opencode";
+type SearchMode =
+  | "workflows"
+  | "services"
+  | "tasks"
+  | "endpoints"
+  | "opencode"
+  | "events"
+  | "event_subscriptions";
 
 const modeConfig: Record<
   SearchMode,
@@ -27,6 +36,12 @@ const modeConfig: Record<
   tasks: { label: "Tasks", icon: Calendar, recordType: "task" },
   endpoints: { label: "Endpoints", icon: Route, recordType: "endpoint" },
   opencode: { label: "OpenCode", icon: Code, recordType: "opencode" },
+  events: { label: "Events", icon: Zap, recordType: "event" },
+  event_subscriptions: {
+    label: "Subscriptions",
+    icon: Link2,
+    recordType: "event_subscription",
+  },
 };
 
 const PAGE_LIMIT = 50;

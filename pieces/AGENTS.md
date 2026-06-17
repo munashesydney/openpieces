@@ -60,6 +60,7 @@ For services that need a non-Deno runtime or native dependencies:
    - Rust: `cargo check`
    - Fix any errors, repeat until clean
 5. **Deploy** — write `piece.json` + `Dockerfile`. The scaffold includes both for Node.js scaffolds; for other languages write them yourself (see the `podman-runtime` skill). The worker reads `piece.json`, builds the image, and spawns the container.
+6. **Port comes from `$PORT`** — the worker injects a `PORT` environment variable. Read it, don't hardcode. See the `podman-runtime` skill for details.
 
 ---
 

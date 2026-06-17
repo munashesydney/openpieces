@@ -3,6 +3,7 @@
 import {
   LayoutDashboard,
   Workflow,
+  Zap,
   Calendar,
   Settings,
   Shield,
@@ -100,6 +101,12 @@ export function Header() {
       activePattern: prefix ? `${prefix}/personal/workflows` : "/workflows",
     },
     {
+      label: "Events",
+      href: prefix ? `${prefix}/personal/events` : "/events",
+      icon: Zap,
+      activePattern: prefix ? `${prefix}/personal/events` : "/events",
+    },
+    {
       label: "Pieces",
       href: prefix ? `${prefix}/personal/services` : "/services",
       icon: Puzzle,
@@ -183,19 +190,25 @@ export function Header() {
       label: "Webhooks",
       href: prefix ? `${prefix}/developers/webhooks` : "/developers/webhooks",
       icon: Webhook,
-      activePattern: prefix ? `${prefix}/developers/webhooks` : "/developers/webhooks",
+      activePattern: prefix
+        ? `${prefix}/developers/webhooks`
+        : "/developers/webhooks",
     },
     {
       label: "Workbench",
       href: prefix ? `${prefix}/developers/workbench` : "/developers/workbench",
       icon: Activity,
-      activePattern: prefix ? `${prefix}/developers/workbench` : "/developers/workbench",
+      activePattern: prefix
+        ? `${prefix}/developers/workbench`
+        : "/developers/workbench",
     },
     {
       label: "Usage",
       href: prefix ? `${prefix}/developers/usage` : "/developers/usage",
       icon: LineChart,
-      activePattern: prefix ? `${prefix}/developers/usage` : "/developers/usage",
+      activePattern: prefix
+        ? `${prefix}/developers/usage`
+        : "/developers/usage",
     },
   ];
 
@@ -212,7 +225,8 @@ export function Header() {
       label: "Personal",
       href: personalHref,
       icon: User,
-      active: personalActive && !brainActive && !settingsActive && !developersActive,
+      active:
+        personalActive && !brainActive && !settingsActive && !developersActive,
     },
     {
       label: "Brain",
