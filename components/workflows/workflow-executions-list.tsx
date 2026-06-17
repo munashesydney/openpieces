@@ -242,7 +242,11 @@ function ExecutionCard({ execution }: { execution: WorkflowExecution }) {
                 <span
                   className={`rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider ${config.bg} ${config.color}`}
                 >
-                  {execution.triggerType === "internal_chat" ? "Chat" : "Task"}
+                  {execution.triggerType === "internal_chat"
+                    ? "Chat"
+                    : execution.triggerType === "event"
+                      ? "Event"
+                      : "Task"}
                 </span>
               </div>
               <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-[var(--muted)]">
