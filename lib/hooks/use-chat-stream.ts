@@ -33,6 +33,7 @@ function toChatMessage(msg: AiChatMessage): ChatMessage {
     toolCalls: msg.toolCalls,
     toolResults: msg.toolResults,
     attachments: msg.attachments ?? [],
+    createdAt: msg.createdAt,
   };
 }
 

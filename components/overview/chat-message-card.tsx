@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { ChevronDown, ChevronRight } from "lucide-react";
 import type { AiToolCall, AiToolResult } from "@/lib/ai-chat/types";
 import { ChatToolCalls } from "./chat-tool-calls";
@@ -25,6 +25,45 @@ function parseToolOutput(raw: unknown): SpawnResult {
   return raw as SpawnResult;
 }
 
+function formatTimestamp(iso?: string): string {
+  if (!iso) return "";
+  const date = new Date(iso);
+  if (isNaN(date.getTime())) return "";
+
+  const now = new Date();
+  const isToday =
+    date.getFullYear() === now.getFullYear() &&
+    date.getMonth() === now.getMonth() &&
+    date.getDate() === now.getDate();
+  const yesterday = new Date(now);
+  yesterday.setDate(yesterday.getDate() - 1);
+  const isYesterday =
+    date.getFullYear() === yesterday.getFullYear() &&
+    date.getMonth() === yesterday.getMonth() &&
+    date.getDate() === yesterday.getDate();
+
+  const time = date.toLocaleTimeString("en-US", {
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true,
+  });
+
+  if (isToday) return `Today at ${time}`;
+  if (isYesterday) return `Yesterday at ${time}`;
+
+  const monthDay = date.toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+  });
+  if (date.getFullYear() === now.getFullYear()) {
+    return `${monthDay} at ${time}`;
+  }
+  return `${monthDay}, ${date.getFullYear()} at ${time}`;
+}
+
+const timestampClass =
+  "mt-1 text-[11px] text-[var(--muted)] opacity-0 group-hover:opacity-100 transition-opacity duration-150 select-none";
+
 type ChatMessageCardProps = {
   content: string;
   role?: "user" | "assistant";
@@ -35,6 +74,7 @@ type ChatMessageCardProps = {
   isStreaming?: boolean;
   onQuestionSubmit?: (answers: Record<string, string>) => void;
   isFollowedByUserMessage?: boolean;
+  createdAt?: string;
 };
 
 const assistantMarkdownClass =
@@ -49,18 +89,23 @@ export function ChatMessageCard({
   isStreaming = false,
   onQuestionSubmit,
   isFollowedByUserMessage,
+  createdAt,
 }: ChatMessageCardProps) {
   if (role === "user") {
+    const formatted = createdAt ? formatTimestamp(createdAt) : null;
     return (
-      <div
-        className="max-w-[min(85%,520px)] rounded-[1.35rem] border border-[var(--border)] bg-[var(--sidebar-bg)] px-4 py-2.5 shadow-sm"
-        data-role="user"
-      >
-        {content && (
-          <p className="text-[15px] leading-relaxed text-[var(--foreground)] whitespace-pre-wrap break-words">
-            {content}
-          </p>
-        )}
+      <div className="group flex flex-col items-end">
+        <div
+          className="max-w-[min(85%,520px)] rounded-[1.35rem] border border-[var(--border)] bg-[var(--sidebar-bg)] px-4 py-2.5 shadow-sm"
+          data-role="user"
+        >
+          {content && (
+            <p className="text-[15px] leading-relaxed text-[var(--foreground)] whitespace-pre-wrap break-words">
+              {content}
+            </p>
+          )}
+        </div>
+        {formatted && <span className={timestampClass}>{formatted}</span>}
       </div>
     );
   }
@@ -142,9 +187,14 @@ export function ChatMessageCard({
     sectionLabel = "Process";
   }
 
+  const formattedTimestamp = useMemo(
+    () => (createdAt ? formatTimestamp(createdAt) : null),
+    [createdAt],
+  );
+
   return (
     <div
-      className="w-full max-w-[min(100%,680px)] min-w-0"
+      className="group w-full max-w-[min(100%,680px)] min-w-0"
       data-role="assistant"
     >
       {/* Thinking / thought process section — includes reasoning and tool calls */}
@@ -332,6 +382,9 @@ export function ChatMessageCard({
               </div>
             );
           })}
+      {formattedTimestamp && (
+        <span className={timestampClass}>{formattedTimestamp}</span>
+      )}
     </div>
   );
 }
