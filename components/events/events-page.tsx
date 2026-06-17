@@ -3,7 +3,6 @@
 import { useState, useTransition } from "react";
 import { Plus, Trash2, Zap, Pencil } from "lucide-react";
 import { Button } from "@/components/basic/buttons/button";
-import { Input } from "@/components/basic/input/input";
 import { Sheet } from "@/components/ui/sheet";
 import type { ActionResult } from "@/app/org/[ordId]/workspace/[workspaceId]/personal/events/actions";
 import {
@@ -63,7 +62,7 @@ export function EventsPage({
     setFormError(null);
 
     const formData = new FormData();
-    formData.set("eventName", eventName);
+    formData.set("eventName", `op.${eventName}`);
     formData.set("description", description);
 
     startTransition(async () => {
@@ -89,7 +88,12 @@ export function EventsPage({
         setEvents((prev) =>
           prev.map((e) =>
             e.id === editingId
-              ? { ...e, eventName, description, updatedAt: now }
+              ? {
+                  ...e,
+                  eventName: `op.${eventName}`,
+                  description,
+                  updatedAt: now,
+                }
               : e,
           ),
         );
@@ -97,7 +101,7 @@ export function EventsPage({
         setEvents((prev) => [
           {
             id: crypto.randomUUID(),
-            eventName,
+            eventName: `op.${eventName}`,
             description,
             createdAt: now,
             updatedAt: now,
@@ -124,7 +128,9 @@ export function EventsPage({
 
   const handleEdit = (ev: EventItem) => {
     setEditingId(ev.id);
-    setEventName(ev.eventName);
+    setEventName(
+      ev.eventName.startsWith("op.") ? ev.eventName.slice(3) : ev.eventName,
+    );
     setDescription(ev.description);
     setFormError(null);
     setIsSheetOpen(true);
@@ -172,14 +178,24 @@ export function EventsPage({
           footer={<></>}
         >
           <form className="space-y-4" onSubmit={handleSubmit}>
-            <Input
-              label="Event name"
-              name="eventName"
-              placeholder="e.g. stripe.payment_intent.succeeded"
-              value={eventName}
-              onChange={(e) => setEventName(e.target.value)}
-              required
-            />
+            <div className="space-y-1.5">
+              <label className="text-[11px] font-medium uppercase tracking-[0.12em] text-[var(--muted)]">
+                Event name
+              </label>
+              <div className="flex items-center rounded border border-[var(--border)] bg-[var(--input-bg)] focus-within:border-[var(--accent)] focus-within:ring-1 focus-within:ring-[var(--accent)]/50 transition-all">
+                <span className="shrink-0 pl-3 pr-1 text-[13px] font-mono text-[var(--accent)] select-none">
+                  op.
+                </span>
+                <input
+                  name="eventName"
+                  placeholder="stripe.payment_intent.succeeded"
+                  value={eventName}
+                  onChange={(e) => setEventName(e.target.value)}
+                  required
+                  className="w-full bg-transparent py-2.5 pr-3 text-[13px] text-[var(--foreground)] placeholder:text-[var(--muted)]/60 focus:outline-none"
+                />
+              </div>
+            </div>
             <div className="space-y-1.5">
               <label className="text-[11px] font-medium uppercase tracking-[0.12em] text-[var(--muted)]">
                 Description
