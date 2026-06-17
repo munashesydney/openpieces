@@ -115,9 +115,9 @@ Concise but actionable — include the essential data only:
 
 ```
 [serviceId: <OPENPIECES_SERVICE_ID>]
-[event: stripe.payment_intent.succeeded]
+[event: op.stripe.payment_intent.succeeded]
 
-Stripe webhook received: payment_intent.succeeded
+Stripe webhook received: op.stripe.payment_intent.succeeded
 amount: 4900
 currency: usd
 customer: cus_abc123

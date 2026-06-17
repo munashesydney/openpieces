@@ -256,8 +256,14 @@ export async function POST(request: NextRequest) {
         }
         effectiveEventId = eventId;
       } else if (eventName) {
-        resolvedEvent = await createOrGetEvent(workspaceId, eventName);
-        effectiveEventId = resolvedEvent.id;
+        try {
+          resolvedEvent = await createOrGetEvent(workspaceId, eventName);
+          effectiveEventId = resolvedEvent.id;
+        } catch (err) {
+          const message =
+            err instanceof Error ? err.message : "Invalid event name";
+          return NextResponse.json({ error: message }, { status: 400 });
+        }
       }
 
       // Create workflow executions for all subscribed workflows

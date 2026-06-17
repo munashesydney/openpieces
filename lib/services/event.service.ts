@@ -76,6 +76,10 @@ export async function createOrGetEvent(
   workspaceId: string,
   eventName: string,
 ): Promise<Event> {
+  if (!eventName.startsWith("op.")) {
+    throw new Error("Event name must start with 'op.'");
+  }
+
   const existing = await getEventByName(workspaceId, eventName);
   if (existing) return existing;
 
@@ -87,6 +91,10 @@ export async function createOrGetEvent(
 }
 
 export async function createEvent(data: NewEvent): Promise<Event> {
+  if (!data.eventName.startsWith("op.")) {
+    throw new Error("Event name must start with 'op.'");
+  }
+
   const result = await db.insert(events).values(data).returning();
   return result[0];
 }
@@ -96,6 +104,10 @@ export async function updateEvent(
   workspaceId: string,
   data: Partial<NewEvent>,
 ): Promise<Event> {
+  if (data.eventName !== undefined && !data.eventName.startsWith("op.")) {
+    throw new Error("Event name must start with 'op.'");
+  }
+
   const result = await db
     .update(events)
     .set({ ...data, updatedAt: new Date() })

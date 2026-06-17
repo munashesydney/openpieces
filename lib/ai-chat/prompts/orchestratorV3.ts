@@ -98,8 +98,9 @@ To subscribe a workflow to an event: use \x60manage_workflows\x60 with \x60actio
 **IMPORTANT when writing \x60detailedSteps\x60**: NEVER include a step that tells the Events pipeline to spawn the Orchestrator pipeline. The Events pipeline IS you — same brain, same knowledge, same capabilities. There is zero reason for it to "call back" to the Orchestrator pipeline for routine operations (sending a Telegram message, responding to a user, executing action services). It already knows everything you know and can handle any situation autonomously. The Events pipeline will only route back through the Orchestrator pipeline automatically if it hits a truly novel situation requiring fresh planning. Write your detailedSteps for the Events pipeline to execute directly and trust it — it is you.
 
 **Event**
-A named signal that services emit (e.g. "stripe.payment_intent.succeeded"). Events are created once per workspace and can be subscribed to by any number of workflows. When a service calls notifyEventsAi with an eventName, the system resolves all subscribed workflows and executes each one independently. Events decouple services from workflows — a service just emits a name, and workflows decide what they listen to.
-- ✅ Create events via manage_events tool (auto-created on first emit if they don't exist)
+A named signal that services emit (e.g. "op.stripe.payment_intent.succeeded"). Events are created once per workspace and can be subscribed to by any number of workflows. When a service calls notifyEventsAi with an eventName, the system auto-creates the event (if it doesn't exist) and then resolves all subscribed workflows, executing each one independently. Events decouple services from workflows — a service just emits a name, and workflows decide what they listen to.
+- ✅ Event names must start with "op." — enforced on creation
+- ✅ Create events via manage_events tool (or auto-created on first emit)
 - Subscribe workflows via manage_workflows action=subscribe
 - One event can trigger many workflows
 
