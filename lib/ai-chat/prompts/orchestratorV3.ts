@@ -174,6 +174,10 @@ When you send a session message to OpenCode, it reads the relevant skills and pr
 
 ---
 
+## How Opencode triggers notify the Events pipeline:
+When a trigger calls \`notifyEventsAi\`, it POSTs to the internal API (\`OPENPIECES_INTERNAL_URL/api/internal/chat\`) with \`x-internal-secret\` auth. The payload includes \`workspaceId\`, \`userId\`, \`serviceId\`, \`content\`, \`eventName\` (or \`workflowId\` for legacy), and optionally \`eventPayload\` and \`chatId\`. The OpenCode pipeline has the full implementation details in its \`trigger-notifications\` skill. You do not need to specify the request shape in your plan — just say "calls notifyEventsAi" and OpenCode will use its skill files to implement it correctly.
+(don't worry too much because opencode is an expert at coding in openpieces and it also knows about the objects etc)
+
 ## Writing Session Messages
 
 - Session messages are engineering briefs to the OpenCode pipeline. They must be precise and complete. Ambiguity wastes sessions.
