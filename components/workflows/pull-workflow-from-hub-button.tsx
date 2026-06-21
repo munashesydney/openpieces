@@ -191,8 +191,11 @@ export function PullWorkflowFromHubButton({
                       )}
                     </div>
                     <span className="shrink-0 ml-2 text-[10px] text-[var(--muted)]">
-                      {(wf as any).serviceCount ?? "?"} services,{" "}
+                      {(wf as any).serviceCount ?? "?"} services,
                       {(wf as any).taskCount ?? "?"} tasks
+                      {(wf as any).eventCount != null
+                        ? `, ${(wf as any).eventCount} events`
+                        : ""}
                     </span>
                   </div>
                 </button>

@@ -13,6 +13,7 @@ import {
   unlinkActionServiceFromWorkflow,
 } from "@/lib/services/workflow-action.service";
 import { getWorkflowExecutions } from "@/lib/services/workflow-execution.service";
+import { getEventsForWorkflow } from "@/lib/services/event.service";
 import { ValidationError } from "@/lib/errors/validation-error";
 
 export type ActionResult = { error: string } | { success: true };
@@ -235,11 +236,13 @@ export async function pushWorkflowToHubAction(
   }
 
   // Gather all linked services (trigger + action) and tasks
-  const [triggerServices, linkedActionServices, tasks] = await Promise.all([
-    getServicesByWorkflowId(workflowId, workspaceId),
-    getActionServicesForWorkflow(workflowId, workspaceId),
-    getTasksByWorkflowId(workflowId, workspaceId),
-  ]);
+  const [triggerServices, linkedActionServices, tasks, subscribedEvents] =
+    await Promise.all([
+      getServicesByWorkflowId(workflowId, workspaceId),
+      getActionServicesForWorkflow(workflowId, workspaceId),
+      getTasksByWorkflowId(workflowId, workspaceId),
+      getEventsForWorkflow(workflowId, workspaceId),
+    ]);
 
   const allServices = [...triggerServices, ...linkedActionServices];
 
@@ -273,6 +276,10 @@ export async function pushWorkflowToHubAction(
       timeWindowStart: t.timeWindowStart,
       timeWindowEnd: t.timeWindowEnd,
       runOnDays: t.runOnDays ?? [],
+    })),
+    events: subscribedEvents.map((e) => ({
+      eventName: e.eventName,
+      description: e.description,
     })),
   });
 
