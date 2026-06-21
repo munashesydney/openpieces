@@ -464,6 +464,7 @@ export async function pullWorkflow(
   const { createWorkflow, updateWorkflow } = await import("./workflow.service");
 
   const targetWorkflowId = data.existingWorkflowId;
+  let finalWorkflowId = targetWorkflowId;
 
   if (targetWorkflowId) {
     await updateWorkflow(targetWorkflowId, data.workspaceId, {
@@ -540,6 +541,8 @@ export async function pullWorkflow(
       hubUpdatedAt: hubWf.updatedAt ? new Date(hubWf.updatedAt) : undefined,
     });
 
+    finalWorkflowId = newWf.id;
+
     // Link services back to the new workflow
     if (newWf) {
       for (const ls of localServiceIds) {
@@ -569,7 +572,7 @@ export async function pullWorkflow(
         }
       }
 
-      // 4. Create tasks
+      // Create tasks
       if (hubWf.tasks.length > 0) {
         const { createTask } = await import("./task.service");
         for (const t of hubWf.tasks) {
@@ -598,32 +601,61 @@ export async function pullWorkflow(
           });
         }
       }
+    }
+  }
 
-      // 5. Restore events and subscriptions
-      if (hubWf.events.length > 0) {
-        const {
-          createEvent: createEventSvc,
-          subscribeWorkflowToEvent: subscribeWfToEvent,
-        } = await import("./event.service");
+  // 5. Restore events and subscriptions (for both new and updated workflows)
+  if (hubWf.events.length > 0 && finalWorkflowId) {
+    const {
+      createEvent: createEventSvc,
+      subscribeWorkflowToEvent: subscribeWfToEvent,
+    } = await import("./event.service");
 
-        for (const ev of hubWf.events) {
-          try {
-            const localEvent = await createEventSvc({
-              workspaceId: data.workspaceId,
-              eventName: ev.eventName,
-              description: ev.description,
-            });
-            await subscribeWfToEvent(newWf.id, localEvent.id, data.workspaceId);
-          } catch (err: unknown) {
-            const isDuplicate =
-              typeof err === "object" &&
-              err !== null &&
-              "code" in err &&
-              (err as { code: string }).code === "23505";
-            if (!isDuplicate) {
-              console.error(`Failed to restore event ${ev.eventName}:`, err);
-            }
-          }
+    for (const ev of hubWf.events) {
+      // Create event if it doesn't exist yet
+      let localEventId: string;
+      try {
+        const localEvent = await createEventSvc({
+          workspaceId: data.workspaceId,
+          eventName: ev.eventName,
+          description: ev.description,
+        });
+        localEventId = localEvent.id;
+      } catch (err: unknown) {
+        const isDuplicate =
+          typeof err === "object" &&
+          err !== null &&
+          "code" in err &&
+          (err as { code: string }).code === "23505";
+        if (!isDuplicate) {
+          console.error(`Failed to create event ${ev.eventName}:`, err);
+          continue;
+        }
+        // Event already exists — look it up
+        const { getEventByName } = await import("./event.service");
+        const existing = await getEventByName(data.workspaceId, ev.eventName);
+        if (!existing) continue;
+        localEventId = existing.id;
+      }
+
+      // Subscribe the workflow to the event
+      try {
+        await subscribeWfToEvent(
+          finalWorkflowId,
+          localEventId,
+          data.workspaceId,
+        );
+      } catch (err: unknown) {
+        const isDuplicate =
+          typeof err === "object" &&
+          err !== null &&
+          "code" in err &&
+          (err as { code: string }).code === "23505";
+        if (!isDuplicate) {
+          console.error(
+            `Failed to subscribe ${finalWorkflowId} to ${ev.eventName}:`,
+            err,
+          );
         }
       }
     }
