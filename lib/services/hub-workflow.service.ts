@@ -66,10 +66,22 @@ export type HubWorkflow = {
     runOnDays: number[];
     createdAt: string;
   }>;
+  events: Array<{
+    id: string;
+    eventName: string;
+    description: string;
+    createdAt: string;
+  }>;
 };
 
 export type SearchWorkflowsResult = {
-  workflows: Array<HubWorkflow & { serviceCount: number; taskCount: number }>;
+  workflows: Array<
+    HubWorkflow & {
+      serviceCount: number;
+      taskCount: number;
+      eventCount: number;
+    }
+  >;
   total: number;
   page: number;
   limit: number;
@@ -203,6 +215,10 @@ export async function pushWorkflow(
       timeWindowEnd: string | null;
       runOnDays: number[];
     }>;
+    events: Array<{
+      eventName: string;
+      description: string;
+    }>;
   },
 ): Promise<PushWorkflowResult> {
   // ── Step 1: Push each service as a piece ────
@@ -285,6 +301,7 @@ export async function pushWorkflow(
   );
   registerForm.append("services", JSON.stringify(servicePieces));
   registerForm.append("tasks", JSON.stringify(data.tasks));
+  registerForm.append("events", JSON.stringify(data.events));
 
   // If workflow already has a hubWorkflowId, send it for update
   const { getWorkflowById } = await import("@/lib/services/workflow.service");
@@ -579,6 +596,34 @@ export async function pullWorkflow(
             timeWindowEnd: t.timeWindowEnd ?? undefined,
             runOnDays: t.runOnDays ?? undefined,
           });
+        }
+      }
+
+      // 5. Restore events and subscriptions
+      if (hubWf.events.length > 0) {
+        const {
+          createEvent: createEventSvc,
+          subscribeWorkflowToEvent: subscribeWfToEvent,
+        } = await import("./event.service");
+
+        for (const ev of hubWf.events) {
+          try {
+            const localEvent = await createEventSvc({
+              workspaceId: data.workspaceId,
+              eventName: ev.eventName,
+              description: ev.description,
+            });
+            await subscribeWfToEvent(newWf.id, localEvent.id, data.workspaceId);
+          } catch (err: unknown) {
+            const isDuplicate =
+              typeof err === "object" &&
+              err !== null &&
+              "code" in err &&
+              (err as { code: string }).code === "23505";
+            if (!isDuplicate) {
+              console.error(`Failed to restore event ${ev.eventName}:`, err);
+            }
+          }
         }
       }
     }
