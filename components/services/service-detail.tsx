@@ -4,6 +4,8 @@ import { useState, useTransition, useEffect, useCallback } from "react";
 import {
   AlertCircle,
   ChevronLeft,
+  ChevronRight,
+  ChevronDown,
   Activity,
   Code,
   Clock,
@@ -105,6 +107,14 @@ export function ServiceDetail({
   const [isWaitingForArchiveStop, setIsWaitingForArchiveStop] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isWaitingForDeleteStop, setIsWaitingForDeleteStop] = useState(false);
+
+  const [expandedEndpoints, setExpandedEndpoints] = useState<
+    Record<string, boolean>
+  >({});
+
+  const toggleEndpoint = (id: string) => {
+    setExpandedEndpoints((prev) => ({ ...prev, [id]: !prev[id] }));
+  };
 
   const [method, setMethod] = useState("GET");
   const [path, setPath] = useState("");
@@ -774,66 +784,91 @@ export function ServiceDetail({
           </CardHeader>
           <CardContent>
             <div className="divide-y divide-[var(--border)]">
-              {endpoints.map((endpoint, i) => (
-                <div
-                  key={endpoint.id}
-                  className={`group flex items-start justify-between gap-4 py-6 first:pt-0 last:pb-0 ${isPending ? "opacity-50" : ""}`}
-                >
-                  <div className="flex flex-col gap-2 min-w-0">
-                    <div className="flex flex-wrap items-center gap-3">
-                      <span
-                        className={`rounded-md border px-2 py-0.5 text-[9px] font-bold tracking-wider ${
-                          endpoint.method === "GET"
-                            ? "border-emerald-500/20 text-emerald-500"
-                            : endpoint.method === "POST"
-                              ? "border-blue-500/20 text-blue-500"
-                              : endpoint.method === "DELETE"
-                                ? "border-red-500/20 text-red-500"
-                                : "border-amber-500/20 text-amber-500"
-                        }`}
-                      >
-                        {endpoint.method}
-                      </span>
-                      <code className="text-sm font-mono text-[var(--foreground)] opacity-80">
-                        {endpoint.path}
-                      </code>
-                    </div>
-                    {endpoint.description && (
-                      <p className="text-sm text-[var(--muted)]">
-                        {endpoint.description}
-                      </p>
-                    )}
-                    {endpoint.inputSchema &&
-                      Object.keys(endpoint.inputSchema).length > 0 && (
-                        <div className="mt-2 rounded-md border border-[var(--border)] bg-[var(--hover-bg)] p-3">
-                          <p className="text-xs font-medium uppercase tracking-wider text-[var(--muted)] mb-2">
-                            Input Schema
-                          </p>
-                          <pre className="text-xs font-mono text-[var(--foreground)] overflow-auto whitespace-pre-wrap">
-                            {JSON.stringify(endpoint.inputSchema, null, 2)}
-                          </pre>
+              {endpoints.map((endpoint) => {
+                const isExpanded = !!expandedEndpoints[endpoint.id];
+                const hasSchema =
+                  endpoint.inputSchema &&
+                  Object.keys(endpoint.inputSchema).length > 0;
+
+                return (
+                  <div
+                    key={endpoint.id}
+                    className={`py-6 first:pt-0 last:pb-0 ${isPending ? "opacity-50" : ""}`}
+                  >
+                    <div
+                      className={`flex items-start justify-between gap-4 group ${hasSchema ? "cursor-pointer" : ""}`}
+                      onClick={
+                        hasSchema
+                          ? () => toggleEndpoint(endpoint.id)
+                          : undefined
+                      }
+                    >
+                      <div className="flex flex-col gap-1 min-w-0 flex-1">
+                        <div className="flex items-center gap-3">
+                          <span
+                            className={`rounded-md border px-2 py-0.5 text-[9px] font-bold tracking-wider ${
+                              endpoint.method === "GET"
+                                ? "border-emerald-500/20 text-emerald-500"
+                                : endpoint.method === "POST"
+                                  ? "border-blue-500/20 text-blue-500"
+                                  : endpoint.method === "DELETE"
+                                    ? "border-red-500/20 text-red-500"
+                                    : "border-amber-500/20 text-amber-500"
+                            }`}
+                          >
+                            {endpoint.method}
+                          </span>
+                          <code className="text-sm font-mono text-[var(--foreground)] opacity-80 truncate">
+                            {endpoint.path}
+                          </code>
                         </div>
-                      )}
+                        {endpoint.description && (
+                          <p className="text-sm text-[var(--muted)]">
+                            {endpoint.description}
+                          </p>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-1 shrink-0">
+                        {hasSchema && (
+                          <span className="text-[var(--muted)] transition-transform duration-200">
+                            {isExpanded ? (
+                              <ChevronDown className="h-4 w-4" />
+                            ) : (
+                              <ChevronRight className="h-4 w-4" />
+                            )}
+                          </span>
+                        )}
+                        <ActionMenu
+                          onSelect={(val) => {
+                            if (val === "delete") {
+                              handleDeleteEndpoint(endpoint.id);
+                            }
+                          }}
+                          options={[
+                            {
+                              label: "Delete",
+                              value: "delete",
+                              icon: <Trash2 className="h-4 w-4" />,
+                              destructive: true,
+                            },
+                          ]}
+                        />
+                      </div>
+                    </div>
+
+                    {isExpanded && hasSchema && (
+                      <div className="mt-3 rounded-md border border-[var(--border)] bg-[var(--hover-bg)] p-3">
+                        <p className="text-xs font-medium uppercase tracking-wider text-[var(--muted)] mb-2">
+                          Input Schema
+                        </p>
+                        <pre className="text-xs font-mono text-[var(--foreground)] overflow-auto whitespace-pre-wrap">
+                          {JSON.stringify(endpoint.inputSchema, null, 2)}
+                        </pre>
+                      </div>
+                    )}
                   </div>
-                  <div className="shrink-0">
-                    <ActionMenu
-                      onSelect={(val) => {
-                        if (val === "delete") {
-                          handleDeleteEndpoint(endpoint.id);
-                        }
-                      }}
-                      options={[
-                        {
-                          label: "Delete",
-                          value: "delete",
-                          icon: <Trash2 className="h-4 w-4" />,
-                          destructive: true,
-                        },
-                      ]}
-                    />
-                  </div>
-                </div>
-              ))}
+                );
+              })}
               {endpoints.length === 0 && (
                 <div className="rounded-xl border border-dashed border-[var(--border)] p-8 text-center text-sm text-[var(--muted)]">
                   No endpoints defined yet.
