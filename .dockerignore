@@ -2,6 +2,10 @@
 node_modules
 npm-debug.log*
 
+# opencode plugin deps (pieces/.opencode) are generated per-machine; they
+# contain .bin symlinks that break Docker build-context loading on Windows
+**/.opencode/node_modules
+
 # Next.js build output
 .next
 out
