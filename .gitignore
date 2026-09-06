@@ -48,3 +48,4 @@ opencode-data/
 /pieces/*
 !/pieces/.opencode
 !/pieces/AGENTS.md
+!/pieces/opencode.json
