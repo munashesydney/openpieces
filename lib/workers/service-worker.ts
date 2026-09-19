@@ -714,7 +714,7 @@ async function sendSpawnFailureMessage(
       const { getWorkspaceOwnerId } =
         await import("@/lib/services/workspace.service");
 
-      const newSession = await createSession();
+      const newSession = await createSession(service.directory);
       const newSessionId =
         (newSession as any).session_id ?? (newSession as any).id;
       await setService(newSessionId, service.id);

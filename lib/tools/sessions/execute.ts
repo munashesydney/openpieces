@@ -62,7 +62,7 @@ export async function executeSessions(
           "Selected service has no directory set. Use manage_services to create or update a service with a directory first.",
         );
       }
-      const session = await createSession();
+      const session = await createSession(directory);
       const id = session.session_id ?? (session as { id?: string }).id;
       if (!id) {
         throw new Error("OpenCode did not return a session id");

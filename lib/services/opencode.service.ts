@@ -65,8 +65,33 @@ export async function listSessions(): Promise<OpenCodeSession[]> {
   }
 }
 
-export async function createSession(): Promise<OpenCodeSession> {
-  const response = await fetch(`${getBaseUrl()}/session`, {
+// OpenCode's server runs with its working directory at the pieces volume root
+// (see docker-compose.yml → opencode.working_dir). Service directories are stored
+// relative to that root, so resolve them to absolute paths inside the container.
+const OPENCODE_PIECES_ROOT = "/pieces";
+
+/**
+ * Create an OpenCode session.
+ *
+ * Passing `directory` pins the session's working directory — and therefore its
+ * `external_directory` permission boundary — to that folder instead of the shared
+ * pieces root. Relative paths resolve against the pieces volume root (`/pieces`).
+ */
+export async function createSession(
+  directory?: string | null,
+): Promise<OpenCodeSession> {
+  const url = new URL(`${getBaseUrl()}/session`);
+  const trimmedDirectory = directory?.trim();
+  if (trimmedDirectory) {
+    url.searchParams.set(
+      "directory",
+      trimmedDirectory.startsWith("/")
+        ? trimmedDirectory
+        : `${OPENCODE_PIECES_ROOT}/${trimmedDirectory}`,
+    );
+  }
+
+  const response = await fetch(url.toString(), {
     method: "POST",
     headers: getAuthHeaders(),
     cache: "no-store",
@@ -283,13 +308,11 @@ export function getMessagesForAi(
   return result;
 }
 
-// OpenCode runs with working_dir at the pieces volume root (see docker-compose opencode.working_dir).
-// `directory` from the DB is relative to that root (e.g. userId/workspaceId/slug), matching `pieces/<directory>` on the app/worker side — do not prefix "pieces/" here.
-const DIRECTORY_INSTRUCTION_PREFIX =
-  "Before doing anything else: ensure the directory '";
-
-const DIRECTORY_INSTRUCTION_SUFFIX =
-  "' exists (create it if needed), then cd into it. You are only allowed to work inside this directory.\n\n";
+// Sessions are created with their working directory pinned to the piece folder
+// (see createSession), so the agent already starts inside it. Remind the agent that
+// this folder is its boundary instead of asking it to create and cd into a path.
+const DIRECTORY_INSTRUCTION =
+  "Stay inside your current working directory. It is the project root — do not read, create, or modify anything outside it.\n\n";
 
 export async function sendMessage(
   sessionId: string,
@@ -440,12 +463,7 @@ export async function sendMessageWithContext(
       `serviceId=${serviceId ?? "unknown"}\n` +
       `__OPENPIECES_CONTEXT_END__\n\n`;
 
-    fullContent =
-      DIRECTORY_INSTRUCTION_PREFIX +
-      directory +
-      DIRECTORY_INSTRUCTION_SUFFIX +
-      contextBlock +
-      content;
+    fullContent = DIRECTORY_INSTRUCTION + contextBlock + content;
   }
 
   await sendMessage(sessionId, fullContent);

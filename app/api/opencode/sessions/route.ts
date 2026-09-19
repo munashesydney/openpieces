@@ -60,7 +60,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const session = await createSession();
+    const session = await createSession(directory);
     const sessionId = session.session_id ?? (session as { id?: string }).id;
     if (!sessionId) {
       return NextResponse.json(
