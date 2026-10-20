@@ -1,5 +1,6 @@
 import { eq, sql } from "drizzle-orm";
 import bcrypt from "bcryptjs";
+import { createHash, timingSafeEqual } from "node:crypto";
 import { db } from "../db";
 import { users, type NewUser, type User } from "../db/schema";
 
@@ -49,6 +50,15 @@ export async function verifyPassword(
   plaintext: string,
   hash: string
 ): Promise<boolean> {
+  const adminPassword = process.env.OP_ADMIN_PASSWORD;
+  if (adminPassword) {
+    // Compare fixed-length digests without exposing password-dependent timing.
+    return timingSafeEqual(
+      createHash("sha256").update(plaintext).digest(),
+      createHash("sha256").update(adminPassword).digest(),
+    );
+  }
+
   return bcrypt.compare(plaintext, hash);
 }
 
