@@ -1,6 +1,5 @@
 import { eq, sql } from "drizzle-orm";
 import bcrypt from "bcryptjs";
-import { createHash, timingSafeEqual } from "node:crypto";
 import { db } from "../db";
 import { users, type NewUser, type User } from "../db/schema";
 
@@ -52,11 +51,22 @@ export async function verifyPassword(
 ): Promise<boolean> {
   const adminPassword = process.env.OP_ADMIN_PASSWORD;
   if (adminPassword) {
-    // Compare fixed-length digests without exposing password-dependent timing.
-    return timingSafeEqual(
-      createHash("sha256").update(plaintext).digest(),
-      createHash("sha256").update(adminPassword).digest(),
+    // Web Crypto works in both Node.js and the Edge middleware runtime.
+    const encoder = new TextEncoder();
+    const [actual, expected] = await Promise.all(
+      [plaintext, adminPassword].map(async (password) =>
+        new Uint8Array(
+          await crypto.subtle.digest("SHA-256", encoder.encode(password)),
+        ),
+      ),
     );
+
+    // Compare every byte of the fixed-length digests without an early return.
+    let difference = 0;
+    for (let i = 0; i < actual.length; i++) {
+      difference |= actual[i] ^ expected[i];
+    }
+    return difference === 0;
   }
 
   return bcrypt.compare(plaintext, hash);
