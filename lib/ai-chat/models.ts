@@ -240,6 +240,12 @@ export const PROVIDERS: ProviderInfo[] = [
     label: "Alibaba",
     models: [
       {
+        id: "alibaba/qwen3.8-flash",
+        label: "Qwen 3.8 Flash",
+        badge: "NEW",
+        capabilities: { vision: true, files: true },
+      },
+      {
         id: "alibaba/qwen3.6-27b",
         label: "Qwen 3.6 27B",
         capabilities: { vision: true, files: true },
