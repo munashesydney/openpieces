@@ -58,6 +58,12 @@ export const PROVIDERS: ProviderInfo[] = [
     label: "OpenAI",
     models: [
       {
+        id: "openai/gpt-6-luna",
+        label: "GPT-6 Luna",
+        badge: "NEW",
+        capabilities: { vision: true, files: true },
+      },
+      {
         id: "openai/gpt-4o",
         label: "GPT-4o",
         capabilities: { vision: true, files: false },
